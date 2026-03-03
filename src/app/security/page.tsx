@@ -5,7 +5,7 @@ export default function SecurityPage() {
   return (
     <main>
       {/* Hero */}
-      <section className="py-24 px-6 text-center">
+      <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">Zero Trust Architecture</p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
@@ -22,7 +22,7 @@ export default function SecurityPage() {
       </section>
 
       {/* The Argument: 3-way comparison */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <SectionHeading subtitle="세 가지 선택지를 비교해 보세요.">왜 로컬이어야 하는가</SectionHeading>
           
@@ -70,7 +70,7 @@ export default function SecurityPage() {
       </section>
 
       {/* Security Architecture Visual */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div>
             <SectionHeading subtitle="ClawNode의 보안 아키텍처">다층 방어 구조</SectionHeading>
@@ -119,7 +119,7 @@ export default function SecurityPage() {
       </section>
 
       {/* Terminal Demo */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-3xl mx-auto">
           <SectionHeading subtitle="실제 보안 로그 예시">실시간 방어 모니터</SectionHeading>
           <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6 font-mono text-sm">
@@ -143,7 +143,7 @@ export default function SecurityPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-6 text-center border-t border-white/5">
+      <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
         <p className="text-gray-400 mb-6">당신의 자산을 당신 손에 두세요.</p>
         <CTAButton href="/reserve">지금 예약하기</CTAButton>

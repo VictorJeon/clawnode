@@ -6,7 +6,7 @@ export default function ProductPage() {
   return (
     <main>
       {/* Hero */}
-      <section className="py-24 px-6 text-center">
+      <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">What You Get</p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
@@ -18,7 +18,7 @@ export default function ProductPage() {
       </section>
 
       {/* Hardware Section */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
             <Image src="/images/mac-mini-hero.png" alt="Mac Mini M4" fill className="object-cover" />
@@ -55,7 +55,7 @@ export default function ProductPage() {
       </section>
 
       {/* Agents Detail — No images, terminal + chat UI */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <SectionHeading subtitle="사전 설치. 전원 켜면 바로 작동.">크립토 AI 에이전트 3종</SectionHeading>
 
@@ -76,7 +76,7 @@ export default function ProductPage() {
             </p>
 
             {/* Telegram-style notification */}
-            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-xs">🕵️</div>
                 <span className="text-xs font-bold text-[#FF6B00]">Alpha Watcher</span>
@@ -110,7 +110,7 @@ export default function ProductPage() {
               텔레그램 채널 100개 구독할 필요 없습니다.
             </p>
 
-            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">📰</div>
                 <span className="text-xs font-bold text-blue-400">News Breaker</span>
@@ -146,7 +146,7 @@ export default function ProductPage() {
               엑셀 포트폴리오 관리 지옥에서 해방됩니다.
             </p>
 
-            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-xs">📊</div>
                 <span className="text-xs font-bold text-green-400">Portfolio Tracker</span>
@@ -167,7 +167,7 @@ export default function ProductPage() {
       </section>
 
       {/* How It's Different */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-4xl mx-auto">
           <SectionHeading subtitle="에이전트는 많습니다. 차이는 이겁니다.">ClawNode가 다른 점</SectionHeading>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -188,7 +188,7 @@ export default function ProductPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-6 text-center border-t border-white/5">
+      <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">관심 있으신가요?</h2>
         <p className="text-gray-400 mb-6">선착순 5대 한정.</p>
         <CTAButton href="/reserve">내 자리 확보하기</CTAButton>

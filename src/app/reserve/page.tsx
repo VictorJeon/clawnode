@@ -37,7 +37,7 @@ export default function ReservePage() {
 
   if (status === 'success') {
     return (
-      <main className="min-h-screen flex items-center justify-center px-6">
+      <main className="min-h-screen flex items-center justify-center px-4 md:px-6">
         <FadeIn>
           <div className="text-center max-w-lg">
             <div className="text-6xl mb-6">🎉</div>
@@ -55,7 +55,7 @@ export default function ReservePage() {
   }
 
   return (
-    <main className="py-24 px-6">
+    <main className="py-24 px-4 md:px-6">
       <div className="max-w-2xl mx-auto">
         <FadeIn>
           <div className="text-center mb-12">

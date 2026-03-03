@@ -65,7 +65,7 @@ export default function HomePage() {
       </section>
 
       {/* Pain Point → Solution */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
             <div className="text-center mb-16">
@@ -103,7 +103,7 @@ export default function HomePage() {
       </section>
 
       {/* Mac Mini Product Shot */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <FadeIn direction="left">
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
@@ -140,7 +140,7 @@ export default function HomePage() {
       </section>
 
       {/* Agents — Telegram Chat UI Style */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
             <div className="text-center mb-16">
@@ -160,7 +160,7 @@ export default function HomePage() {
                   <p className="text-xs text-gray-500">온체인 감시관 · 24시간 고래 추적</p>
                 </div>
               </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5 hover:border-[#FF6B00]/20 transition-colors">
+              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-[#FF6B00]/20 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-6 h-6 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-xs">🕵️</div>
                   <span className="text-xs font-bold text-[#FF6B00]">Alpha Watcher</span>
@@ -191,7 +191,7 @@ export default function HomePage() {
                   <p className="text-xs text-gray-500">24시간 뉴스룸 · CT/디스코드/뉴스 모니터링</p>
                 </div>
               </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5 hover:border-blue-500/20 transition-colors">
+              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-blue-500/20 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">📰</div>
                   <span className="text-xs font-bold text-blue-400">News Breaker</span>
@@ -223,7 +223,7 @@ export default function HomePage() {
                   <p className="text-xs text-gray-500">개인 자산 관리자 · 거래소+지갑 통합</p>
                 </div>
               </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5 hover:border-green-500/20 transition-colors">
+              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-green-500/20 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-xs">📊</div>
                   <span className="text-xs font-bold text-green-400">Portfolio Tracker</span>
@@ -253,7 +253,7 @@ export default function HomePage() {
       </section>
 
       {/* Social Proof */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-5xl mx-auto">
           <FadeIn>
             <div className="text-center mb-12">
@@ -298,7 +298,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Local */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-4xl font-bold mb-12">
@@ -329,7 +329,7 @@ export default function HomePage() {
       </section>
 
       {/* Mid CTA */}
-      <section className="py-16 px-6 text-center border-y border-white/5">
+      <section className="py-16 px-4 md:px-6 text-center border-y border-white/5">
         <FadeIn>
           <h2 className="text-2xl md:text-3xl font-bold mb-4">선착순 5대. 고민하면 없어집니다.</h2>
           <p className="text-gray-400 mb-6">텔레그램에서 바로 예약 가능합니다.</p>
@@ -338,7 +338,7 @@ export default function HomePage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 text-center relative overflow-hidden">
+      <section className="py-24 px-4 md:px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20">
           <Image src="/images/hero-bg.png" alt="" fill className="object-cover" />
         </div>

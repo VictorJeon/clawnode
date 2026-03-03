@@ -21,7 +21,7 @@ export default function PricingPage() {
   return (
     <main>
       {/* Hero */}
-      <section className="py-24 px-6 text-center">
+      <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">Pricing</p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
@@ -34,7 +34,7 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing Card */}
-      <section className="py-12 px-6">
+      <section className="py-12 px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
           <div className="bg-[#0A0A0A] border border-[#FF6B00]/30 rounded-3xl p-8 md:p-12">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
@@ -50,16 +50,16 @@ export default function PricingPage() {
 
             {/* ROI */}
             <div className="bg-[#FF6B00]/10 border border-[#FF6B00]/20 rounded-xl p-4 mb-10">
-              <div className="grid grid-cols-3 text-center divide-x divide-[#FF6B00]/20">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0 text-center sm:divide-x divide-[#FF6B00]/20">
+                <div className="py-2 sm:py-0">
                   <div className="text-2xl font-bold text-white">2,740원</div>
                   <div className="text-xs text-gray-400">하루 비용 (3년 기준)</div>
                 </div>
-                <div>
+                <div className="py-2 sm:py-0 border-t sm:border-t-0 border-[#FF6B00]/20">
                   <div className="text-2xl font-bold text-white">25만원</div>
                   <div className="text-xs text-gray-400">월 비용 (12개월 기준)</div>
                 </div>
-                <div>
+                <div className="py-2 sm:py-0 border-t sm:border-t-0 border-[#FF6B00]/20">
                   <div className="text-2xl font-bold text-white">∞</div>
                   <div className="text-xs text-gray-400">3년 이후 비용</div>
                 </div>
@@ -109,10 +109,11 @@ export default function PricingPage() {
       </section>
 
       {/* Comparison Table */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <SectionHeading subtitle="같은 돈으로 뭘 할 수 있을까요?">가치 비교</SectionHeading>
-          <div className="overflow-x-auto">
+          {/* Desktop: Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-gray-400">
@@ -143,11 +144,30 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-4">
+            {[
+              { feature: '비용', others: 'DIY: 시간 무제한 · VPS: 매달 $20~50 · 크몽: 10만원+HW별도', claw: '일시불 (평생)' },
+              { feature: '하드웨어', others: 'DIY: 본인 조달 · VPS: 없음 · 크몽: 본인 조달', claw: 'M4 Mac Mini 포함' },
+              { feature: '보안', others: 'DIY: 본인 책임 · VPS: 클라우드 리스크 · 크몽: 백도어 우려', claw: 'Zero Trust' },
+              { feature: '교육', others: 'DIY: 유튜브 독학 · VPS: 없음 · 크몽: 텍스트 가이드', claw: '2시간 1:1 과외' },
+              { feature: '지원', others: 'DIY: 없음 · VPS: 느린 티켓 · 크몽: 설치 후 끝', claw: '30일 전용 채널' },
+            ].map(item => (
+              <div key={item.feature} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                <div className="text-white font-bold mb-2">{item.feature}</div>
+                <div className="text-xs text-gray-500 mb-3 leading-relaxed">{item.others}</div>
+                <div className="text-sm text-[#FF6B00] font-medium flex items-center gap-2">
+                  <span>🔶</span> ClawNode: {item.claw}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Not For You */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-3xl mx-auto">
           <SectionHeading subtitle="솔직하게 말씀드립니다.">이런 분에게는 안 맞습니다</SectionHeading>
           <div className="space-y-4">
@@ -167,7 +187,7 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-3xl mx-auto">
           <FadeIn>
             <SectionHeading>자주 묻는 질문</SectionHeading>
@@ -179,7 +199,7 @@ export default function PricingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 text-center relative overflow-hidden">
+      <section className="py-24 px-4 md:px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20">
           <Image src="/images/hero-bg.png" alt="" fill className="object-cover" />
         </div>

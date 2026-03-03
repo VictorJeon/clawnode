@@ -6,7 +6,7 @@ export default function ProcessPage() {
   return (
     <main>
       {/* Hero */}
-      <section className="py-24 px-6 text-center">
+      <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">Installation Protocol</p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
@@ -21,7 +21,7 @@ export default function ProcessPage() {
       </section>
 
       {/* Unboxing Image */}
-      <section className="py-12 px-6">
+      <section className="py-12 px-4 md:px-6">
         <div className="max-w-4xl mx-auto relative aspect-[21/9] rounded-2xl overflow-hidden">
           <Image src="/images/unboxing-v2.png" alt="Unboxing" fill className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
@@ -33,7 +33,7 @@ export default function ProcessPage() {
       </section>
 
       {/* Timeline */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-4 md:px-6">
         <div className="max-w-3xl mx-auto">
           <SectionHeading subtitle="2시간 현장 설치 프로토콜">타임라인</SectionHeading>
 
@@ -86,11 +86,11 @@ export default function ProcessPage() {
                 highlight: true,
               },
             ].map((step, i) => (
-              <div key={i} className="relative flex gap-8 mb-12 last:mb-0">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 ${step.highlight ? 'bg-[#FF6B00] text-black' : 'bg-[#1a1a1a] border border-[#FF6B00] text-[#FF6B00]'}`}>
+              <div key={i} className="relative flex gap-4 md:gap-8 mb-10 md:mb-12 last:mb-0">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 ${step.highlight ? 'bg-[#FF6B00] text-black' : 'bg-[#1a1a1a] border border-[#FF6B00] text-[#FF6B00]'}`}>
                   {i + 1}
                 </div>
-                <div className="pt-2">
+                <div className="pt-1 min-w-0">
                   <div className="text-xs text-[#FF6B00] font-mono mb-1">{step.time}</div>
                   <h3 className="text-lg font-bold mb-1">{step.title}</h3>
                   <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
@@ -102,7 +102,7 @@ export default function ProcessPage() {
       </section>
 
       {/* After-Service */}
-      <section className="py-24 px-6 bg-white/[0.02]">
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-3xl mx-auto">
           <SectionHeading subtitle="설치 후에도 혼자가 아닙니다.">A/S & 지원</SectionHeading>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -127,7 +127,7 @@ export default function ProcessPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 px-6 text-center border-t border-white/5">
+      <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 노드가 깨어납니다.</h2>
         <p className="text-gray-400 mb-6">선착순 5대 한정.</p>
         <CTAButton href="/reserve">지금 예약하기</CTAButton>
