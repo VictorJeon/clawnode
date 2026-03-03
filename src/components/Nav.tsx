@@ -35,7 +35,7 @@ export default function Nav() {
           ))}
           <li>
             <a
-              href="https://t.me/buidlermason"
+              href="/reserve"
               className="bg-[#FF6B00] text-black text-sm font-bold px-5 py-2 rounded-md hover:opacity-90 transition-opacity"
             >
               예약하기
@@ -76,7 +76,7 @@ export default function Nav() {
             ))}
             <li className="pt-2 border-t border-white/10">
               <a
-                href="https://t.me/buidlermason"
+                href="/reserve"
                 className="bg-[#FF6B00] text-black text-sm font-bold px-5 py-3 rounded-md block text-center"
               >
                 예약하기

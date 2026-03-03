@@ -126,7 +126,7 @@ export default function SecurityPage() {
       <section className="py-16 px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
         <p className="text-gray-400 mb-6">당신의 자산을 당신 손에 두세요.</p>
-        <CTAButton href="https://t.me/buidlermason">지금 예약하기</CTAButton>
+        <CTAButton href="/reserve">지금 예약하기</CTAButton>
       </section>
     </main>
   )

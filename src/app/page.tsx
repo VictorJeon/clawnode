@@ -45,7 +45,7 @@ export default function HomePage() {
 
           <FadeIn delay={0.6}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <CTAButton href="https://t.me/buidlermason">선착순 5대 — 내 자리 확보하기</CTAButton>
+              <CTAButton href="/reserve">선착순 5대 — 내 자리 확보하기</CTAButton>
               <a href="/security" className="px-8 py-3 rounded-md border border-white/10 hover:bg-white/5 text-white font-medium transition-all">
                 왜 로컬인가?
               </a>
@@ -333,7 +333,7 @@ export default function HomePage() {
         <FadeIn>
           <h2 className="text-2xl md:text-3xl font-bold mb-4">선착순 5대. 고민하면 없어집니다.</h2>
           <p className="text-gray-400 mb-6">텔레그램에서 바로 예약 가능합니다.</p>
-          <CTAButton href="https://t.me/buidlermason">내 자리 확보하기</CTAButton>
+          <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
         </FadeIn>
       </section>
 
@@ -354,7 +354,7 @@ export default function HomePage() {
               <span className="text-[#FF6B00]">놓치지 마세요.</span>
             </h2>
             <p className="text-gray-400 mb-8">하루 2,740원. 3년 쓰면 커피값. 그런데 평생 씁니다.</p>
-            <CTAButton href="https://t.me/buidlermason">선착순 5대 — 내 자리 확보하기</CTAButton>
+            <CTAButton href="/reserve">선착순 5대 — 내 자리 확보하기</CTAButton>
           </FadeIn>
         </div>
       </section>

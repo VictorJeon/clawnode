@@ -101,7 +101,7 @@ export default function PricingPage() {
             </div>
 
             <div className="text-center">
-              <CTAButton href="https://t.me/buidlermason">지금 예약하기 (선착순 5대)</CTAButton>
+              <CTAButton href="/reserve">지금 예약하기 (선착순 5대)</CTAButton>
               <p className="text-xs text-gray-500 mt-4">* 주문 제작 상품으로 설치 후 환불이 불가능합니다.</p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function PricingPage() {
             <span className="text-[#FF6B00]">시작하세요.</span>
           </h2>
           <p className="text-gray-400 mb-8">하루 2,740원. 커피 한 잔 값으로 평생 일하는 AI 직원.</p>
-          <CTAButton href="https://t.me/buidlermason">지금 예약하기 (300만원) →</CTAButton>
+          <CTAButton href="/reserve">지금 예약하기 (300만원) →</CTAButton>
         </div>
       </section>
     </main>

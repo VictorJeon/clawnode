@@ -191,7 +191,7 @@ export default function ProductPage() {
       <section className="py-16 px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">관심 있으신가요?</h2>
         <p className="text-gray-400 mb-6">선착순 5대 한정.</p>
-        <CTAButton href="https://t.me/buidlermason">내 자리 확보하기</CTAButton>
+        <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
       </section>
     </main>
   )

@@ -130,7 +130,7 @@ export default function ProcessPage() {
       <section className="py-16 px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 노드가 깨어납니다.</h2>
         <p className="text-gray-400 mb-6">선착순 5대 한정.</p>
-        <CTAButton href="https://t.me/buidlermason">지금 예약하기</CTAButton>
+        <CTAButton href="/reserve">지금 예약하기</CTAButton>
       </section>
     </main>
   )
