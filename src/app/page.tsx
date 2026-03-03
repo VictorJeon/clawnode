@@ -6,7 +6,6 @@ export default function HomePage() {
     <main>
       {/* Hero */}
       <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden">
-        {/* Background Image */}
         <div className="absolute inset-0 z-0 opacity-30">
           <Image src="/images/hero-bg.png" alt="" fill className="object-cover" priority />
         </div>
@@ -15,25 +14,27 @@ export default function HomePage() {
           {/* Fire Ant Badge */}
           <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-medium mb-8 backdrop-blur-sm">
             <Image src="/images/fire-ant-logo.jpg" alt="Fire Ant Crypto" width={28} height={28} className="rounded-full" />
-            <span className="text-gray-300">Trusted by <span className="text-white font-bold">Fire Ant Crypto</span> (40K+)</span>
+            <span className="text-gray-300"><span className="text-white font-bold">불개미</span> 4만 커뮤니티 추천</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
-            잠자는 동안에도 시장을 감시하는
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight">
+            새벽 3시 펌핑,
             <br />
             <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-              내 책상 위의 AI 노드.
+              또 놓치실 건가요?
             </span>
           </h1>
 
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            월 구독료 0원. 클라우드 의존 0%. 데이터 유출 0건.
+          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            텔레그램 알파 채널 100개를 눈으로 다 볼 수 없습니다.
             <br />
-            애플 M4 실리콘의 강력한 보안으로 당신만의 금융 인텔리전스를 구축하세요.
+            당신 책상 위의 Mac Mini가 대신 감시하고, 대신 알려줍니다.
+            <br />
+            <span className="text-gray-500">월 구독료 없음 · 클라우드 없음 · API 키 유출 0건</span>
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <CTAButton href="https://t.me/buidlermason">지금 예약하기 (300만원) →</CTAButton>
+            <CTAButton href="https://t.me/buidlermason">선착순 5대 — 내 자리 확보하기</CTAButton>
             <a href="/security" className="px-8 py-3 rounded-md border border-white/10 hover:bg-white/5 text-white font-medium transition-all">
               왜 로컬인가?
             </a>
@@ -47,8 +48,8 @@ export default function HomePage() {
           {[
             { value: '5대', label: '선착순 한정' },
             { value: 'M4', label: 'Apple Silicon' },
-            { value: '2시간', label: '설치 완료' },
-            { value: '30일', label: '기술 지원' },
+            { value: '2시간', label: '현장 설치' },
+            { value: '30일', label: '1:1 기술지원' },
           ].map(s => (
             <div key={s.label}>
               <div className="text-3xl font-bold text-[#FF6B00]">{s.value}</div>
@@ -58,8 +59,38 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Mac Mini Product Shot */}
+      {/* Pain Point → Solution */}
       <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">The Problem</p>
+            <h2 className="text-3xl md:text-4xl font-bold">이거 다 해본 적 있죠?</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+            {[
+              { emoji: '😴', pain: '새벽 3시에 고래가 움직였는데, 아침에 일어나서 알았다' },
+              { emoji: '📱', pain: '텔레그램 알파 채널 100개를 구독했는데, 하루에 읽는 건 3개' },
+              { emoji: '📊', pain: '포트폴리오를 구글 시트로 관리하다가 3번째 포기했다' },
+              { emoji: '🔐', pain: 'API 키를 클라우드 봇에 넣었는데, 진짜 안전한 건지 모르겠다' },
+            ].map(item => (
+              <div key={item.pain} className="flex items-start gap-4 p-5 bg-white/[0.03] border border-white/5 rounded-xl">
+                <span className="text-2xl shrink-0">{item.emoji}</span>
+                <p className="text-gray-300 leading-relaxed">{item.pain}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <p className="text-gray-500 mb-4">↓</p>
+            <h3 className="text-2xl font-bold mb-2">그래서 만들었습니다.</h3>
+            <p className="text-gray-400">당신 옆에서 24시간 일하는, <span className="text-[#FF6B00] font-bold">진짜 내 것인</span> AI.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Mac Mini Product Shot */}
+      <section className="py-24 px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
             <Image src="/images/mac-mini-hero.png" alt="Mac Mini M4" fill className="object-cover" />
@@ -71,80 +102,193 @@ export default function HomePage() {
               <span className="text-[#FF6B00]">개인 AI 서버.</span>
             </h2>
             <p className="text-gray-400 leading-relaxed mb-6">
-              Apple Mac Mini M4는 세계에서 가장 조용하고, 가장 효율적인 AI 연산 장치입니다. 
-              전기세는 전구 하나 수준이면서, 24시간 내내 당신만의 AI 에이전트를 돌릴 수 있습니다.
+              Apple Mac Mini M4. 팬 없이 무소음. 전기세 전구 하나 수준.
+              그런데 24시간 내내 AI 에이전트 3개를 동시에 돌립니다.
             </p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <div className="text-[#FF6B00] font-bold text-xl">10코어</div>
-                <div className="text-xs text-gray-500">CPU + Neural Engine</div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <div className="text-[#FF6B00] font-bold text-xl">16GB</div>
-                <div className="text-xs text-gray-500">Unified Memory</div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <div className="text-[#FF6B00] font-bold text-xl">~7W</div>
-                <div className="text-xs text-gray-500">유휴 시 소비전력</div>
-              </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <div className="text-[#FF6B00] font-bold text-xl">0dB</div>
-                <div className="text-xs text-gray-500">팬리스 무소음</div>
-              </div>
+              {[
+                { val: '10코어', sub: 'CPU + Neural Engine' },
+                { val: '16GB', sub: 'Unified Memory' },
+                { val: '~7W', sub: '유휴 시 소비전력' },
+                { val: '0dB', sub: '팬리스 무소음' },
+              ].map(s => (
+                <div key={s.val} className="bg-white/5 p-4 rounded-xl border border-white/10">
+                  <div className="text-[#FF6B00] font-bold text-xl">{s.val}</div>
+                  <div className="text-xs text-gray-500">{s.sub}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Agents Preview */}
-      <section className="py-24 px-6 bg-white/[0.02]">
-        <div className="max-w-6xl mx-auto text-center mb-16">
-          <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">Pre-installed Agents</p>
-          <h2 className="text-3xl md:text-4xl font-bold">전원을 켜면, 3명의 직원이 일을 시작합니다.</h2>
-        </div>
+      {/* Agents — Telegram Chat UI Style */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">3 AI Agents, Pre-installed</p>
+            <h2 className="text-3xl md:text-4xl font-bold">전원 켜면 바로 일합니다.</h2>
+            <p className="text-gray-400 mt-3">텔레그램으로 이런 알림이 옵니다.</p>
+          </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              img: '/images/agent-alpha-final.png',
-              name: 'Alpha Watcher',
-              role: '온체인 감시관',
-              desc: '특정 지갑의 움직임을 24시간 감시하고, 이상 거래 발생 시 텔레그램으로 즉시 알림을 보냅니다.',
-            },
-            {
-              img: '/images/agent-news-final.png',
-              name: 'News Breaker',
-              role: '24시간 뉴스룸',
-              desc: '수백 개의 크립토 트위터, 뉴스, 디스코드를 모니터링하고 매일 아침/저녁 핵심 요약을 보내드립니다.',
-            },
-            {
-              img: '/images/agent-portfolio-final.png',
-              name: 'Portfolio Tracker',
-              role: '개인 자산 관리자',
-              desc: '거래소와 지갑을 통합 연결하여 실시간 P&L을 계산하고 리밸런싱 시점을 알려드립니다.',
-            },
-          ].map(agent => (
-            <div key={agent.name} className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 hover:border-[#FF6B00]/50 transition-colors group">
-              <div className="relative w-full aspect-[16/9] mb-4 rounded-xl overflow-hidden bg-black">
-                <Image src={agent.img} alt={agent.name} fill className="object-contain group-hover:scale-105 transition-transform" />
+          {/* Agent 1: Alpha Watcher */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-lg">🕵️</div>
+              <div>
+                <h3 className="font-bold">Alpha Watcher</h3>
+                <p className="text-xs text-gray-500">온체인 감시관 · 24시간 고래 추적</p>
               </div>
-              <h3 className="text-xl font-bold">{agent.name}</h3>
-              <p className="text-sm text-[#FF6B00] mb-3">{agent.role}</p>
-              <p className="text-sm text-gray-400 leading-relaxed">{agent.desc}</p>
             </div>
-          ))}
-        </div>
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+              <p className="text-sm text-gray-300 leading-relaxed">
+                <span className="text-[#FF6B00] font-bold">⚠️ 고래 이동 감지</span>
+                <br /><br />
+                지갑 <span className="font-mono text-xs text-gray-400">0x7a3b...f2e1</span>에서
+                <br />
+                <span className="text-white font-bold">1,200 ETH</span> → Binance Hot Wallet 이체
+                <br /><br />
+                <span className="text-yellow-400">최근 72시간 내 해당 지갑의 3번째 대량 이체입니다.</span>
+                <br />
+                <span className="text-gray-500 text-xs">2026.03.04 03:42 KST</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 mt-3 ml-13">고래 지갑, DEX 유동성, 비정상 거래 패턴을 실시간으로 감시합니다.</p>
+          </div>
 
-        <div className="text-center mt-12">
-          <a href="/product" className="text-[#FF6B00] font-medium hover:underline">에이전트 상세 보기 →</a>
+          {/* Agent 2: News Breaker */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-lg">📰</div>
+              <div>
+                <h3 className="font-bold">News Breaker</h3>
+                <p className="text-xs text-gray-500">24시간 뉴스룸 · CT/디스코드/뉴스 모니터링</p>
+              </div>
+            </div>
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+              <p className="text-sm text-gray-300 leading-relaxed">
+                <span className="text-blue-400 font-bold">📋 오늘의 브리핑 (08:00)</span>
+                <br /><br />
+                1. SEC, 이더리움 현물 ETF 옵션 거래 최종 승인
+                <br />
+                2. Solana TVL $15B 돌파 — 사상 최고치 경신
+                <br />
+                3. 업비트, 신규 상장 후보 3종 공시
+                <br /><br />
+                <span className="text-gray-500">→ 상세 분석이 필요하면 말씀해 주세요.</span>
+                <br />
+                <span className="text-gray-500 text-xs">소스: CoinDesk, The Block, CT 주요 계정 42개</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 mt-3 ml-13">수백 개 소스를 모니터링하고, 노이즈를 제거한 핵심만 매일 2회 브리핑합니다.</p>
+          </div>
+
+          {/* Agent 3: Portfolio Tracker */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-lg">📊</div>
+              <div>
+                <h3 className="font-bold">Portfolio Tracker</h3>
+                <p className="text-xs text-gray-500">개인 자산 관리자 · 거래소+지갑 통합</p>
+              </div>
+            </div>
+            <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 max-w-lg border border-white/5">
+              <p className="text-sm text-gray-300 leading-relaxed">
+                <span className="text-green-400 font-bold">📈 일일 포트폴리오 리포트</span>
+                <br /><br />
+                총 자산: <span className="text-white font-bold">₩142,350,000</span> <span className="text-green-400">(+2.3%)</span>
+                <br /><br />
+                <span className="text-green-400">▲ BTC +4.1%</span> · <span className="text-green-400">▲ ETH +1.8%</span> · <span className="text-red-400">▼ SOL -2.5%</span>
+                <br /><br />
+                <span className="text-yellow-400">⚡ SOL 비중이 목표(15%) 대비 22%입니다. 리밸런싱을 검토해 보세요.</span>
+                <br />
+                <span className="text-gray-500 text-xs">업비트 + 메타마스크 + Phantom 통합</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 mt-3 ml-13">거래소와 지갑을 연결하면 실시간 P&L, 비중 분석, 리밸런싱 알림까지.</p>
+          </div>
+
+          <div className="text-center mt-12">
+            <a href="/product" className="text-[#FF6B00] font-medium hover:underline">에이전트 상세 보기 →</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-24 px-6 bg-white/[0.02]">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">먼저 써본 사람들</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: '떡상기원',
+                type: '데이 트레이더',
+                quote: '새벽에 고래 알림 와서 숏 잡았는데, 아침에 일어나니까 15% 수익이 찍혀 있었어요. 이전 같았으면 그냥 자고 있었겠죠.',
+              },
+              {
+                name: '조용한홀더',
+                type: '장기 홀더',
+                quote: '매일 아침 브리핑 하나만 읽으면 돼요. 텔레그램 채널 100개 들어가 있었는데 이제 뉴스 스트레스가 없습니다.',
+              },
+              {
+                name: '알파독',
+                type: '알파 헌터',
+                quote: '남들이 CT에서 소문 볼 때 이미 온체인에서 확인한 상태. 정보 격차가 확실히 생겼어요.',
+              },
+            ].map(p => (
+              <div key={p.name} className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
+                <p className="text-gray-300 text-sm leading-relaxed mb-6">&ldquo;{p.quote}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-xs font-bold text-[#FF6B00]">
+                    {p.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{p.name}</p>
+                    <p className="text-xs text-gray-500">{p.type}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Local — Quick Version */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-12">
+            API 키를 <span className="text-red-500">남의 서버</span>에 맡기고 계시나요?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            <div className="p-6 border border-white/10 rounded-xl">
+              <p className="text-[#FF6B00] text-3xl mb-4">01</p>
+              <h4 className="font-bold mb-2">클라우드 봇은 공용 서버</h4>
+              <p className="text-sm text-gray-400">당신의 API 키가 수천 명의 키와 같은 DB에 저장됩니다. 한 명이 뚫리면 전체가 뚫립니다.</p>
+            </div>
+            <div className="p-6 border border-white/10 rounded-xl">
+              <p className="text-[#FF6B00] text-3xl mb-4">02</p>
+              <h4 className="font-bold mb-2">서비스가 죽으면 끝</h4>
+              <p className="text-sm text-gray-400">클라우드 서비스가 종료하면 설정, 데이터, 전략 전부 사라집니다. 내 것이 아닌 건 내 것이 아닙니다.</p>
+            </div>
+            <div className="p-6 border border-white/10 rounded-xl">
+              <p className="text-[#FF6B00] text-3xl mb-4">03</p>
+              <h4 className="font-bold mb-2">ClawNode는 내 책상 위</h4>
+              <p className="text-sm text-gray-400">API 키는 Apple Keychain에 암호화 저장. 데이터는 맥미니 안에서만. 외부 통신은 Tailscale 암호화 터널만.</p>
+            </div>
+          </div>
+          <div className="mt-10">
+            <a href="/security" className="text-[#FF6B00] font-medium hover:underline">보안 아키텍처 상세 보기 →</a>
+          </div>
         </div>
       </section>
 
       {/* Mid CTA */}
       <section className="py-16 px-6 text-center border-y border-white/5">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">준비되셨나요?</h2>
-        <p className="text-gray-400 mb-6">선착순 5대 한정. 지금 예약하세요.</p>
-        <CTAButton href="https://t.me/buidlermason">텔레그램으로 예약하기</CTAButton>
+        <h2 className="text-2xl md:text-3xl font-bold mb-4">선착순 5대. 고민하면 없어집니다.</h2>
+        <p className="text-gray-400 mb-6">텔레그램에서 바로 예약 가능합니다.</p>
+        <CTAButton href="https://t.me/buidlermason">내 자리 확보하기</CTAButton>
       </section>
 
       {/* Final CTA */}
@@ -155,15 +299,15 @@ export default function HomePage() {
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 mb-6">
             <Image src="/images/fire-ant-logo.jpg" alt="Fire Ant" width={24} height={24} className="rounded-full" />
-            <span className="text-sm text-gray-400">Fire Ant Crypto 추천</span>
+            <span className="text-sm text-gray-400">불개미 커뮤니티 추천</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            당신의 노드를
+            다음 펌핑은
             <br />
-            <span className="text-[#FF6B00]">시작하세요.</span>
+            <span className="text-[#FF6B00]">놓치지 마세요.</span>
           </h2>
-          <p className="text-gray-400 mb-8">하루 2,740원. 커피 한 잔 값으로 평생 일하는 AI 직원.</p>
-          <CTAButton href="https://t.me/buidlermason">지금 예약하기 (300만원) →</CTAButton>
+          <p className="text-gray-400 mb-8">하루 2,740원. 3년 쓰면 커피값. 그런데 평생 씁니다.</p>
+          <CTAButton href="https://t.me/buidlermason">선착순 5대 — 내 자리 확보하기</CTAButton>
         </div>
       </section>
     </main>
