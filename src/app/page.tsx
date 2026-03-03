@@ -76,10 +76,10 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
             {[
-              { emoji: '😴', pain: '새벽 3시에 고래가 움직였는데, 아침에 일어나서 알았다' },
-              { emoji: '📱', pain: '텔레그램 알파 채널 100개를 구독했는데, 하루에 읽는 건 3개' },
-              { emoji: '📊', pain: '포트폴리오를 구글 시트로 관리하다가 3번째 포기했다' },
-              { emoji: '🔐', pain: 'API 키를 클라우드 봇에 넣었는데, 진짜 안전한 건지 모르겠다' },
+              { emoji: '😴', pain: '새벽 3시 27분, 고래가 ETH 2,400개를 바이낸스로 옮겼어요. 당신은 7시에 일어나서 -8% 차트를 봤고요.' },
+              { emoji: '📱', pain: '텔레그램 알파 채널 127개 구독 중. 오늘 실제로 읽은 건 3개. 그 사이에 묻힌 알파가 몇 개일까요.' },
+              { emoji: '📊', pain: '업비트, 바이낸스, 메타마스크, 팬텀 — 4개 앱 돌려가며 총 자산 계산하다가 세 번째 구글 시트도 포기했어요.' },
+              { emoji: '🔐', pain: '클라우드 봇에 거래소 API 키를 넣었는데, 그 서버를 누가 관리하는지 물어본 적 있나요?' },
             ].map((item, i) => (
               <FadeIn key={item.pain} delay={i * 0.1}>
                 <GlowCard>
@@ -167,13 +167,14 @@ export default function HomePage() {
                   <span className="text-xs text-gray-600">03:42</span>
                 </div>
                 <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="font-bold text-yellow-400">⚠️ 고래 이동 감지</span>
+                  <span className="font-bold text-yellow-400">🚨 고래 긴급</span>
                   <br />
                   <span className="font-mono text-xs text-gray-500">0x7a3b...f2e1</span> → Binance
                   <br />
-                  <span className="text-white font-bold">1,200 ETH ($4.2M)</span>
+                  <span className="text-white font-bold">2,400 ETH ($8.2M)</span> 이체
                   <br />
-                  <span className="text-gray-500 text-xs mt-2 block">72시간 내 3번째 대량 이체 · 매도 압력 주의</span>
+                  <span className="text-gray-500 text-xs block">72시간 내 3회째 · 누적 매도 $8.2M</span>
+                  <span className="text-yellow-400 text-xs block">지난번 이 패턴 후 ETH 12% 하락했어요</span>
                 </p>
               </div>
               <p className="text-sm text-gray-500 mt-3">고래 지갑, DEX 유동성, 비정상 거래 패턴을 실시간으로 감시합니다.</p>
@@ -199,13 +200,13 @@ export default function HomePage() {
                 <p className="text-sm text-gray-300 leading-relaxed">
                   <span className="font-bold text-blue-400">📋 모닝 브리핑</span>
                   <br /><br />
-                  1. SEC, 이더리움 현물 ETF 옵션 거래 승인
+                  1. SEC, 이더리움 현물 ETF 옵션 거래 최종 승인 → ETH +6.2%
                   <br />
-                  2. Solana TVL $15B — 사상 최고치
+                  2. 바이낸스 신규 상장 KMNO 공지 → 업비트 상장 가능성
                   <br />
-                  3. 업비트 신규 상장 후보 3종 공시
+                  3. Solana TVL $15B 돌파 — DEX 거래량 이더 추월
                   <br />
-                  <span className="text-gray-500 text-xs mt-2 block">42개 소스 분석 · 상세 분석 필요하면 질문하세요</span>
+                  <span className="text-gray-500 text-xs mt-2 block">42개 소스 종합 · 상세 분석 필요하면 물어보세요</span>
                 </p>
               </div>
               <p className="text-sm text-gray-500 mt-3">수백 개 소스를 모니터링하고, 노이즈를 제거한 핵심만 매일 2회 브리핑합니다.</p>
@@ -235,7 +236,8 @@ export default function HomePage() {
                   <br />
                   <span className="text-green-400">▲ BTC +4.1%</span> · <span className="text-green-400">▲ ETH +1.8%</span> · <span className="text-red-400">▼ SOL -2.5%</span>
                   <br />
-                  <span className="text-yellow-400 text-xs mt-2 block">⚡ SOL 비중 22% (목표 15%) — 리밸런싱 검토</span>
+                  <span className="text-yellow-400 text-xs block">⚠️ SOL 비중 22% → 목표 15% 초과</span>
+                  <span className="text-gray-500 text-xs block">7% 정리 시 약 ₩980만원 리밸런싱 가능</span>
                 </p>
               </div>
               <p className="text-sm text-gray-500 mt-3">거래소와 지갑을 연결하면 실시간 P&L, 비중 분석, 리밸런싱 알림까지.</p>
@@ -261,19 +263,19 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: '떡상기원',
+                name: '새벽손절러',
                 type: '데이 트레이더',
-                quote: '새벽에 고래 알림 와서 숏 잡았는데, 아침에 일어나니까 15% 수익이 찍혀 있었어요. 이전 같았으면 그냥 자고 있었겠죠.',
+                quote: '고래 알림 보고 새벽에 숏 잡았는데 아침에 +18%. 예전 같으면 손절 타이밍도 못 잡고 물렸을 거예요.',
               },
               {
-                name: '조용한홀더',
+                name: '비트묻어둔남자',
                 type: '장기 홀더',
-                quote: '매일 아침 브리핑 하나만 읽으면 돼요. 텔레그램 채널 100개 들어가 있었는데 이제 뉴스 스트레스가 없습니다.',
+                quote: '텔레그램 채널 정리 다 했어요. 아침 브리핑 하나면 충분. 정보 스트레스에서 해방됐어요 진짜로.',
               },
               {
                 name: '알파독',
                 type: '알파 헌터',
-                quote: '남들이 CT에서 소문 볼 때 이미 온체인에서 확인한 상태. 정보 격차가 확실히 생겼어요.',
+                quote: 'CT에서 소문 돌기 6시간 전에 온체인에서 잡아요. 정보 먹이사슬이 확실히 달라졌어요.',
               },
             ].map((p, i) => (
               <FadeIn key={p.name} delay={i * 0.15}>
