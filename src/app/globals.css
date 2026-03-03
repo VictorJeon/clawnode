@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  /* Design tokens */
+  --color-bg: #050505;
+  --color-accent: #FF6B00;
+  --color-foreground: #ffffff;
+
+  /* Font stack */
+  --font-sans: 'Pretendard', var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Pretendard', var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  background-color: #050505;
+  color: #ffffff;
+}
