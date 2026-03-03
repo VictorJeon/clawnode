@@ -1,6 +1,21 @@
+'use client'
+
 import Image from 'next/image'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
+import FadeIn from '@/components/FadeIn'
+import Accordion from '@/components/Accordion'
+
+const FAQ_ITEMS = [
+  { q: '해킹당하면 책임지나요?', a: '하드웨어와 소프트웨어 세팅을 제공하는 서비스입니다. 기기는 100% 고객님 소유이며, 보안 관리 책임도 고객님께 있습니다. 다만 업계 표준 보안(Tailscale, Docker 격리, 포트 폐쇄)을 적용하여 위험을 최소화합니다.' },
+  { q: '지방도 설치 가능한가요?', a: '현재 서울/경기권만 직접 방문 설치가 가능합니다. 그 외 지역은 출장비 별도 청구 또는 화상(Zoom) 원격 설치 가이드로 진행할 수 있습니다.' },
+  { q: '코인 지갑(Private Key) 연결해도 되나요?', a: '"읽기 전용(View-Only)" 권한만 연결하는 것을 강력히 권장합니다. Private Key나 출금 권한이 있는 API Key는 절대 입력하지 마세요.' },
+  { q: 'M4 Pro로 업그레이드 가능한가요?', a: '가능합니다. 주문 시 미리 말씀해 주시면 하드웨어 차액만큼 추가 결제 후 M4 Pro 모델로 준비해 드립니다.' },
+  { q: 'A/S는 어떻게 되나요?', a: '하드웨어 → 애플 공식 서비스센터. 소프트웨어 → 30일 전용 채널 무상 지원. 이후 유료 유지보수 플랜 선택 가능.' },
+  { q: '사용하다가 중고로 팔아도 되나요?', a: '네, 하드웨어 소유권 100% 고객님께 있으므로 자유 처분 가능합니다. 판매 전 기기 초기화를 권장하며, 기술 지원은 최초 구매자에게만 제공됩니다.' },
+  { q: 'API 비용은 별도인가요?', a: '네, LLM API(Claude, GPT 등) 사용료는 고객님이 직접 부담합니다. 다만 온보딩 시 spending limit 설정을 도와드려서 예상치 못한 과금을 방지합니다.' },
+  { q: '모니터/키보드 없이 쓸 수 있나요?', a: '네, 설치 완료 후에는 텔레그램으로만 대화하면 됩니다. 맥미니에 모니터 연결할 필요 없이 전원만 꽂아두시면 됩니다.' },
+]
 
 export default function PricingPage() {
   return (
@@ -154,24 +169,12 @@ export default function PricingPage() {
       {/* FAQ */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto">
-          <SectionHeading>자주 묻는 질문</SectionHeading>
-          <div className="space-y-6">
-            {[
-              { q: '해킹당하면 책임지나요?', a: '하드웨어와 소프트웨어 세팅을 제공하는 서비스입니다. 기기는 100% 고객님 소유이며, 보안 관리 책임도 고객님께 있습니다. 다만 업계 표준 보안(Tailscale, Docker 격리, 포트 폐쇄)을 적용하여 위험을 최소화합니다.' },
-              { q: '지방도 설치 가능한가요?', a: '현재 서울/경기권만 직접 방문 설치가 가능합니다. 그 외 지역은 출장비 별도 청구 또는 화상(Zoom) 원격 설치 가이드로 진행할 수 있습니다.' },
-              { q: '코인 지갑(Private Key) 연결해도 되나요?', a: '"읽기 전용(View-Only)" 권한만 연결하는 것을 강력히 권장합니다. Private Key나 출금 권한이 있는 API Key는 절대 입력하지 마세요.' },
-              { q: 'M4 Pro로 업그레이드 가능한가요?', a: '가능합니다. 주문 시 미리 말씀해 주시면 하드웨어 차액만큼 추가 결제 후 M4 Pro 모델로 준비해 드립니다.' },
-              { q: 'A/S는 어떻게 되나요?', a: '하드웨어 → 애플 공식 서비스센터. 소프트웨어 → 30일 전용 채널 무상 지원. 이후 유료 유지보수 플랜 선택 가능.' },
-              { q: '사용하다가 중고로 팔아도 되나요?', a: '네, 하드웨어 소유권 100% 고객님께 있으므로 자유 처분 가능합니다. 판매 전 기기 초기화를 권장하며, 기술 지원은 최초 구매자에게만 제공됩니다.' },
-              { q: 'API 비용은 별도인가요?', a: '네, LLM API(Claude, GPT 등) 사용료는 고객님이 직접 부담하십니다. 다만 온보딩 시 spending limit 설정을 도와드려서 예상치 못한 과금을 방지합니다.' },
-              { q: '모니터/키보드 없이 쓸 수 있나요?', a: '네, 설치 완료 후에는 텔레그램으로만 대화하면 됩니다. 맥미니에 모니터 연결할 필요 없이 전원만 꽂아두시면 됩니다.' },
-            ].map(faq => (
-              <div key={faq.q} className="border border-white/10 rounded-xl p-6 hover:bg-white/5 transition-colors">
-                <h3 className="font-bold text-lg mb-2">Q. {faq.q}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{faq.a}</p>
-              </div>
-            ))}
-          </div>
+          <FadeIn>
+            <SectionHeading>자주 묻는 질문</SectionHeading>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <Accordion items={FAQ_ITEMS} />
+          </FadeIn>
         </div>
       </section>
 
