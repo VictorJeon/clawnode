@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
 
@@ -92,8 +91,29 @@ export default function SecurityPage() {
               ))}
             </div>
           </div>
-          <div className="relative aspect-square">
-            <Image src="/images/security-shield-final.png" alt="Security Shield" fill className="object-contain" />
+          {/* Security Layers Diagram */}
+          <div className="flex items-center justify-center">
+            <div className="relative w-80 h-80">
+              {/* Outer ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-[#FF6B00]/20 flex items-center justify-center">
+                <span className="absolute top-2 text-xs text-[#FF6B00]/50 font-mono">TAILSCALE MESH</span>
+              </div>
+              {/* Middle ring */}
+              <div className="absolute inset-8 rounded-full border-2 border-[#FF6B00]/30 flex items-center justify-center">
+                <span className="absolute top-2 text-xs text-[#FF6B00]/60 font-mono">FIREWALL</span>
+              </div>
+              {/* Inner ring */}
+              <div className="absolute inset-16 rounded-full border-2 border-[#FF6B00]/40 flex items-center justify-center">
+                <span className="absolute top-2 text-xs text-[#FF6B00]/70 font-mono">DOCKER</span>
+              </div>
+              {/* Core */}
+              <div className="absolute inset-24 rounded-full bg-[#FF6B00]/10 border-2 border-[#FF6B00] flex items-center justify-center">
+                <div className="text-center">
+                  <span className="text-3xl">🔐</span>
+                  <p className="text-xs text-[#FF6B00] font-bold mt-1">KEYCHAIN</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
