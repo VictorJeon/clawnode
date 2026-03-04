@@ -183,15 +183,15 @@ export default function HomePage() {
 
           {/* Agent 2: News Breaker */}
           <FadeIn delay={0.1}>
-            <div className="mb-12 md:flex md:flex-col md:items-end">
-              <div className="flex items-center gap-3 mb-4 md:w-full md:max-w-lg md:flex-row-reverse md:text-right">
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-lg">📰</div>
                 <div>
                   <h3 className="font-bold">News Breaker</h3>
                   <p className="text-xs text-gray-500">24시간 뉴스룸 · CT/디스코드/뉴스 모니터링</p>
                 </div>
               </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tr-md p-5 w-full md:max-w-lg border border-white/5 hover:border-blue-500/20 transition-colors">
+              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-blue-500/20 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">📰</div>
                   <span className="text-xs font-bold text-blue-400">News Breaker</span>
@@ -209,7 +209,7 @@ export default function HomePage() {
                   <span className="text-gray-500 text-xs mt-2 block">42개 소스 종합 · 상세 분석 필요하면 물어보세요</span>
                 </p>
               </div>
-              <p className="text-sm text-gray-500 mt-3 md:max-w-lg md:text-right">수백 개 소스를 모니터링하고, 노이즈를 제거한 핵심만 매일 2회 브리핑합니다.</p>
+              <p className="text-sm text-gray-500 mt-3">수백 개 소스를 모니터링하고, 노이즈를 제거한 핵심만 매일 2회 브리핑합니다.</p>
             </div>
           </FadeIn>
 
@@ -326,6 +326,15 @@ export default function HomePage() {
             </div>
           </FadeIn>
         </div>
+      </section>
+
+      {/* Mid CTA */}
+      <section className="py-16 px-4 md:px-6 text-center border-y border-white/5">
+        <FadeIn>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">선착순 5대. 고민하면 없어집니다.</h2>
+          <p className="text-gray-400 mb-6">텔레그램에서 바로 예약 가능합니다.</p>
+          <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
+        </FadeIn>
       </section>
 
       {/* Final CTA */}
