@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClawNode 설치 — 예약부터 가동까지 2시간',
     description: '고객님 눈앞에서 미개봉 씰을 뜯고, 2시간 만에 AI 노드를 완성합니다.',
-    images: [{ url: '/images/og-image.png' }],
+    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
   },
 }
 

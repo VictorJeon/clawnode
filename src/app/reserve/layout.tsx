@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClawNode 예약 — 선착순 5대 한정',
     description: '지금 예약하고 당신만의 크립토 AI 노드를 시작하세요.',
-    images: [{ url: '/images/og-image.png' }],
+    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
   },
 }
 

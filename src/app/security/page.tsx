@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClawNode 보안 — Zero Trust Architecture',
     description: '100% 로컬 실행. Tailscale + Docker + Keychain 다층 방어. API 키가 절대 외부로 나가지 않습니다.',
-    images: [{ url: '/images/og-image.png' }],
+    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
   },
 }
 

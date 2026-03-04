@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClawNode 가격 — 300만원 올인원 턴키',
     description: '하루 2,740원. Mac Mini M4 포함. 월 구독료 없음. 평생 소유.',
-    images: [{ url: '/images/og-image.png' }],
+    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
   },
 }
 

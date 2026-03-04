@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClawNode 제품 소개 — 하드웨어 + AI + 교육 올인원',
     description: 'Mac Mini M4에 사전 설치된 크립토 AI 에이전트 3종. 전원 켜면 바로 작동합니다.',
-    images: [{ url: '/images/og-image.png' }],
+    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
   },
 }
 
