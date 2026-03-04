@@ -17,11 +17,16 @@ export default function Counter({ value, label }: CounterProps) {
     if (!isInView) return
 
     // Extract number from value (e.g., "5대" → 5, "30일" → 30)
-    const match = value.match(/(\d+)/)
-    if (!match) return
+    // Only animate if value starts with a number (e.g., "5대", "30일", "2시간")
+    const match = value.match(/^(\d+)(.*)$/)
+    if (!match) {
+      // Non-numeric prefix like "M4" — just show as-is
+      setDisplay(value)
+      return
+    }
 
     const target = parseInt(match[1])
-    const suffix = value.replace(match[1], '')
+    const suffix = match[2]
     const duration = 1500
     const steps = 30
     const stepTime = duration / steps
