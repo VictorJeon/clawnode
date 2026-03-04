@@ -1,5 +1,16 @@
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: '보안 아키텍처',
+  description: 'API 키를 남의 서버에 맡기고 계시나요? ClawNode는 100% 로컬. Tailscale 암호화 터널 + Docker 격리 + macOS Keychain.',
+  openGraph: {
+    title: 'ClawNode 보안 — Zero Trust Architecture',
+    description: '100% 로컬 실행. Tailscale + Docker + Keychain 다층 방어. API 키가 절대 외부로 나가지 않습니다.',
+    images: [{ url: '/images/og-image.png' }],
+  },
+}
 
 export default function SecurityPage() {
   return (

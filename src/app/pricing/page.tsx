@@ -6,6 +6,9 @@ import CTAButton from '@/components/CTAButton'
 import FadeIn from '@/components/FadeIn'
 import Accordion from '@/components/Accordion'
 
+// Note: metadata export is in a separate file below (pricing/layout.tsx)
+// because this page uses 'use client'
+
 const FAQ_ITEMS = [
   { q: '해킹당하면 책임지나요?', a: '하드웨어와 소프트웨어 세팅을 제공하는 서비스입니다. 기기는 100% 고객님 소유이며, 보안 관리 책임도 고객님께 있습니다. 다만 업계 표준 보안(Tailscale, Docker 격리, 포트 폐쇄)을 적용하여 위험을 최소화합니다.' },
   { q: '지방도 설치 가능한가요?', a: '현재 서울/경기권만 직접 방문 설치가 가능합니다. 그 외 지역은 출장비 별도 청구 또는 화상(Zoom) 원격 설치 가이드로 진행할 수 있습니다.' },

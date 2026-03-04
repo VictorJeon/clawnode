@@ -1,6 +1,17 @@
 import Image from 'next/image'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: '설치 과정',
+  description: '예약부터 가동까지 단 2시간. 미개봉 언박싱 → 원클릭 설치 → 현장 교육 → 핸드오버. 복잡한 건 저희가 다 합니다.',
+  openGraph: {
+    title: 'ClawNode 설치 — 예약부터 가동까지 2시간',
+    description: '고객님 눈앞에서 미개봉 씰을 뜯고, 2시간 만에 AI 노드를 완성합니다.',
+    images: [{ url: '/images/og-image.png' }],
+  },
+}
 
 export default function ProcessPage() {
   return (
