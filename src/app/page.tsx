@@ -5,336 +5,268 @@ import CTAButton from '@/components/CTAButton'
 import FadeIn from '@/components/FadeIn'
 import Counter from '@/components/Counter'
 import GlowCard from '@/components/GlowCard'
+import SectionHeading from '@/components/SectionHeading'
+import ChatBot from '@/components/ChatBot'
 
 export default function HomePage() {
   return (
     <main>
       {/* Hero */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden">
+      <section className="relative min-h-screen flex flex-col justify-center px-6 py-24 overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-30">
           <Image src="/images/hero-bg.png" alt="" fill className="object-cover" priority />
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <FadeIn delay={0.1}>
-            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-medium mb-8 backdrop-blur-sm">
-              <Image src="/images/fire-ant-logo.jpg" alt="Fire Ant Crypto" width={28} height={28} className="rounded-full" />
-              <span className="text-gray-300"><span className="text-white font-bold">불개미</span> 4만 커뮤니티 추천</span>
-            </div>
-          </FadeIn>
+        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Copy */}
+          <div className="text-center lg:text-left">
+            <FadeIn delay={0.2}>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
+                당신을 위한 24시간
+                <br />
+                <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+                  무급 직원을 고용하세요.
+                </span>
+              </h1>
+            </FadeIn>
 
-          <FadeIn delay={0.2}>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight">
-              새벽 3시 펌핑,
-              <br />
-              <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                또 놓치실 건가요?
-              </span>
-            </h1>
-          </FadeIn>
+            <FadeIn delay={0.4}>
+              <p className="text-lg text-gray-400 mb-4 leading-relaxed">
+                나만의 전용 AI 서버, <span className="text-white font-bold">ClawNode</span>.
+              </p>
+              <p className="text-base text-gray-500 mb-10 leading-relaxed">
+                코딩을 아무것도 몰라도 괜찮습니다. 다 셋팅해 드립니다.<br />
+                AI가 경리, 리서치, 데이터 수집을 대신합니다.
+              </p>
+            </FadeIn>
 
-          <FadeIn delay={0.4}>
-            <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              텔레그램 알파 채널 100개를 눈으로 다 볼 수 없습니다.
-              <br />
-              당신 책상 위의 Mac Mini가 대신 감시하고, 대신 알려줍니다.
-              <br />
-              <span className="text-gray-500">월 구독료 없음 · 클라우드 없음 · API 키 유출 0건</span>
-            </p>
-          </FadeIn>
+            <FadeIn delay={0.6}>
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4">
+                <CTAButton href="/reserve">선착순 5대 — 내 자리 확보하기</CTAButton>
+                <a href="/product" className="px-8 py-3 rounded-md border border-white/10 hover:bg-white/5 text-white font-medium transition-all">
+                  제품 상세 보기
+                </a>
+              </div>
+            </FadeIn>
+          </div>
 
-          <FadeIn delay={0.6}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <CTAButton href="/reserve">선착순 5대 — 내 자리 확보하기</CTAButton>
-              <a href="/security" className="px-8 py-3 rounded-md border border-white/10 hover:bg-white/5 text-white font-medium transition-all">
-                왜 로컬인가?
-              </a>
+          {/* Right: Chatbot */}
+          <FadeIn delay={0.5}>
+            <div className="w-full">
+              <div className="text-center lg:text-left mb-4">
+                <p className="text-xs text-[#FF6B00] font-bold tracking-wider uppercase">Free AI Consulting</p>
+                <p className="text-sm text-gray-500 mt-1">어떤 업무를 자동화하고 싶으신지 알려주세요.</p>
+              </div>
+              <ChatBot />
             </div>
           </FadeIn>
         </div>
       </section>
 
       {/* Stats Counter */}
-      <section className="border-y border-white/5 py-12">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <Counter value="5대" label="선착순 한정" />
-          <Counter value="M4" label="Apple Silicon" />
-          <Counter value="2시간" label="현장 설치" />
-          <Counter value="30일" label="1:1 기술지원" />
+      <section className="border-y border-white/5 py-12 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <Counter value="220만" label="평생 고용 비용" />
+          <Counter value="0원" label="월 구독료" />
+          <Counter value="100%" label="데이터 소유권" />
+          <Counter value="2시간" label="설치부터 가동까지" />
         </div>
       </section>
 
-      {/* Pain Point → Solution */}
+      {/* Pain Point */}
       <section className="py-24 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
             <div className="text-center mb-16">
               <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">The Problem</p>
-              <h2 className="text-3xl md:text-4xl font-bold">이거 다 해본 적 있죠?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold">직원 한 명 뽑기, 너무 힘드시죠?</h2>
             </div>
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
             {[
-              { emoji: '😴', pain: '새벽 3시 27분, 고래가 ETH 2,400개를 바이낸스로 옮겼어요. 당신은 7시에 일어나서 -8% 차트를 봤고요.' },
-              { emoji: '📱', pain: '텔레그램 알파 채널 127개 구독 중. 오늘 실제로 읽은 건 3개. 그 사이에 묻힌 알파가 몇 개일까요.' },
-              { emoji: '📊', pain: '업비트, 바이낸스, 메타마스크, 팬텀 — 4개 앱 돌려가며 총 자산 계산하다가 세 번째 구글 시트도 포기했어요.' },
-              { emoji: '🔐', pain: '클라우드 봇에 거래소 API 키를 넣었는데, 그 서버를 누가 관리하는지 물어본 적 있나요?' },
+              '단순 반복 업무 시키려고 월 250만 원 주는 건 너무 아까워요.',
+              '회계 장부나 고객 DB를 챗GPT에 올리자니 정보 유출이 겁납니다.',
+              '외주 개발자에게 자동화 봇 하나 맡기면 500만 원 부르고 3주 걸려요.',
+              '좋다는 AI 툴은 많은데, 막상 내 업무에 적용하려면 너무 복잡해요.',
+            ].map((pain, i) => (
+              <FadeIn key={pain} delay={i * 0.1}>
+                <GlowCard>
+                  <p className="text-gray-300 leading-relaxed font-medium">{pain}</p>
+                </GlowCard>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases Grid */}
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto">
+          <FadeIn>
+            <SectionHeading subtitle="ClawNode 하나로 대체할 수 있는 직무들">당신의 AI 직원이 할 수 있는 일</SectionHeading>
+          </FadeIn>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            {[
+              { title: '회계/장부 자동화', desc: '은행/카드사 내역을 자동으로 긁어와 엑셀 장부를 정리합니다. 경리 직원의 4시간을 3초로 단축합니다.', tag: '경리 대체' },
+              { title: '쇼핑몰/웹사이트 운영', desc: '상품 등록, 상세페이지 초안 작성, CS 답변 초안 작성까지. 혼자서 쇼핑몰 3개를 운영할 수 있습니다.', tag: '운영팀 대체' },
+              { title: '뉴스/트렌드 리서치', desc: '매일 아침 업계 뉴스, 경쟁사 동향, 트위터 여론을 요약해서 텔레그램으로 보고합니다.', tag: '리서처 대체' },
+              { title: '크립토/주식 트레이딩', desc: '24시간 시세를 감시하고, 원하는 조건이 오면 즉시 알림을 보내거나 자동 매매합니다.', tag: '트레이더 대체' },
+              { title: '온체인 고래 추적', desc: '특정 지갑이 움직이면 1초 만에 알람. 남들보다 한 발 빠르게 움직일 수 있습니다.', tag: '알파 헌터' },
+              { title: '반복 업무 무한 자동화', desc: '이메일 발송, 데이터 입력, 문서 변환... 귀찮은 모든 일을 AI에게 가르쳐서 위임하세요.', tag: '인턴 대체' },
             ].map((item, i) => (
-              <FadeIn key={item.pain} delay={i * 0.1}>
-                <GlowCard>
-                  <div className="flex items-start gap-4">
-                    <span className="text-2xl shrink-0">{item.emoji}</span>
-                    <p className="text-gray-300 leading-relaxed">{item.pain}</p>
+              <FadeIn key={item.title} delay={i * 0.1}>
+                <div className="h-full p-8 border border-white/10 bg-[#0A0A0A] rounded-2xl hover:border-[#FF6B00]/30 transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-bold">{item.title}</h3>
+                    <span className="px-3 py-1 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] text-xs font-bold shrink-0 ml-3">{item.tag}</span>
                   </div>
-                </GlowCard>
-              </FadeIn>
-            ))}
-          </div>
-
-          <FadeIn>
-            <div className="text-center">
-              <p className="text-gray-500 mb-4">↓</p>
-              <h3 className="text-2xl font-bold mb-2">그래서 만들었습니다.</h3>
-              <p className="text-gray-400">당신 옆에서 24시간 일하는, <span className="text-[#FF6B00] font-bold">진짜 내 것인</span> AI.</p>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* Mac Mini Product Shot */}
-      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          <FadeIn direction="left">
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
-              <Image src="/images/mac-mini-hero.png" alt="Mac Mini M4" fill className="object-cover" />
-            </div>
-          </FadeIn>
-          <FadeIn direction="right">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                당신의 책상 위에 놓이는
-                <br />
-                <span className="text-[#FF6B00]">개인 AI 서버.</span>
-              </h2>
-              <p className="text-gray-400 leading-relaxed mb-6">
-                Apple Mac Mini M4. 팬 없이 무소음. 전기세 전구 하나 수준.
-                그런데 24시간 내내 AI 에이전트 3개를 동시에 돌립니다.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { val: '10코어', sub: 'CPU + Neural Engine' },
-                  { val: '16GB', sub: 'Unified Memory' },
-                  { val: '~7W', sub: '유휴 시 소비전력' },
-                  { val: '0dB', sub: '팬리스 무소음' },
-                ].map(s => (
-                  <div key={s.val} className="bg-white/5 p-4 rounded-xl border border-white/10 hover:border-[#FF6B00]/30 transition-colors">
-                    <div className="text-[#FF6B00] font-bold text-xl">{s.val}</div>
-                    <div className="text-xs text-gray-500">{s.sub}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* Agents — Telegram Chat UI Style */}
-      <section className="py-24 px-4 md:px-6">
-        <div className="max-w-4xl mx-auto">
-          <FadeIn>
-            <div className="text-center mb-16">
-              <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">3 AI Agents, Pre-installed</p>
-              <h2 className="text-3xl md:text-4xl font-bold">전원 켜면 바로 일합니다.</h2>
-              <p className="text-gray-400 mt-3">텔레그램으로 이런 알림이 옵니다.</p>
-            </div>
-          </FadeIn>
-
-          {/* Agent 1: Alpha Watcher */}
-          <FadeIn delay={0}>
-            <div className="mb-12">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-lg">🕵️</div>
-                <div>
-                  <h3 className="font-bold">Alpha Watcher</h3>
-                  <p className="text-xs text-gray-500">온체인 감시관 · 24시간 고래 추적</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
                 </div>
-              </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-[#FF6B00]/20 transition-colors">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-xs">🕵️</div>
-                  <span className="text-xs font-bold text-[#FF6B00]">Alpha Watcher</span>
-                  <span className="text-xs text-gray-600">03:42</span>
-                </div>
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="font-bold text-yellow-400">🚨 고래 긴급</span>
-                  <br />
-                  <span className="font-mono text-xs text-gray-500">0x7a3b...f2e1</span> → Binance
-                  <br />
-                  <span className="text-white font-bold">2,400 ETH ($8.2M)</span> 이체
-                  <br />
-                  <span className="text-gray-500 text-xs block">72시간 내 3회째 · 누적 매도 $8.2M</span>
-                  <span className="text-yellow-400 text-xs block">지난번 이 패턴 후 ETH 12% 하락했어요</span>
-                </p>
-              </div>
-              <p className="text-sm text-gray-500 mt-3">고래 지갑, DEX 유동성, 비정상 거래 패턴을 실시간으로 감시합니다.</p>
-            </div>
-          </FadeIn>
-
-          {/* Agent 2: News Breaker */}
-          <FadeIn delay={0.1}>
-            <div className="mb-12">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-lg">📰</div>
-                <div>
-                  <h3 className="font-bold">News Breaker</h3>
-                  <p className="text-xs text-gray-500">24시간 뉴스룸 · CT/디스코드/뉴스 모니터링</p>
-                </div>
-              </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-blue-500/20 transition-colors">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs">📰</div>
-                  <span className="text-xs font-bold text-blue-400">News Breaker</span>
-                  <span className="text-xs text-gray-600">08:00</span>
-                </div>
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="font-bold text-blue-400">📋 모닝 브리핑</span>
-                  <br /><br />
-                  1. SEC, 이더리움 현물 ETF 옵션 거래 최종 승인 → ETH +6.2%
-                  <br />
-                  2. 바이낸스 신규 상장 KMNO 공지 → 업비트 상장 가능성
-                  <br />
-                  3. Solana TVL $15B 돌파 — DEX 거래량 이더 추월
-                  <br />
-                  <span className="text-gray-500 text-xs mt-2 block">42개 소스 종합 · 상세 분석 필요하면 물어보세요</span>
-                </p>
-              </div>
-              <p className="text-sm text-gray-500 mt-3">수백 개 소스를 모니터링하고, 노이즈를 제거한 핵심만 매일 2회 브리핑합니다.</p>
-            </div>
-          </FadeIn>
-
-          {/* Agent 3: Portfolio Tracker */}
-          <FadeIn delay={0.2}>
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-lg">📊</div>
-                <div>
-                  <h3 className="font-bold">Portfolio Tracker</h3>
-                  <p className="text-xs text-gray-500">개인 자산 관리자 · 거래소+지갑 통합</p>
-                </div>
-              </div>
-              <div className="bg-[#0E1621] rounded-2xl rounded-tl-md p-5 w-full md:max-w-lg border border-white/5 hover:border-green-500/20 transition-colors">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-xs">📊</div>
-                  <span className="text-xs font-bold text-green-400">Portfolio Tracker</span>
-                  <span className="text-xs text-gray-600">09:00</span>
-                </div>
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="font-bold text-green-400">📈 일일 리포트</span>
-                  <br /><br />
-                  총 자산: <span className="text-white font-bold">₩142,350,000</span> <span className="text-green-400">(+2.3%)</span>
-                  <br />
-                  <span className="text-green-400">▲ BTC +4.1%</span> · <span className="text-green-400">▲ ETH +1.8%</span> · <span className="text-red-400">▼ SOL -2.5%</span>
-                  <br />
-                  <span className="text-yellow-400 text-xs block">⚠️ SOL 비중 22% → 목표 15% 초과</span>
-                  <span className="text-gray-500 text-xs block">7% 정리 시 약 ₩980만원 리밸런싱 가능</span>
-                </p>
-              </div>
-              <p className="text-sm text-gray-500 mt-3">거래소와 지갑을 연결하면 실시간 P&L, 비중 분석, 리밸런싱 알림까지.</p>
-            </div>
-          </FadeIn>
-
-          <FadeIn>
-            <div className="text-center mt-12">
-              <a href="/product" className="text-[#FF6B00] font-medium hover:underline">에이전트 상세 보기 →</a>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* Social Proof */}
-      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn>
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">먼저 써본 사람들</h2>
-            </div>
-          </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: '새벽손절러',
-                type: '데이 트레이더',
-                quote: '고래 알림 보고 새벽에 숏 잡았는데 아침에 +18%. 예전 같으면 손절 타이밍도 못 잡고 물렸을 거예요.',
-              },
-              {
-                name: '비트묻어둔남자',
-                type: '장기 홀더',
-                quote: '텔레그램 채널 정리 다 했어요. 아침 브리핑 하나면 충분. 정보 스트레스에서 해방됐어요 진짜로.',
-              },
-              {
-                name: '알파독',
-                type: '알파 헌터',
-                quote: 'CT에서 소문 돌기 6시간 전에 온체인에서 잡아요. 정보 먹이사슬이 확실히 달라졌어요.',
-              },
-            ].map((p, i) => (
-              <FadeIn key={p.name} delay={i * 0.15}>
-                <GlowCard>
-                  <p className="text-gray-300 text-sm leading-relaxed mb-6">&ldquo;{p.quote}&rdquo;</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-xs font-bold text-[#FF6B00]">
-                      {p.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{p.name}</p>
-                      <p className="text-xs text-gray-500">{p.type}</p>
-                    </div>
-                  </div>
-                </GlowCard>
               </FadeIn>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Why Local */}
+      {/* Cost Savings */}
+      <section className="py-24 px-4 md:px-6 overflow-hidden relative">
+        <div className="absolute inset-0 bg-[#FF6B00]/5 skew-y-3 transform scale-110" />
+        <div className="max-w-5xl mx-auto relative z-10">
+           <FadeIn>
+             <div className="text-center mb-16">
+               <h2 className="text-3xl md:text-5xl font-bold mb-6">1년이면 <span className="text-[#FF6B00]">2,780만 원</span>이 절약됩니다.</h2>
+               <p className="text-gray-400">초기 도입비 한 번으로 평생 무료. 월급도, 퇴직금도, 4대 보험도 없습니다.</p>
+             </div>
+           </FadeIn>
+
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+             <FadeIn delay={0}>
+               <div className="p-8 rounded-2xl bg-white/5 border border-white/10 opacity-50">
+                 <p className="text-sm text-gray-400 mb-2">신입 인턴 고용 (연봉)</p>
+                 <p className="text-3xl font-bold text-gray-500 line-through decoration-red-500/50">30,000,000원</p>
+               </div>
+             </FadeIn>
+             <FadeIn delay={0.1}>
+               <div className="p-8 rounded-2xl bg-white/5 border border-white/10 opacity-50">
+                 <p className="text-sm text-gray-400 mb-2">단순 경리 직원 (연봉)</p>
+                 <p className="text-3xl font-bold text-gray-500 line-through decoration-red-500/50">25,000,000원</p>
+               </div>
+             </FadeIn>
+             <FadeIn delay={0.2}>
+               <div className="p-8 rounded-2xl bg-[#FF6B00]/10 border border-[#FF6B00] shadow-[0_0_50px_rgba(255,107,0,0.1)] transform md:-translate-y-4">
+                 <p className="text-sm text-[#FF6B00] font-bold mb-2">ClawNode 올인원 (평생)</p>
+                 <div className="text-xl text-gray-500 line-through mb-1">3,000,000원</div>
+                 <div className="text-4xl md:text-5xl font-bold text-white flex justify-center items-center gap-1">
+                   <Counter value="2,200,000" label="" />원
+                 </div>
+                 <p className="text-xs text-[#FF6B00] mt-2">런칭 특가 · 기기값 포함 · 추가 비용 0원</p>
+               </div>
+             </FadeIn>
+           </div>
+        </div>
+      </section>
+
+      {/* Why ClawNode (Differentiation) */}
       <section className="py-24 px-4 md:px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <FadeIn>
-            <h2 className="text-3xl md:text-4xl font-bold mb-12">
-              API 키를 <span className="text-red-500">남의 서버</span>에 맡기고 계시나요?
-            </h2>
-          </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-            {[
-              { num: '01', title: '클라우드 봇은 공용 서버', desc: '당신의 API 키가 수천 명의 키와 같은 DB에 저장됩니다. 한 명이 뚫리면 전체가 뚫립니다.' },
-              { num: '02', title: '서비스가 죽으면 끝', desc: '클라우드 서비스가 종료하면 설정, 데이터, 전략 전부 사라집니다. 내 것이 아닌 건 내 것이 아닙니다.' },
-              { num: '03', title: 'ClawNode는 내 책상 위', desc: 'API 키는 Apple Keychain에 암호화 저장. 데이터는 맥미니 안에서만. 외부 통신은 Tailscale 암호화 터널만.' },
+        <div className="max-w-6xl mx-auto">
+          <SectionHeading subtitle="왜 15만 원짜리 설치 대행보다 10배 비쌀까요?">단순 설치가 아닙니다. '두뇌 이식'입니다.</SectionHeading>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+            {[ 
+              { num: '01', title: '경력직 뇌구조 탑재', desc: '깡통 오픈클로가 아닙니다. 수천 시간 검증된 업무 루틴(AGENTS)과 페르소나(SOUL)를 심어드립니다. 처음부터 일 잘하는 경력직처럼 행동합니다.' },
+              { num: '02', title: '완벽한 V3 기억장치', desc: '일반 설치는 대화를 금방 까먹습니다. ClawNode는 엔터프라이즈급 벡터 DB를 구축해, 3개월 전 지나가듯 말한 지시사항도 완벽하게 기억합니다.' },
+              { num: '03', title: '설치 당일, 맞춤 봇 완성', desc: '설치만 하고 떠나지 않습니다. 고객님이 가장 필요한 자동화 봇 하나를 그 자리에서 뚝딱 만들어 드립니다. 설치 당일부터 본전을 뽑으세요.' },
             ].map((item, i) => (
               <FadeIn key={item.num} delay={i * 0.15}>
-                <div className="p-6 border border-white/10 rounded-xl hover:border-[#FF6B00]/30 transition-colors">
-                  <p className="text-[#FF6B00] text-3xl font-bold mb-4">{item.num}</p>
-                  <h4 className="font-bold mb-2">{item.title}</h4>
-                  <p className="text-sm text-gray-400">{item.desc}</p>
+                <div className="relative p-8 border border-white/10 bg-[#0A0A0A] rounded-2xl overflow-hidden group hover:border-[#FF6B00]/30 transition-all h-full">
+                  <div className="absolute -right-4 -top-4 text-9xl font-bold text-white/[0.03] group-hover:text-[#FF6B00]/10 transition-colors select-none">
+                    {item.num}
+                  </div>
+                  <div className="relative z-10">
+                    <div className="text-[#FF6B00] font-bold text-lg mb-4">Point {item.num}</div>
+                    <h3 className="text-2xl font-bold mb-4">{item.title}</h3>
+                    <p className="text-gray-400 leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
               </FadeIn>
             ))}
           </div>
-          <FadeIn>
-            <div className="mt-10">
-              <a href="/security" className="text-[#FF6B00] font-medium hover:underline">보안 아키텍처 상세 보기 →</a>
-            </div>
-          </FadeIn>
         </div>
       </section>
 
-      {/* Mid CTA */}
-      <section className="py-16 px-4 md:px-6 text-center border-y border-white/5">
-        <FadeIn>
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">선착순 5대. 고민하면 없어집니다.</h2>
-          <p className="text-gray-400 mb-6">텔레그램에서 바로 예약 가능합니다.</p>
-          <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
-        </FadeIn>
+
+
+      {/* Pricing Two-Tier */}
+      <section className="py-24 px-4 md:px-6">
+        <div className="max-w-6xl mx-auto">
+           <FadeIn>
+             <SectionHeading subtitle="나에게 맞는 패키지 선택">Pricing Plans</SectionHeading>
+           </FadeIn>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-4xl mx-auto">
+             <FadeIn delay={0}>
+               <div className="p-8 rounded-3xl border border-white/10 bg-[#0A0A0A] hover:border-white/20 transition-colors relative flex flex-col h-full">
+                 <div className="mb-6">
+                   <h3 className="text-xl font-bold text-gray-300">Basic Remote</h3>
+                   <div className="text-4xl font-bold mt-4 mb-2">30만 원</div>
+                   <p className="text-sm text-gray-500">VAT 별도 · 기존 PC 보유자용</p>
+                 </div>
+                 <ul className="space-y-4 mb-8 flex-1">
+                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 원격 오픈클로 설치 지원</li>
+                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> AI 연산 최적화 세팅</li>
+                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 기본 기능 활용 원격 가이드</li>
+                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 텔레그램 지원 채널</li>
+                 </ul>
+                 <a href="/reserve" className="block w-full text-center py-4 rounded-xl border border-white/20 hover:bg-white/5 text-white font-bold transition-colors">원격 설치 예약하기</a>
+               </div>
+             </FadeIn>
+
+             <FadeIn delay={0.2}>
+               <div className="p-8 rounded-3xl border border-[#FF6B00] bg-[#FF6B00]/5 relative flex flex-col h-full shadow-[0_0_30px_rgba(255,107,0,0.1)]">
+                 <div className="absolute top-0 right-0 bg-[#FF6B00] text-black text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">
+                   BEST CHOICE
+                 </div>
+                 <div className="mb-6">
+                   <h3 className="text-xl font-bold text-[#FF6B00]">All-in-One Premium</h3>
+                   <div className="flex items-baseline gap-3 mt-4 mb-2">
+                     <div className="text-4xl font-bold text-white">220만 원</div>
+                     <div className="text-xl text-gray-500 line-through">300만 원</div>
+                   </div>
+                   <p className="text-sm text-gray-400">VAT 포함 · 기기값 포함 · <span className="text-[#FF6B00] font-bold">런칭 할인가</span></p>
+                 </div>
+                 <ul className="space-y-4 mb-8 flex-1">
+                   <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> Apple Mac Mini M4 (신품) 포함</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 서울/경기 방문 설치 (투명한 언박싱)</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 1:1 현장 활용 강의 (2시간)</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 맞춤형 자동화 봇 1개 즉석 제작</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템(DB) 구축</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 무상 A/S 지원</li>
+                 </ul>
+                 <CTAButton href="/reserve">올인원 패키지 예약하기</CTAButton>
+               </div>
+             </FadeIn>
+           </div>
+        </div>
+      </section>
+
+      {/* Hardware Teaser */}
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-500">
+             <Image src="/images/mac-mini-hero.png" alt="Mac Mini" fill className="object-cover" />
+           </div>
+           <div>
+             <h3 className="text-2xl font-bold mb-4">하드웨어는 거들 뿐.</h3>
+             <p className="text-gray-400 leading-relaxed mb-6">
+               Apple Mac Mini M4. 작지만 강력합니다.
+               팬리스 무소음 설계로 침실에 둬도 모릅니다.
+               전기세는 전구 하나 수준입니다.
+             </p>
+             <a href="/product" className="text-[#FF6B00] hover:underline font-medium">하드웨어 스펙 자세히 보기 →</a>
+           </div>
+        </div>
       </section>
 
       {/* Final CTA */}
@@ -344,17 +276,13 @@ export default function HomePage() {
         </div>
         <div className="relative z-10 max-w-2xl mx-auto">
           <FadeIn>
-            <div className="inline-flex items-center gap-2 mb-6">
-              <Image src="/images/fire-ant-logo.jpg" alt="Fire Ant" width={24} height={24} className="rounded-full" />
-              <span className="text-sm text-gray-400">불개미 커뮤니티 추천</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              다음 펌핑은
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              당신의 24시간 무급 직원,
               <br />
-              <span className="text-[#FF6B00]">놓치지 마세요.</span>
+              <span className="text-[#FF6B00]">오늘 고용하세요.</span>
             </h2>
-            <p className="text-gray-400 mb-8">하루 2,740원. 3년 쓰면 커피값. 그런데 평생 씁니다.</p>
-            <CTAButton href="/reserve">선착순 5대 — 내 자리 확보하기</CTAButton>
+            <p className="text-gray-400 mb-8">선착순 5대 한정. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 220만 원</span></p>
+            <CTAButton href="/reserve">지금 예약하기 (220만 원) →</CTAButton>
           </FadeIn>
         </div>
       </section>
