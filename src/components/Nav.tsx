@@ -17,7 +17,8 @@ export default function Nav() {
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-[#050505]/80 border-b border-white/5">
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-        <Link href="/" className="text-[#FF6B00] font-bold text-xl tracking-tight">
+        <Link href="/" className="flex items-center gap-2 text-[#FF6B00] font-bold text-xl tracking-tight">
+          <img src="/images/clawnode-logo.png" alt="" className="w-7 h-7" />
           ClawNode
         </Link>
 

@@ -12,36 +12,32 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ClawNode — 내 책상 위의 크립토 AI 노드',
+    default: 'ClawNode — 당신의 24시간 무급 직원',
     template: '%s | ClawNode',
   },
-  description: '새벽 3시 펌핑, 또 놓치실 건가요? Mac Mini M4 + AI 에이전트 3종 사전탑재. 월 구독료 없음. 현장 설치 교육 포함. 선착순 5대.',
+  description: '220만 원으로 평생 쓰는 AI 직원. Mac Mini M4 + OpenClaw AI 두뇌 + 방문 설치 교육. 경리, 리서치, 트레이딩 자동화. 월 구독료 0원. 선착순 5대.',
   metadataBase: new URL('https://website-v2-eight-beta.vercel.app'),
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
     url: 'https://website-v2-eight-beta.vercel.app',
     siteName: 'ClawNode',
-    title: 'ClawNode — 내 책상 위의 크립토 AI 노드',
-    description: '새벽 3시 펌핑, 또 놓치실 건가요? Mac Mini M4 + AI 에이전트 3종. 월 구독료 0원. 선착순 5대 한정.',
+    title: 'ClawNode — 당신의 24시간 무급 직원',
+    description: '220만 원으로 평생 쓰는 AI 직원. Mac Mini M4 + AI 두뇌 + 방문 설치. 월 구독료 0원. 선착순 5대 한정.',
     images: [
       {
         url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png',
-        width: 1536,
-        height: 1024,
-        alt: 'ClawNode — Mac Mini M4 AI 크립토 노드',
+        width: 1200,
+        height: 630,
+        alt: 'ClawNode — 당신의 24시간 무급 직원',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ClawNode — 내 책상 위의 크립토 AI 노드',
-    description: '새벽 3시 펌핑, 또 놓치실 건가요? Mac Mini M4 + AI 에이전트 3종. 월 구독료 0원.',
+    title: 'ClawNode — 당신의 24시간 무급 직원',
+    description: '220만 원으로 평생 쓰는 AI 직원. Mac Mini M4 + AI 두뇌 + 방문 설치. 월 구독료 0원.',
     images: ['https://website-v2-eight-beta.vercel.app/images/og-image.png'],
-  },
-  icons: {
-    icon: '/images/fire-ant-logo.jpg',
-    apple: '/images/fire-ant-logo.jpg',
   },
   robots: {
     index: true,

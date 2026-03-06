@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Footer() {
@@ -10,13 +9,9 @@ export default function Footer() {
           <div className="md:col-span-2">
             <span className="text-[#FF6B00] font-bold text-xl">ClawNode</span>
             <p className="text-sm text-gray-500 mt-3 max-w-sm leading-relaxed">
-              크립토 트레이더를 위한 턴키 AI 노드.
-              Mac Mini M4 + AI 에이전트 3종 + 현장 설치 교육.
+              당신의 24시간 무급 직원.
+              Mac Mini M4 + AI 두뇌 + 현장 설치 교육 올인원.
             </p>
-            <div className="flex items-center gap-2 mt-4">
-              <Image src="/images/fire-ant-logo.jpg" alt="Fire Ant" width={20} height={20} className="rounded-full" />
-              <span className="text-xs text-gray-500">불개미 커뮤니티 추천 제품</span>
-            </div>
           </div>
 
           {/* Links */}
@@ -43,18 +38,14 @@ export default function Footer() {
             <h4 className="text-sm font-bold text-gray-400 mb-4">연락처</h4>
             <ul className="space-y-2">
               <li>
-                <a href="https://t.me/buidlermason" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
-                  Telegram
+                <a href="http://pf.kakao.com/_kBxdZX/chat" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                  카카오톡 채널 상담
                 </a>
               </li>
               <li>
-                <a href="https://twitter.com/buidlermason" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
-                  Twitter / X
-                </a>
-              </li>
-              <li>
-                <a href="mailto:hello@clawnode.io" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
-                  hello@clawnode.io
+                <a href="mailto:help@claw-node.com" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                  help@claw-node.com
                 </a>
               </li>
             </ul>
