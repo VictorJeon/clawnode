@@ -155,6 +155,7 @@ run_core_setup() {
 replace_or_append_env() {
   local key="$1"
   local value="$2"
+  local tmp_file
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] env ${key}=${value}"
     return 0
@@ -162,11 +163,21 @@ replace_or_append_env() {
 
   touch "${SERVICE_ENV_FILE}"
   chmod 600 "${SERVICE_ENV_FILE}"
-  if grep -q "^${key}=" "${SERVICE_ENV_FILE}" 2>/dev/null; then
-    perl -0pi -e "s#^${key}=.*#${key}=${value//\\/\\\\}#m" "${SERVICE_ENV_FILE}"
-  else
-    printf '%s=%s\n' "${key}" "${value}" >> "${SERVICE_ENV_FILE}"
-  fi
+  tmp_file="$(mktemp)"
+  awk -v key="${key}" -v value="${value}" '
+    BEGIN { replaced = 0 }
+    index($0, key "=") == 1 {
+      print key "=" value
+      replaced = 1
+      next
+    }
+    { print }
+    END {
+      if (!replaced) print key "=" value
+    }
+  ' "${SERVICE_ENV_FILE}" > "${tmp_file}"
+  mv "${tmp_file}" "${SERVICE_ENV_FILE}"
+  chmod 600 "${SERVICE_ENV_FILE}"
 }
 
 get_pg_prefix() {
