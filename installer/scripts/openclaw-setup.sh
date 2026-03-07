@@ -722,9 +722,15 @@ if [[ "$DRY_RUN" == "1" ]]; then
 else
   info "원격 접속 설정 중..."
 
-  # SSH 활성화
-  sudo systemsetup -setremotelogin on 2>/dev/null
-  ok "SSH 활성화 완료"
+  # SSH 활성화 (원격 접속에 필수)
+  info "SSH(원격 로그인) 활성화 중... (비밀번호 입력이 필요할 수 있습니다)"
+  if sudo systemsetup -setremotelogin on 2>/dev/null; then
+    ok "SSH 활성화 완료"
+  else
+    warn "SSH 활성화 실패 — 수동 설정 필요"
+    echo "  시스템 설정 → 일반 → 공유 → 원격 로그인 켜기"
+    read -rp "  설정 완료 후 Enter... "
+  fi
 
   # Tailscale 설치
   if ! command -v tailscale &>/dev/null && [[ ! -d "/Applications/Tailscale.app" ]]; then
