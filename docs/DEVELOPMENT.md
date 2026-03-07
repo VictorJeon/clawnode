@@ -1,4 +1,4 @@
-# ClawNode 설치 시스템 — 개발 문서 v2.2
+# ClawNode 설치 시스템 — 개발 문서 v2.3
 
 > CLI 설치 스크립트 기반
 > 현재 기준: OpenClaw 코어 설치는 구현됨, Memory V3 전체 프로비저닝은 아직 미구현
@@ -206,6 +206,22 @@ V2는 “OpenClaw를 설치한다”가 아니라 아래를 완성해야 한다.
 - OpenClaw 본체는 계속 native process로 유지한다
 - loopback bind만 허용
 - DB 이름은 실제 코드 기준 `memory_v2`
+- 현재 검증된 기준 버전은 `Homebrew postgresql@16`이다
+
+현재까지 확인된 사실:
+- dev DB는 `postgresql@16`으로 운영 중이다
+- `psql`/`pg_config` 경로도 `/opt/homebrew/opt/postgresql@16/...` 기준으로 맞아 있다
+- `vector` extension은 설치되어 있고, `gen_random_uuid()`는 `pg_catalog`에 있으므로 최소 bring-up에 `pgcrypto` extension은 필수가 아니다
+- 반면 `memory-v2` repo에는 `003` 이전 base migration이 없다
+
+즉 Phase A의 실제 핵심은 두 가지다.
+
+1. native PostgreSQL을 올린다
+2. `003~006` 이전에 필요한 base schema를 먼저 준비한다
+
+기준 문서:
+- [MEMORY-V3-SETUP-CONTRACT.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-SETUP-CONTRACT.md)
+- [MEMORY-V3-BASE-SCHEMA.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-BASE-SCHEMA.md)
 
 기존 `setup.sh` 반영 방식:
 - 현재 Step 6 이후에 DB bring-up Step 추가
@@ -219,17 +235,25 @@ PG_PORT=5433
 PG_DB="memory_v2"
 PG_PASSWORD="$(openssl rand -hex 16)"
 
-brew install postgresql@17 pgvector
-brew services start postgresql@17
+brew install postgresql@16 pgvector
+brew services start postgresql@16
 createdb "$PG_DB" || true
 ```
 
 중요:
 - toy schema를 직접 만들면 안 된다.
+- `003_memories.sql`은 단독 시작점이 아니다.
+- `memory_documents`, `memory_chunks`, `vector` extension이 먼저 준비되어 있어야 한다.
 - 반드시 실제 sidecar migration을 실행해야 한다.
 - native extension 설치/로딩 방식은 실제 mac 환경 기준으로 검증해야 한다.
 
+선행 필요 항목:
+- base schema for `memory_documents`
+- base schema for `memory_chunks`
+- `CREATE EXTENSION IF NOT EXISTS vector`
+
 실행 대상:
+- pre-V3 base schema migration (신규 필요)
 - `migrations/003_memories.sql`
 - `migrations/004_memory_v3_phase2.sql`
 - `migrations/005_bilingual_facts.sql`

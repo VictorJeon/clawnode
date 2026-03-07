@@ -235,6 +235,7 @@ Phase 0에서 고정할 권장 프로세스는 아래다.
 권장 기본값:
 - mac target에서는 native PostgreSQL + native `pgvector` extension
 - `Docker`는 기본 경로가 아니라 fallback 후보
+- 첫 구현 기준 버전은 `Homebrew postgresql@16`
 
 이유:
 - OpenClaw 본체가 native process인 만큼 운영 모델을 단순하게 유지할 수 있음
@@ -251,6 +252,17 @@ Phase 0에서 고정할 권장 프로세스는 아래다.
 toy schema 금지.
 
 반드시 실제 migration을 실행해야 한다.
+
+중요:
+- 현재 repo에는 `003~006`만 있다
+- 그러나 `003_memories.sql`은 `memory_documents`, `memory_chunks`, `vector` extension을 선행 조건으로 가정한다
+- 즉 setup V2에는 pre-V3 base schema migration이 추가로 필요하다
+
+기준 문서:
+- [MEMORY-V3-BASE-SCHEMA.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-BASE-SCHEMA.md)
+
+실행 순서:
+- pre-V3 base schema migration (신규 필요)
 - `003_memories.sql`
 - `004_memory_v3_phase2.sql`
 - `005_bilingual_facts.sql`
@@ -396,10 +408,11 @@ curl -s -X POST http://127.0.0.1:18790/v1/memory/search \
 1. payload는 versioned artifact로 배포한다
 2. sidecar 설치 경로는 `~/.openclaw/services/memory-v2`
 3. env file 기반 설정으로 바꾼다
-4. DB는 mac 기준 native PostgreSQL + pgvector를 기본 경로로 둔다
-5. first release는 `global` workspace만 필수 지원
-6. Gemini는 optional feature로 둔다
-7. API server + Tier1 worker만 우선 필수 프로세스로 본다
-8. setup V2는 full parity가 아니라 minimum viable memory stack 재현을 목표로 한다
+4. DB는 mac 기준 native PostgreSQL + pgvector를 기본 경로로 두고, 첫 구현은 `postgresql@16` 기준으로 맞춘다
+5. pre-V3 base schema migration을 별도로 확보한다
+6. first release는 `global` workspace만 필수 지원
+7. Gemini는 optional feature로 둔다
+8. API server + Tier1 worker만 우선 필수 프로세스로 본다
+9. setup V2는 full parity가 아니라 minimum viable memory stack 재현을 목표로 한다
 
-이 8개가 Phase 0의 실질적인 결론이다.
+이 9개가 Phase 0의 실질적인 결론이다.
