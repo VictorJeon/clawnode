@@ -3,13 +3,13 @@
 # OpenClaw Cleanup — 재설치를 위한 초기화 스크립트
 #
 # 사용법:
-#   bash <(curl -fsSL <GIST_URL> cleanup)
-#   bash openclaw-cleanup.sh
+#   bash <(curl -fsSL <GIST_URL>)
+#   bash openclaw-cleanup.sh [--soft|--hard|--full]
 #
 # 모드:
-#   --soft   OpenClaw만 제거 (brew/node/git 유지) ← 기본값
-#   --hard   OpenClaw + brew 패키지까지 제거 (brew 자체는 유지)
-#   --full   모든 것 제거 (brew 포함, 완전 초기화)
+#   --soft   OpenClaw만 제거 (brew/node/git/Tailscale 유지) ← 기본값
+#   --hard   OpenClaw + brew 패키지 + Tailscale 제거 (brew 자체는 유지)
+#   --full   모든 것 제거 (brew 포함, 완전 깡통 초기화)
 # ============================================================================
 
 set -o pipefail
@@ -34,9 +34,9 @@ echo "============================================"
 echo ""
 
 case "$MODE" in
-  --soft) echo "  모드: Soft (OpenClaw만 제거, brew/node 유지)" ;;
-  --hard) echo "  모드: Hard (OpenClaw + brew 패키지 제거)" ;;
-  --full) echo "  모드: Full (모든 것 제거)" ;;
+  --soft) echo "  모드: Soft (OpenClaw만 제거, brew/node/Tailscale 유지)" ;;
+  --hard) echo "  모드: Hard (OpenClaw + brew 패키지 + Tailscale 제거)" ;;
+  --full) echo "  모드: Full (모든 것 제거, 깡통 초기화)" ;;
   *)      echo "  사용법: $0 [--soft|--hard|--full]"; exit 1 ;;
 esac
 echo ""
@@ -53,15 +53,67 @@ echo ""
 # ============================================================================
 # 1. Gateway 중지
 # ============================================================================
+info "OpenClaw 중지 중..."
 if command -v openclaw &>/dev/null; then
-  info "OpenClaw Gateway 중지 중..."
   openclaw gateway stop 2>/dev/null && ok "Gateway 중지됨" || warn "Gateway가 실행 중이 아님"
 else
   warn "openclaw 명령어 없음 — 스킵"
 fi
 
 # ============================================================================
-# 2. LaunchAgent 제거 (자동 시작 해제)
+# 2. SSH 터널 종료
+# ============================================================================
+info "원격 접속 정리 중..."
+
+# localhost.run 터널 종료
+pkill -f "localhost.run" 2>/dev/null && ok "localhost.run 터널 종료됨" || true
+
+# ============================================================================
+# 3. SSH 비활성화
+# ============================================================================
+if [[ "$(uname)" == "Darwin" ]]; then
+  if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+    info "SSH(원격 로그인) 비활성화 중..."
+    sudo systemsetup -setremotelogin off 2>/dev/null && ok "SSH 비활성화됨" || warn "SSH 비활성화 실패 (sudo 필요)"
+  else
+    ok "SSH 이미 비활성화 상태"
+  fi
+fi
+
+# ============================================================================
+# 4. Tailscale 로그아웃 및 제거
+# ============================================================================
+info "Tailscale 정리 중..."
+
+# Tailscale 로그아웃 (Tailnet에서 이 디바이스 제거)
+if command -v tailscale &>/dev/null; then
+  tailscale logout 2>/dev/null && ok "Tailscale 로그아웃됨 (Tailnet에서 디바이스 제거)" || true
+fi
+
+if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
+  # Tailscale 앱 종료
+  pkill -f "Tailscale" 2>/dev/null || true
+
+  # Tailscale 앱 삭제
+  if [[ -d "/Applications/Tailscale.app" ]]; then
+    rm -rf "/Applications/Tailscale.app" 2>/dev/null && ok "Tailscale 앱 삭제됨" || warn "Tailscale 앱 삭제 실패"
+  fi
+
+  # brew cask로 설치된 경우
+  if command -v brew &>/dev/null; then
+    brew uninstall --cask tailscale 2>/dev/null && ok "Tailscale (brew) 제거됨" || true
+  fi
+
+  # Tailscale 설정 파일 제거
+  rm -rf "$HOME/Library/Containers/io.tailscale.ipn.macos" 2>/dev/null
+  rm -rf "$HOME/Library/Group Containers/"*tailscale* 2>/dev/null
+  ok "Tailscale 설정 파일 제거됨"
+else
+  ok "Tailscale 유지 (--hard 또는 --full로 제거)"
+fi
+
+# ============================================================================
+# 5. LaunchAgent 제거 (자동 시작 해제)
 # ============================================================================
 PLIST="$HOME/Library/LaunchAgents/com.openclaw.gateway.plist"
 if [[ -f "$PLIST" ]]; then
@@ -72,7 +124,7 @@ if [[ -f "$PLIST" ]]; then
 fi
 
 # ============================================================================
-# 3. OpenClaw 언인스톨
+# 6. OpenClaw 언인스톨
 # ============================================================================
 if command -v npm &>/dev/null; then
   info "OpenClaw npm 패키지 제거 중..."
@@ -83,7 +135,7 @@ if command -v npm &>/dev/null; then
 fi
 
 # ============================================================================
-# 4. OpenClaw 설정 디렉토리 제거
+# 7. OpenClaw 설정 디렉토리 제거
 # ============================================================================
 if [[ -d "$HOME/.openclaw" ]]; then
   info "~/.openclaw 디렉토리 제거 중..."
@@ -92,13 +144,23 @@ if [[ -d "$HOME/.openclaw" ]]; then
 fi
 
 # config 파일
-if [[ -f "$HOME/.config/openclaw/config.json" ]]; then
-  rm -rf "$HOME/.config/openclaw"
-  ok "~/.config/openclaw 제거됨"
-fi
+rm -rf "$HOME/.config/openclaw" 2>/dev/null
+
+# Claude Code 설정도 제거
+rm -rf "$HOME/.claude" 2>/dev/null && ok "~/.claude 제거됨" || true
 
 # ============================================================================
-# 5. Hard 모드: brew 패키지 제거
+# 8. 임시 파일 제거
+# ============================================================================
+info "임시 파일 제거 중..."
+rm -f /tmp/openclaw-tunnel.log
+rm -f /tmp/openclaw-setup*.sh
+rm -f /tmp/openclaw-cleanup.sh
+rm -f "$HOME/.openclaw/.setup-env" 2>/dev/null
+ok "임시 파일 제거됨"
+
+# ============================================================================
+# 9. Hard 모드: brew 패키지 제거
 # ============================================================================
 if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
   if command -v brew &>/dev/null; then
@@ -111,14 +173,13 @@ if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
       fi
     done
 
-    # brew cleanup
     brew cleanup 2>/dev/null
     ok "brew cleanup 완료"
   fi
 fi
 
 # ============================================================================
-# 6. Full 모드: Homebrew 자체 제거
+# 10. Full 모드: Homebrew 자체 제거
 # ============================================================================
 if [[ "$MODE" == "--full" ]]; then
   if command -v brew &>/dev/null; then
@@ -127,12 +188,10 @@ if [[ "$MODE" == "--full" ]]; then
     ok "Homebrew 제거됨"
   fi
 
-  # /opt/homebrew 잔여물
   if [[ -d "/opt/homebrew" ]]; then
     sudo rm -rf /opt/homebrew 2>/dev/null && ok "/opt/homebrew 제거됨" || warn "/opt/homebrew 제거 실패 (sudo 필요)"
   fi
 
-  # PATH에서 homebrew 제거
   if [[ -f "/etc/paths.d/homebrew" ]]; then
     sudo rm -f /etc/paths.d/homebrew 2>/dev/null
   fi
@@ -148,12 +207,23 @@ echo "============================================"
 echo ""
 
 case "$MODE" in
-  --soft) echo "  brew/node/git은 남아있습니다." 
-          echo "  재설치: bash <(curl -fsSL <GIST_URL>)" ;;
-  --hard) echo "  brew는 남아있지만 패키지는 제거됐습니다."
-          echo "  재설치하면 brew install부터 다시 진행합니다." ;;
-  --full) echo "  완전 초기화됐습니다. 깡통 상태입니다."
-          echo "  재설치하면 Homebrew부터 다시 시작합니다." ;;
+  --soft)
+    echo "  제거됨: OpenClaw, Gateway, LaunchAgent, SSH터널"
+    echo "  유지됨: brew, node, git, Tailscale"
+    echo ""
+    echo "  SSH는 비활성화됨. Tailscale은 로그아웃됨."
+    echo "  재설치: bash <(curl -fsSL <GIST_URL>)"
+    ;;
+  --hard)
+    echo "  제거됨: OpenClaw + brew 패키지 + Tailscale + SSH"
+    echo "  유지됨: Homebrew 자체"
+    echo ""
+    echo "  재설치하면 brew install부터 다시 진행합니다."
+    ;;
+  --full)
+    echo "  완전 초기화됐습니다. 깡통 상태입니다."
+    echo ""
+    echo "  재설치하면 Homebrew부터 다시 시작합니다."
+    ;;
 esac
 echo ""
-
