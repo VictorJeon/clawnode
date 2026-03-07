@@ -723,13 +723,40 @@ else
   info "원격 접속 설정 중..."
 
   # SSH 활성화 (원격 접속에 필수)
-  info "SSH(원격 로그인) 활성화 중... (비밀번호 입력이 필요할 수 있습니다)"
-  if sudo systemsetup -setremotelogin on 2>/dev/null; then
-    ok "SSH 활성화 완료"
+  # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음
+  SSH_ON=false
+  if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+    SSH_ON=true
+    ok "SSH 이미 활성화됨"
   else
-    warn "SSH 활성화 실패 — 수동 설정 필요"
-    echo "  시스템 설정 → 일반 → 공유 → 원격 로그인 켜기"
-    read -rp "  설정 완료 후 Enter... "
+    info "SSH(원격 로그인) 활성화 시도 중..."
+    if sudo systemsetup -setremotelogin on 2>&1 | grep -qi "Full Disk Access"; then
+      # macOS 15+ Full Disk Access 제약
+      echo ""
+      echo "  ┌──────────────────────────────────────────────────┐"
+      echo "  │  SSH(원격 로그인) 수동 설정이 필요합니다          │"
+      echo "  │                                                   │"
+      echo "  │  1. 시스템 설정 열기 (Cmd+Space → '시스템 설정') │"
+      echo "  │  2. 일반 → 공유                                  │"
+      echo "  │  3. '원격 로그인' 켜기                            │"
+      echo "  └──────────────────────────────────────────────────┘"
+      echo ""
+      read -rp "  원격 로그인을 켠 후 Enter를 눌러주세요... "
+      echo ""
+      if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+        SSH_ON=true
+        ok "SSH 활성화 확인됨"
+      else
+        warn "SSH가 아직 꺼져있습니다. 원격 접속이 제한될 수 있습니다."
+      fi
+    elif sudo systemsetup -setremotelogin on 2>/dev/null; then
+      SSH_ON=true
+      ok "SSH 활성화 완료"
+    else
+      warn "SSH 활성화 실패"
+      echo "  시스템 설정 → 일반 → 공유 → 원격 로그인 켜기"
+      read -rp "  설정 완료 후 Enter... "
+    fi
   fi
 
   # Tailscale 설치
