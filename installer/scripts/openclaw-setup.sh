@@ -581,7 +581,8 @@ AI가 쓴 티가 나는 글은 가치가 없다.
 모호한 답변, 책임 회피, \"양쪽 다 맞다\"는 식의 결론을 피한다.
 **사용자의 의도를 보수적으로 해석하지 말 것.** 요청 그대로 실행한다."
 
-AGENTS_CONTENT="# AGENTS.md — 운영 규칙
+AGENTS_TEMPLATE=$(cat <<'EOF'
+# AGENTS.md — 운영 규칙
 
 _이 파일은 내가 어떻게 동작하는지를 정의한다._
 
@@ -596,8 +597,8 @@ _이 파일은 내가 어떻게 동작하는지를 정의한다._
 5. **속도** — 불필요한 질문, 확인, 보고 줄이기.
 
 ## 사용자 정보
-- 이름: ${USER_NAME}
-- Telegram Chat ID: ${CHAT_ID}
+- 이름: __USER_NAME__
+- Telegram Chat ID: __CHAT_ID__
 
 ## 메모리
 ### SESSION-STATE.md
@@ -713,7 +714,11 @@ _이 파일은 내가 어떻게 동작하는지를 정의한다._
 ## 판단
 
 - 확인 안 된 건 \"확인해볼게요\" 먼저.
-- 사용자의 의도를 보수적으로 해석하지 말 것. 요청 그대로 실행."
+- 사용자의 의도를 보수적으로 해석하지 말 것. 요청 그대로 실행.
+EOF
+)
+AGENTS_CONTENT="${AGENTS_TEMPLATE//__USER_NAME__/${USER_NAME}}"
+AGENTS_CONTENT="${AGENTS_CONTENT//__CHAT_ID__/${CHAT_ID}}"
 
 USER_CONTENT="# USER.md
 - 이름: ${USER_NAME}
@@ -966,4 +971,3 @@ fi
 if [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
 fi
-
