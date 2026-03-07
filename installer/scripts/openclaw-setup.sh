@@ -734,109 +734,59 @@ else
     fi
   fi
 
-  # Tailscale 실행 및 로그인
+  # Tailscale 실행 및 로그인 (대화형)
   if command -v tailscale &>/dev/null || [[ -f "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
-    # Tailscale 앱 실행 + 데몬 대기
     info "Tailscale 시작 중..."
     open -a Tailscale 2>/dev/null
+    sleep 2
 
-    # 데몬이 올라올 때까지 대기 (최대 30초)
-    TS_DAEMON_READY=false
-    for i in $(seq 1 30); do
-      if tailscale status &>/dev/null 2>&1; then
-        TS_DAEMON_READY=true
-        break
-      fi
-      printf "\r  Tailscale 데몬 대기 중... %ds" "$i"
-      sleep 1
-    done
-    echo ""
+    # 이미 로그인되어있는지 확인
+    TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
 
-    if [[ "$TS_DAEMON_READY" == "false" ]]; then
-      warn "Tailscale 데몬 시작 타임아웃 (30초)"
-      REMOTE_INFO=""
-    else
-      # 이미 로그인되어있는지 확인
+    if [[ -z "$TS_IP" ]]; then
+      echo ""
+      echo "  ┌──────────────────────────────────────────────────┐"
+      echo "  │  Tailscale 로그인이 필요합니다                    │"
+      echo "  │                                                   │"
+      echo "  │  1. 화면 우측 상단 메뉴바에서 Tailscale 클릭      │"
+      echo "  │  2. 'Log in' 버튼 클릭                            │"
+      echo "  │  3. 브라우저에서 Google/Apple 계정으로 로그인      │"
+      echo "  │                                                   │"
+      echo "  │  로그인 후, 담당자가 원격으로 봇을 최적화합니다.  │"
+      echo "  │  작업 완료 후 담당자 접속은 자동 해제됩니다.      │"
+      echo "  └──────────────────────────────────────────────────┘"
+      echo ""
+      read -rp "  로그인 완료 후 Enter를 눌러주세요... "
+      echo ""
+
+      # 로그인 확인
       TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
-
       if [[ -z "$TS_IP" ]]; then
-        # 로그인 필요
-        echo ""
-        echo "  ┌──────────────────────────────────────────────────┐"
-        echo "  │  Tailscale 로그인이 필요합니다                    │"
-        echo "  │                                                   │"
-        echo "  │  브라우저에 로그인 창이 열립니다.                  │"
-        echo "  │  Google 또는 Apple 계정으로 로그인하세요.         │"
-        echo "  │                                                   │"
-        echo "  │  로그인 후, 담당자가 원격으로 봇을 최적화합니다.  │"
-        echo "  │  작업 완료 후 담당자 접속은 자동 해제됩니다.      │"
-        echo "  └──────────────────────────────────────────────────┘"
-        echo ""
-
-        # 브라우저 로그인 트리거
-        tailscale up 2>/dev/null &
-        TS_UP_PID=$!
-
-        # 로그인 완료 대기 (최대 180초)
-        for i in $(seq 1 90); do
-          TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
-          if [[ -n "$TS_IP" ]]; then break; fi
-          printf "\r  로그인 대기 중... %ds" "$((i*2))"
-          sleep 2
-        done
-        echo ""
+        warn "Tailscale 로그인이 아직 안 된 것 같습니다."
+        read -rp "  다시 확인합니다. 로그인 후 Enter... "
+        TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
       fi
+    fi
 
-      # 결과 확인
-      if [[ -n "${TS_IP:-}" ]]; then
-        TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
-        TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
-        ok "Tailscale 연결됨 — IP: $TS_IP"
-        REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
-        if [[ -n "${TS_HOSTNAME:-}" ]]; then
-          REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
-        fi
-        if [[ -n "${TS_TAILNET:-}" ]]; then
-          REMOTE_INFO="${REMOTE_INFO}\nTailnet: ${TS_TAILNET}"
-        fi
-      else
-        warn "Tailscale 로그인 타임아웃 (180초)"
-        REMOTE_INFO=""
+    # 결과 확인
+    if [[ -n "${TS_IP:-}" ]]; then
+      TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+      TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
+      ok "Tailscale 연결됨 — IP: $TS_IP"
+      REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
+      if [[ -n "${TS_HOSTNAME:-}" ]]; then
+        REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
       fi
+      if [[ -n "${TS_TAILNET:-}" ]]; then
+        REMOTE_INFO="${REMOTE_INFO}\nTailnet: ${TS_TAILNET}"
+      fi
+    else
+      warn "Tailscale 연결 실패 — 담당자에게 공인IP를 알려주세요"
+      REMOTE_INFO=""
     fi
   else
     warn "Tailscale 설치를 찾을 수 없음"
     REMOTE_INFO=""
-  fi
-
-  # Tailscale 실패 시 fallback: localhost.run
-  if [[ -z "${REMOTE_INFO:-}" ]]; then
-    warn "Tailscale 연결 실패 — localhost.run 폴백 사용"
-
-    if [[ ! -f "$HOME/.ssh/id_ed25519" ]] && [[ ! -f "$HOME/.ssh/id_rsa" ]]; then
-      ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N "" -q
-      ok "SSH 키 생성 완료"
-    fi
-
-    TUNNEL_LOG="/tmp/openclaw-tunnel.log"
-    ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 \
-      -R 0:localhost:22 nokey@localhost.run > "$TUNNEL_LOG" 2>&1 &
-    TUNNEL_PID=$!
-
-    TUNNEL_ADDR=""
-    for i in $(seq 1 15); do
-      TUNNEL_ADDR=$(grep -oE '[a-z0-9]+\.localhost\.run' "$TUNNEL_LOG" 2>/dev/null | head -1)
-      if [[ -n "$TUNNEL_ADDR" ]]; then break; fi
-      sleep 1
-    done
-
-    if [[ -n "$TUNNEL_ADDR" ]]; then
-      ok "localhost.run 터널 연결됨"
-      REMOTE_INFO="원격접속: ssh $(whoami)@${TUNNEL_ADDR}"
-    else
-      REMOTE_INFO=""
-      kill "${TUNNEL_PID:-}" 2>/dev/null
-    fi
   fi
 
   if [[ -n "${REMOTE_INFO:-}" ]]; then
@@ -848,8 +798,6 @@ else
     echo "  │                                           │"
     echo "  └─────────────────────────────────────────┘"
     echo ""
-  else
-    warn "원격 접속 설정 실패 — 담당자에게 공인IP를 알려주세요"
   fi
 
   TUNNEL_INFO="${REMOTE_INFO:-원격접속: 설정안됨}"
