@@ -746,24 +746,29 @@ else
     if [[ -z "$TS_IP" ]]; then
       echo ""
       echo "  ┌──────────────────────────────────────────────────┐"
-      echo "  │  Tailscale 로그인이 필요합니다                    │"
+      echo "  │  Tailscale 설정 (원격 최적화용)                   │"
       echo "  │                                                   │"
-      echo "  │  1. 화면 우측 상단 메뉴바에서 Tailscale 클릭      │"
-      echo "  │  2. 'Log in' 버튼 클릭                            │"
-      echo "  │  3. 브라우저에서 Google/Apple 계정으로 로그인      │"
+      echo "  │  Step 1. 로그인                                   │"
+      echo "  │    - 화면 우측 상단 메뉴바에서 Tailscale 클릭     │"
+      echo "  │    - 'Log in' 클릭 → Google/Apple 계정 로그인    │"
       echo "  │                                                   │"
-      echo "  │  로그인 후, 담당자가 원격으로 봇을 최적화합니다.  │"
-      echo "  │  작업 완료 후 담당자 접속은 자동 해제됩니다.      │"
+      echo "  │  Step 2. 담당자 초대                              │"
+      echo "  │    - 메뉴바 Tailscale → 'Invite users...' 클릭   │"
+      echo "  │    - 담당자 이메일 입력 후 초대 전송               │"
+      echo "  │                                                   │"
+      echo "  │  ※ 작업 완료 후 담당자를 제거할 수 있습니다.      │"
+      echo "  │    (Tailscale 관리 → Users → 제거)               │"
       echo "  └──────────────────────────────────────────────────┘"
       echo ""
-      read -rp "  로그인 완료 후 Enter를 눌러주세요... "
+      read -rp "  로그인 + 초대까지 완료되면 Enter를 눌러주세요... "
       echo ""
 
       # 로그인 확인
       TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
       if [[ -z "$TS_IP" ]]; then
         warn "Tailscale 로그인이 아직 안 된 것 같습니다."
-        read -rp "  다시 확인합니다. 로그인 후 Enter... "
+        read -rp "  로그인 완료 후 다시 Enter... "
+        echo ""
         TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
       fi
     fi
@@ -773,13 +778,17 @@ else
       TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
       TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
       ok "Tailscale 연결됨 — IP: $TS_IP"
-      REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
+      TS_SSH="ssh $(whoami)@${TS_IP}"
       if [[ -n "${TS_HOSTNAME:-}" ]]; then
-        REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
+        TS_SSH="ssh $(whoami)@${TS_HOSTNAME}"
       fi
+      REMOTE_INFO="원격접속: ${TS_SSH}"
       if [[ -n "${TS_TAILNET:-}" ]]; then
-        REMOTE_INFO="${REMOTE_INFO}\nTailnet: ${TS_TAILNET}"
+        REMOTE_INFO="${REMOTE_INFO}
+Tailnet: ${TS_TAILNET}"
       fi
+      REMOTE_INFO="${REMOTE_INFO}
+Tailscale IP: ${TS_IP}"
     else
       warn "Tailscale 연결 실패 — 담당자에게 공인IP를 알려주세요"
       REMOTE_INFO=""
@@ -787,17 +796,6 @@ else
   else
     warn "Tailscale 설치를 찾을 수 없음"
     REMOTE_INFO=""
-  fi
-
-  if [[ -n "${REMOTE_INFO:-}" ]]; then
-    echo ""
-    echo "  ┌─────────────────────────────────────────┐"
-    echo "  │  🔗 원격 접속 정보 (담당자에게 전달)      │"
-    echo "  │                                           │"
-    echo "  │  ${REMOTE_INFO}"
-    echo "  │                                           │"
-    echo "  └─────────────────────────────────────────┘"
-    echo ""
   fi
 
   TUNNEL_INFO="${REMOTE_INFO:-원격접속: 설정안됨}"
