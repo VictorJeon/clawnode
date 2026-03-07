@@ -603,7 +603,7 @@ configure_memory_env() {
   local db_dsn python_bin
   info "memory-v3 .env 설정"
 
-  db_dsn="host=${PG_HOST} port=${PG_PORT} dbname=${PG_DB} user=${PG_USER}"
+  db_dsn="postgresql://${PG_USER}@${PG_HOST}:${PG_PORT}/${PG_DB}"
   python_bin="${SERVICE_ROOT}/.venv/bin/python"
 
   replace_or_append_env "DATABASE_URL" "${db_dsn}"
