@@ -16,6 +16,9 @@ set -uo pipefail
 
 # --- Dry-run 모드 (색상/함수보다 먼저 설정) ---
 DRY_RUN="${DRY_RUN:-0}"
+SUPPRESS_FINAL_REPORT="${SUPPRESS_FINAL_REPORT:-0}"
+OPENCLAW_PARENT_LOG="${OPENCLAW_PARENT_LOG:-0}"
+OPENCLAW_LOG_FILE="${OPENCLAW_LOG_FILE:-}"
 
 # curl | bash 차단 방지 (DRY_RUN에서는 스킵)
 if [[ "$DRY_RUN" != "1" ]]; then
@@ -40,9 +43,14 @@ fi
 # --- 설치 로그 자동 생성 ---
 LOG_DIR="$HOME/.openclaw"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
-if [[ "$DRY_RUN" != "1" ]]; then
+LOG_FILE="${OPENCLAW_LOG_FILE:-$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log}"
+if [[ "$DRY_RUN" != "1" && "$OPENCLAW_PARENT_LOG" != "1" ]]; then
   exec > >(tee -a "$LOG_FILE") 2>&1
+  echo "# OpenClaw Setup Log — $(date)"
+  echo "# OS: $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m))"
+  echo "# User: $(whoami)"
+  echo "---"
+elif [[ "$DRY_RUN" != "1" ]]; then
   echo "# OpenClaw Setup Log — $(date)"
   echo "# OS: $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m))"
   echo "# User: $(whoami)"
@@ -741,19 +749,21 @@ fi
 # ============================================================================
 echo ""
 echo "============================================"
-if [[ $FAILED -eq 0 ]]; then
+if [[ "$SUPPRESS_FINAL_REPORT" != "1" && $FAILED -eq 0 ]]; then
   echo -e "  ${GREEN}✅ 모든 설치가 완료되었습니다!${NC}"
-else
+elif [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   echo -e "  ${YELLOW}⚠️  설치 완료 (일부 오류 발생)${NC}"
 fi
-echo "============================================"
-echo ""
-echo "  [테스트 방법]"
-echo "  Telegram 봇에게 '안녕'이라고 메시지를 보내보세요."
-echo ""
-echo "  [원격 최적화 설정]"
-echo "  담당자가 원격으로 봇을 최적화할 수 있도록 설정합니다."
-echo ""
+if [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
+  echo "============================================"
+  echo ""
+  echo "  [테스트 방법]"
+  echo "  Telegram 봇에게 '안녕'이라고 메시지를 보내보세요."
+  echo ""
+  echo "  [원격 최적화 설정]"
+  echo "  담당자가 원격으로 봇을 최적화할 수 있도록 설정합니다."
+  echo ""
+fi
 if [[ "$DRY_RUN" == "1" ]]; then
   ok "[DRY] 원격 접속 설정 스킵"
 else
@@ -905,7 +915,7 @@ rm -f "$SETUP_ENV"
 # ============================================================================
 # 설치 결과 요약 (고객이 담당자에게 전달)
 # ============================================================================
-if [[ "$DRY_RUN" != "1" ]]; then
+if [[ "$DRY_RUN" != "1" && "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   SYS_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || echo "감지실패")
   LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || echo "N/A")
   SYS_USER=$(whoami)
@@ -948,11 +958,12 @@ ChatID: ${CHAT_ID}
 fi
 
 echo ""
-if [[ "$DRY_RUN" != "1" ]]; then
+if [[ "$DRY_RUN" != "1" && "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   echo "  📋 설치 로그: $LOG_FILE"
   echo "  (문제 발생 시 이 파일을 담당자에게 전달해주세요)"
   echo ""
 fi
-echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
-
+if [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
+  echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
+fi
 

@@ -42,6 +42,7 @@ EXTENSIONS_DIR="${CONFIG_DIR}/extensions"
 PLUGIN_ROOT="${EXTENSIONS_DIR}/memory-v3"
 WORKSPACE="${CONFIG_DIR}/workspace"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+LOG_FILE="${CONFIG_DIR}/setup-v2-$(date +%Y%m%d-%H%M%S).log"
 
 PG_FORMULA="${PG_FORMULA:-postgresql@17}"
 PG_DB="${PG_DB:-memory_v2}"
@@ -49,11 +50,141 @@ PG_HOST="${PG_HOST:-127.0.0.1}"
 PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+CORE_STEP_RESULT="pending"
 
-info()  { printf '[INFO] %s\n' "$*"; }
-ok()    { printf '[ OK ] %s\n' "$*"; }
-warn()  { printf '[WARN] %s\n' "$*"; }
-err()   { printf '[ERR ] %s\n' "$*" >&2; }
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+info()  { printf "${BLUE}[INFO]${NC} %s\n" "$*"; }
+ok()    { printf "${GREEN}[ OK ]${NC} %s\n" "$*"; }
+warn()  { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
+err()   { printf "${RED}[ERR ]${NC} %s\n" "$*" >&2; }
+
+print_hero() {
+  echo ""
+  echo "============================================================"
+  printf "  ${BOLD}OpenClaw V2 + Memory V3${NC}\n"
+  echo "  local agent runtime + recall memory + hybrid search stack"
+  echo "============================================================"
+  echo ""
+  printf "  ${CYAN}Components${NC}\n"
+  echo "  - OpenClaw core runtime"
+  echo "  - Memory V3 plugin"
+  echo "  - Memory API + atomize worker"
+  echo "  - PostgreSQL + pgvector"
+  echo "  - Workspace memory protocol"
+  echo ""
+}
+
+stage() {
+  echo ""
+  printf "${BOLD}[%s]${NC}\n" "$1"
+}
+
+write_log_header() {
+  echo "# OpenClaw Setup V2 Log — $(date)"
+  echo "# OS: $(sw_vers -productName 2>/dev/null) $(sw_vers -productVersion 2>/dev/null) ($(uname -m))"
+  echo "# User: $(whoami)"
+  echo "---"
+}
+
+core_step_label() {
+  case "${CORE_STEP_RESULT}" in
+    skipped-existing) printf '%s\n' "기존 OpenClaw 유지 + Memory V3 업그레이드" ;;
+    skipped-env) printf '%s\n' "core 단계 생략 (SKIP_CORE_SETUP=1)" ;;
+    ran) printf '%s\n' "OpenClaw core 신규/재실행 후 Memory V3 적용" ;;
+    *) printf '%s\n' "Memory V3 적용" ;;
+  esac
+}
+
+tailscale_ip() {
+  if command -v tailscale >/dev/null 2>&1; then
+    tailscale ip -4 2>/dev/null | head -n 1 || true
+    return 0
+  fi
+  if [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
+    /Applications/Tailscale.app/Contents/MacOS/Tailscale ip -4 2>/dev/null | head -n 1 || true
+  fi
+}
+
+render_final_summary() {
+  local oc_ver sys_ip sys_host sys_os sys_user ts_ip memory_api plugin_state report_file report
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] final summary"
+    return 0
+  fi
+
+  oc_ver="$(openclaw --version 2>/dev/null || echo "미설치")"
+  sys_ip="$(curl -s --max-time 5 ifconfig.me 2>/dev/null || echo "감지실패")"
+  sys_host="$(hostname)"
+  sys_os="$(sw_vers -productName 2>/dev/null) $(sw_vers -productVersion 2>/dev/null) ($(uname -m))"
+  sys_user="$(whoami)"
+  ts_ip="$(tailscale_ip)"
+
+  if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+    memory_api="online"
+  else
+    memory_api="offline"
+  fi
+
+  if [[ -f "${PLUGIN_ROOT}/openclaw.plugin.json" && -f "${PLUGIN_ROOT}/index.ts" ]]; then
+    plugin_state="installed"
+  else
+    plugin_state="missing"
+  fi
+
+  report="OpenClaw V2 설치 결과
+상태: ✅ 성공
+설치 모드: $(core_step_label)
+호스트: ${sys_host}
+OS: ${sys_os}
+OpenClaw: ${oc_ver}
+공인IP: ${sys_ip}
+유저: ${sys_user}
+Memory API: ${memory_api}
+Memory Plugin: ${plugin_state}
+Memory DB: ${PG_FORMULA} / ${PG_DB}
+Memory URL: http://127.0.0.1:18790
+Workspace: ${WORKSPACE}
+AGENTS.md: memory protocol applied
+설치 로그: ${LOG_FILE}"
+
+  if [[ -n "${ts_ip}" ]]; then
+    report="${report}
+Tailscale IP: ${ts_ip}"
+  fi
+
+  report_file="${CONFIG_DIR}/install-report-v2.txt"
+  printf '%s\n' "${report}" > "${report_file}"
+
+  echo ""
+  echo "============================================================"
+  printf "  ${GREEN}${BOLD}OpenClaw V2 Ready${NC}\n"
+  echo "============================================================"
+  echo ""
+  printf "  ${CYAN}Installed Stack${NC}\n"
+  echo "  - OpenClaw core"
+  echo "  - Memory V3 plugin"
+  echo "  - Memory API + atomize worker"
+  echo "  - PostgreSQL pgvector backend"
+  echo "  - Workspace memory protocol"
+  echo ""
+  printf "  ${CYAN}Report${NC}\n"
+  printf '%s\n' "${report}"
+  echo ""
+
+  if printf '%s' "${report}" | pbcopy 2>/dev/null; then
+    ok "클립보드 복사 완료"
+  else
+    info "수동 복사: ${report_file}"
+  fi
+}
 
 ensure_homebrew_on_path() {
   local prefix
@@ -97,6 +228,14 @@ cleanup_assets() {
   fi
 }
 trap cleanup_assets EXIT
+
+if [[ "${DRY_RUN}" != "1" ]]; then
+  mkdir -p "${CONFIG_DIR}"
+  exec > >(tee -a "${LOG_FILE}") 2>&1
+  write_log_header
+fi
+
+print_hero
 
 download_to_file() {
   local url="$1"
@@ -146,17 +285,24 @@ prepare_installer_assets() {
 run_core_setup() {
   if [[ "${SKIP_CORE_SETUP}" == "1" ]]; then
     warn "SKIP_CORE_SETUP=1 — 기존 core setup 단계는 건너뜁니다."
+    CORE_STEP_RESULT="skipped-env"
     return 0
   fi
 
   if [[ "${FORCE_CORE_SETUP}" != "1" ]] && core_install_present; then
     warn "기존 OpenClaw core 설치 감지 — V2 memory 단계만 적용합니다."
     warn "core를 다시 설치하려면 FORCE_CORE_SETUP=1 로 실행하세요."
+    CORE_STEP_RESULT="skipped-existing"
     return 0
   fi
 
   info "기존 core setup 실행"
-  dry bash "${CORE_SCRIPT}"
+  CORE_STEP_RESULT="ran"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 bash ${CORE_SCRIPT}"
+    return 0
+  fi
+  SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 OPENCLAW_LOG_FILE="${LOG_FILE}" bash "${CORE_SCRIPT}"
 }
 
 replace_or_append_env() {
@@ -1104,18 +1250,24 @@ main() {
     exit 1
   fi
 
+  stage "Core"
   run_core_setup
+  stage "Memory Payload"
   stage_memory_payload
   stage_memory_extension
+  stage "Database"
   ensure_native_postgres
+  stage "Runtime"
   setup_python_env
   run_memory_migrations
   configure_memory_env
   bootstrap_workspace_memory
   patch_openclaw_plugin
+  stage "Bring-up"
   install_launchd_services
   restart_openclaw_gateway
   health_check_memory
+  render_final_summary
 
   ok "setup v2 memory bring-up 완료"
 }
