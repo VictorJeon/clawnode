@@ -14,10 +14,7 @@ set -euo pipefail
 #   3. Native PostgreSQL + migration
 #   4. Python venv + requirements
 #   5. workspace bootstrap + plugin patch
-#
-# 아직 미구현:
-#   - launchd 등록
-#   - health check / daemon bring-up
+#   6. launchd 등록 + health check
 # ============================================================================
 
 DRY_RUN="${DRY_RUN:-0}"
@@ -119,6 +116,69 @@ get_createdb_bin() {
   return 1
 }
 
+is_supported_python() {
+  local python_bin="$1"
+  "${python_bin}" - <<'EOF' >/dev/null 2>&1
+import sys
+raise SystemExit(0 if (3, 11) <= sys.version_info[:2] <= (3, 13) else 1)
+EOF
+}
+
+resolve_python_bin() {
+  local candidate brew_python_prefix brew_python_bin
+
+  if [[ -n "${PYTHON_BIN_OVERRIDE:-}" ]]; then
+    if [[ ! -x "${PYTHON_BIN_OVERRIDE}" ]]; then
+      err "PYTHON_BIN_OVERRIDE 경로가 실행 가능하지 않습니다: ${PYTHON_BIN_OVERRIDE}"
+      return 1
+    fi
+    if ! is_supported_python "${PYTHON_BIN_OVERRIDE}"; then
+      err "PYTHON_BIN_OVERRIDE는 Python 3.11~3.13 이어야 합니다: ${PYTHON_BIN_OVERRIDE}"
+      return 1
+    fi
+    printf '%s\n' "${PYTHON_BIN_OVERRIDE}"
+    return 0
+  fi
+
+  for candidate in \
+    /opt/homebrew/bin/python3.13 \
+    /opt/homebrew/bin/python3.12 \
+    /opt/homebrew/bin/python3.11 \
+    python3.13 \
+    python3.12 \
+    python3.11 \
+    python3
+  do
+    if [[ -x "${candidate}" ]] || command -v "${candidate}" >/dev/null 2>&1; then
+      candidate="$(command -v "${candidate}" 2>/dev/null || printf '%s' "${candidate}")"
+      if is_supported_python "${candidate}"; then
+        printf '%s\n' "${candidate}"
+        return 0
+      fi
+    fi
+  done
+
+  if ! command -v brew >/dev/null 2>&1; then
+    err "Python 3.11~3.13이 필요하지만 brew를 찾을 수 없습니다."
+    return 1
+  fi
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] brew install python@3.13"
+    printf '%s\n' "/opt/homebrew/bin/python3.13"
+    return 0
+  fi
+
+  brew list --versions python@3.13 >/dev/null 2>&1 || brew install python@3.13
+  brew_python_prefix="$(brew --prefix python@3.13)"
+  brew_python_bin="${brew_python_prefix}/bin/python3.13"
+  if [[ ! -x "${brew_python_bin}" ]] || ! is_supported_python "${brew_python_bin}"; then
+    err "brew로 설치한 python@3.13을 확인할 수 없습니다."
+    return 1
+  fi
+  printf '%s\n' "${brew_python_bin}"
+}
+
 wait_for_postgres() {
   local psql_bin="$1"
   local i
@@ -209,11 +269,12 @@ setup_python_env() {
   local python_bin venv_python
   info "memory-v3 Python 환경 준비"
 
-  python_bin="${PYTHON_BIN_OVERRIDE:-$(command -v python3 || true)}"
+  python_bin="$(resolve_python_bin)"
   if [[ -z "${python_bin}" ]]; then
-    err "python3를 찾을 수 없습니다."
+    err "호환되는 Python 3.11~3.13을 찾을 수 없습니다."
     return 1
   fi
+  ok "Python 런타임 선택: $(${python_bin} --version 2>&1)"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] ${python_bin} -m venv ${SERVICE_ROOT}/.venv"
@@ -221,7 +282,7 @@ setup_python_env() {
     return 0
   fi
 
-  "${python_bin}" -m venv "${SERVICE_ROOT}/.venv"
+  "${python_bin}" -m venv --clear "${SERVICE_ROOT}/.venv"
   venv_python="${SERVICE_ROOT}/.venv/bin/python"
   "${venv_python}" -m pip install --upgrade pip
   "${venv_python}" -m pip install -r "${SERVICE_ROOT}/requirements.txt"
