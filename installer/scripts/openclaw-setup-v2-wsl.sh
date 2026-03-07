@@ -599,7 +599,7 @@ configure_memory_env() {
 bootstrap_workspace_memory() {
   info "workspace memory bootstrap"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] create ${WORKSPACE}/MEMORY.md and memory dirs"
+    ok "[DRY] create ${WORKSPACE}/MEMORY.md, AGENTS.md and memory dirs"
     return 0
   fi
 
@@ -614,6 +614,79 @@ MD
   else
     ok "MEMORY.md 이미 존재 — 보존"
   fi
+
+  ensure_agents_memory_guidance
+}
+
+ensure_agents_memory_guidance() {
+  local agents_file tmp_file out_file
+  agents_file="${WORKSPACE}/AGENTS.md"
+  tmp_file="$(mktemp)"
+  out_file="$(mktemp)"
+
+  cat > "${tmp_file}" <<'EOF'
+<!-- OPENCLAW_MEMORY_V3_START -->
+## Memory
+
+### SESSION-STATE.md
+5줄 이하. 현재 활성 작업 이름만 적는다. 상세는 Memory V3 검색으로 복구한다.
+
+### MEMORY.md
+장기 선호, 반복되는 요청, 중요한 결정사항을 기록한다.
+
+### 일일 로그
+`memory/YYYY-MM-DD.md` 에 당일 작업 흐름, 실패, 결정, 결과를 기록한다.
+당일 작업이 있으면 반드시 갱신한다.
+
+### Memory V3 검색 프로토콜
+- 실행형 요청을 받으면 시작 전에 관련 기억을 먼저 검색한다.
+- 프로젝트 루트에 `PROJECT-STATE.md`가 있으면 반드시 먼저 읽는다.
+- 기본 엔드포인트: `http://127.0.0.1:18790/v1/memory/search`
+- 최소 2회 검색:
+  1. `<entity> 현재 상태`
+  2. `<entity> 최근 변경`
+- 둘 다 실패할 때만 "기억 없음"으로 간주한다.
+
+### Memory V3 기록 프로토콜
+- 장기적으로 재사용할 정보는 `MEMORY.md`
+- 당일 작업 로그는 `memory/YYYY-MM-DD.md`
+- 프로젝트 상태 요약은 `PROJECT-STATE.md`
+- 메모리 인프라/장애/동기화 이슈는 `memory/infra.md`
+<!-- OPENCLAW_MEMORY_V3_END -->
+EOF
+
+  if [[ ! -f "${agents_file}" ]]; then
+    cat > "${agents_file}" <<'EOF'
+# AGENTS.md
+
+이 워크스페이스에서 일하는 에이전트 운영 규칙.
+
+EOF
+  fi
+
+  if grep -q '<!-- OPENCLAW_MEMORY_V3_START -->' "${agents_file}" 2>/dev/null; then
+    awk '
+      BEGIN { skip = 0 }
+      /<!-- OPENCLAW_MEMORY_V3_START -->/ {
+        while ((getline line < blockfile) > 0) print line
+        close(blockfile)
+        skip = 1
+        next
+      }
+      /<!-- OPENCLAW_MEMORY_V3_END -->/ {
+        skip = 0
+        next
+      }
+      skip == 0 { print }
+    ' blockfile="${tmp_file}" "${agents_file}" > "${out_file}"
+    mv "${out_file}" "${agents_file}"
+  else
+    printf '\n' >> "${agents_file}"
+    cat "${tmp_file}" >> "${agents_file}"
+  fi
+
+  rm -f "${tmp_file}" "${out_file}"
+  ok "AGENTS.md memory 규칙 반영"
 }
 
 patch_openclaw_plugin() {
