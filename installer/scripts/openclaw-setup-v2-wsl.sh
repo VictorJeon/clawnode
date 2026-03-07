@@ -104,7 +104,7 @@ core_step_label() {
 }
 
 render_final_summary() {
-  local oc_ver sys_ip local_ip sys_host sys_os sys_user report report_file
+  local oc_ver sys_ip local_ip sys_host sys_os sys_user memory_api memory_state report report_file
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] final summary"
@@ -118,8 +118,16 @@ render_final_summary() {
   sys_os="$(lsb_release -ds 2>/dev/null || grep PRETTY /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"') ($(uname -m))"
   sys_user="$(whoami)"
 
+  if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+    memory_api="online"
+    memory_state="ready"
+  else
+    memory_api="offline"
+    memory_state="degraded"
+  fi
+
   report="OpenClaw V2 설치 결과
-상태: ✅ 성공
+상태: ✅ OpenClaw + Memory V3 준비 완료
 설치 모드: $(core_step_label)
 호스트: ${sys_host}
 OS: ${sys_os}
@@ -127,11 +135,13 @@ OpenClaw: ${oc_ver}
 공인IP: ${sys_ip}
 로컬IP: ${local_ip}
 유저: ${sys_user}
-Memory API: http://127.0.0.1:18790
+Memory 상태: ${memory_state}
+Memory API: ${memory_api} (http://127.0.0.1:18790)
 Memory Plugin: installed
-Memory DB: ${PG_DB}
+Memory DB: ${PG_DB} / pgvector
 Workspace: ${WORKSPACE}
 AGENTS.md: memory protocol applied
+리포트: ${CONFIG_DIR}/install-report-v2.txt
 설치 로그: ${LOG_FILE}"
 
   report_file="${CONFIG_DIR}/install-report-v2.txt"
@@ -139,9 +149,17 @@ AGENTS.md: memory protocol applied
 
   echo ""
   echo "============================================================"
-  printf "  ${GREEN}${BOLD}OpenClaw V2 Ready${NC}\n"
+  printf "  ${GREEN}${BOLD}OpenClaw V2 + Memory V3 Ready${NC}\n"
   echo "============================================================"
   echo ""
+  printf "  ${CYAN}Provisioned Stack${NC}\n"
+  echo "  - OpenClaw core"
+  echo "  - Memory V3 plugin"
+  echo "  - Memory API + atomize worker"
+  echo "  - PostgreSQL pgvector backend"
+  echo "  - Workspace memory protocol"
+  echo ""
+  printf "  ${CYAN}Installation Report${NC}\n"
   printf '%s\n' "${report}"
   echo ""
   if [[ "${IS_WSL:-0}" == "1" ]] && command -v clip.exe >/dev/null 2>&1; then

@@ -116,7 +116,7 @@ tailscale_ip() {
 }
 
 render_final_summary() {
-  local oc_ver sys_ip sys_host sys_os sys_user ts_ip memory_api plugin_state report_file report
+  local oc_ver sys_ip sys_host sys_os sys_user ts_ip memory_api plugin_state memory_state report_file report
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] final summary"
@@ -142,20 +142,27 @@ render_final_summary() {
     plugin_state="missing"
   fi
 
+  if [[ "${memory_api}" == "online" && "${plugin_state}" == "installed" ]]; then
+    memory_state="ready"
+  else
+    memory_state="degraded"
+  fi
+
   report="OpenClaw V2 설치 결과
-상태: ✅ 성공
+상태: ✅ OpenClaw + Memory V3 준비 완료
 설치 모드: $(core_step_label)
 호스트: ${sys_host}
 OS: ${sys_os}
 OpenClaw: ${oc_ver}
 공인IP: ${sys_ip}
 유저: ${sys_user}
-Memory API: ${memory_api}
+Memory 상태: ${memory_state}
+Memory API: ${memory_api} (http://127.0.0.1:18790)
 Memory Plugin: ${plugin_state}
-Memory DB: ${PG_FORMULA} / ${PG_DB}
-Memory URL: http://127.0.0.1:18790
+Memory DB: ${PG_FORMULA} / ${PG_DB} / pgvector
 Workspace: ${WORKSPACE}
 AGENTS.md: memory protocol applied
+리포트: ${CONFIG_DIR}/install-report-v2.txt
 설치 로그: ${LOG_FILE}"
 
   if [[ -n "${ts_ip}" ]]; then
@@ -168,17 +175,17 @@ Tailscale IP: ${ts_ip}"
 
   echo ""
   echo "============================================================"
-  printf "  ${GREEN}${BOLD}OpenClaw V2 Ready${NC}\n"
+  printf "  ${GREEN}${BOLD}OpenClaw V2 + Memory V3 Ready${NC}\n"
   echo "============================================================"
   echo ""
-  printf "  ${CYAN}Installed Stack${NC}\n"
+  printf "  ${CYAN}Provisioned Stack${NC}\n"
   echo "  - OpenClaw core"
   echo "  - Memory V3 plugin"
   echo "  - Memory API + atomize worker"
   echo "  - PostgreSQL pgvector backend"
   echo "  - Workspace memory protocol"
   echo ""
-  printf "  ${CYAN}Report${NC}\n"
+  printf "  ${CYAN}Installation Report${NC}\n"
   printf '%s\n' "${report}"
   echo ""
 
