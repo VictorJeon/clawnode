@@ -240,14 +240,18 @@ ensure_pgvector_extension_files() {
   fi
 
   source_dir="$(dirname "${source_control}")"
-  cp -f "${source_dir}"/vector* "${target_dir}/"
+  if [[ "${source_dir}" != "${target_dir}" ]]; then
+    cp -f "${source_dir}"/vector* "${target_dir}/"
+  fi
 
   source_lib="$(find /opt/homebrew /usr/local \( -path "*/lib/postgresql@${pg_major}/vector.dylib" -o -path "*/lib/postgresql@${pg_major}/vector.so" -o -path "*/lib/postgresql/vector.dylib" -o -path "*/lib/postgresql/vector.so" \) 2>/dev/null | head -n 1)"
   if [[ -z "${source_lib}" ]]; then
     err "pgvector shared library를 찾지 못했습니다. ${PG_FORMULA} 조합이 현재 Homebrew bottle과 호환되는지 확인하세요."
     return 1
   fi
-  cp -f "${source_lib}" "${target_lib_dir}/"
+  if [[ "${source_lib}" != "${target_lib_dir}/$(basename "${source_lib}")" ]]; then
+    cp -f "${source_lib}" "${target_lib_dir}/"
+  fi
 
   if [[ ! -f "${target_dir}/vector.control" ]]; then
     err "pgvector extension 파일 복사 후에도 vector.control 이 없습니다."
