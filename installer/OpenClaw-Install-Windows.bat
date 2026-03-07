@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul 2>&1
 title 🦞 OpenClaw 설치 (Windows)
+setlocal
 
 echo.
 echo  ============================================
@@ -69,16 +70,17 @@ for /f "tokens=*" %%i in ('wsl -l -q 2^>nul ^| findstr /i "ubuntu"') do (
     
     echo.
     echo  ✅ Ubuntu 설치 완료!
-    echo  처음 실행 시 사용자 이름과 비밀번호를 설정합니다.
+    echo  이제 Ubuntu 안에서 Linux 사용자 이름과 비밀번호를 1회 설정해야 합니다.
     echo.
-    echo  1. 곧 열리는 창에서 사용자 이름을 입력하세요
-    echo  2. 비밀번호를 설정하세요 (화면에 안 보이는 게 정상)
-    echo  3. 설정이 끝나면 'exit' 를 입력하세요
-    echo  4. 이 파일을 다시 실행하세요
+    echo  1. 아래에서 Enter를 누르면 Ubuntu가 현재 창에서 열립니다.
+    echo  2. 사용자 이름을 입력하세요.
+    echo  3. 비밀번호를 설정하세요. (화면에 안 보이는 게 정상)
+    echo  4. 설정이 끝나면 'exit' 를 입력하세요.
+    echo  5. 그 후 이 파일을 다시 실행하세요.
     echo.
     pause
     
-    wsl -d %DISTRO% echo "Ubuntu 초기화 완료"
+    wsl -d %DISTRO%
     
     echo.
     echo  Ubuntu 설정이 끝났으면, 이 파일을 다시 실행해주세요.
@@ -89,15 +91,57 @@ for /f "tokens=*" %%i in ('wsl -l -q 2^>nul ^| findstr /i "ubuntu"') do (
 for /f "tokens=* delims= " %%a in ("%DISTRO%") do set "DISTRO=%%a"
 echo  Ubuntu 발견: %DISTRO%
 
+wsl -d %DISTRO% bash -lc "exit 0" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo  Ubuntu 초기 설정이 아직 완료되지 않았습니다.
+    echo  Linux 사용자 이름과 비밀번호를 먼저 만들어야 합니다.
+    echo.
+    echo  1. 아래에서 Enter를 누르면 Ubuntu가 현재 창에서 열립니다.
+    echo  2. 사용자 이름을 입력하세요.
+    echo  3. 비밀번호를 설정하세요. (화면에 안 보이는 게 정상)
+    echo  4. 설정이 끝나면 'exit' 를 입력하세요.
+    echo  5. 그 후 이 파일을 다시 실행하세요.
+    echo.
+    pause
+    wsl -d %DISTRO%
+    echo.
+    echo  Ubuntu 설정이 끝났으면, 이 파일을 다시 실행해주세요.
+    pause
+    exit /b 0
+)
+
 :: WSL에서 OpenClaw 설치 스크립트 실행
 echo  [3/3] OpenClaw 설치 시작...
 echo.
 
 set "GIST_URL=https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup-wsl.sh"
+set "SCRIPT_PATH=%TEMP%\openclaw-setup-wsl.sh"
 
-wsl -d %DISTRO% bash -c "curl -fsSL '%GIST_URL%' -o /tmp/openclaw-setup-wsl.sh && bash /tmp/openclaw-setup-wsl.sh; rm -f /tmp/openclaw-setup-wsl.sh"
+echo  설치 스크립트 다운로드 중...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing $env:GIST_URL -OutFile $env:SCRIPT_PATH" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  ❌ 설치 스크립트 다운로드 실패!
+    echo  네트워크 연결을 확인한 뒤 다시 시도해주세요.
+    pause
+    exit /b 1
+)
 
-if %errorlevel% equ 0 (
+set "WSL_SCRIPT_PATH="
+for /f "usebackq delims=" %%p in (`wsl -d %DISTRO% wslpath -a "%SCRIPT_PATH%"`) do set "WSL_SCRIPT_PATH=%%p"
+if not defined WSL_SCRIPT_PATH (
+    echo  ❌ WSL 경로 변환 실패!
+    echo  Ubuntu 초기 설정이 완료되었는지 확인한 뒤 다시 실행해주세요.
+    del /q "%SCRIPT_PATH%" >nul 2>&1
+    pause
+    exit /b 1
+)
+
+wsl -d %DISTRO% bash -lc "bash \"\$1\"; STATUS=\$?; rm -f \"\$1\"; exit \$STATUS" _ "%WSL_SCRIPT_PATH%"
+set "INSTALL_EXIT=%errorlevel%"
+del /q "%SCRIPT_PATH%" >nul 2>&1
+
+if %INSTALL_EXIT% equ 0 (
     echo.
     echo  ✅ OpenClaw 설치가 완료되었습니다!
 ) else (

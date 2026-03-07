@@ -99,14 +99,11 @@ echo ""
 
 # WSL 감지
 IS_WSL=0
-IS_WSL2=0
 if grep -qi microsoft /proc/version 2>/dev/null; then
   IS_WSL=1
   if grep -qi "microsoft.*WSL2\|WSL2" /proc/version 2>/dev/null || [[ -d /run/WSL ]]; then
-    IS_WSL2=1
     ok "WSL2 환경 감지됨"
   else
-    IS_WSL2=0
     warn "WSL1이 감지되었습니다. WSL2를 강력히 권장합니다."
     echo "  업그레이드: wsl --set-version <distro> 2"
     echo "  WSL1에서는 systemd/daemon 자동시작이 불가능합니다."
@@ -117,6 +114,29 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
 else
   info "네이티브 Linux 환경"
 fi
+
+DAEMON_INSTALL_SUPPORTED=0
+if command -v systemctl &>/dev/null && [[ -d /run/systemd/system ]] && systemctl --user show-environment &>/dev/null; then
+  DAEMON_INSTALL_SUPPORTED=1
+fi
+
+if [[ "$DAEMON_INSTALL_SUPPORTED" == "1" ]]; then
+  ok "systemd user session 확인됨 — 자동 시작 데몬 설치 가능"
+else
+  warn "systemd user session이 없어 자동 시작 데몬 설치를 건너뜁니다."
+  echo "  이번 설치에서는 Gateway를 수동 시작 방식으로 설정합니다."
+  if [[ "$IS_WSL" == "1" ]]; then
+    echo "  자동 시작이 필요하면 /etc/wsl.conf 에 systemd=true 를 설정하세요."
+  fi
+fi
+
+run_openclaw_onboard() {
+  if [[ "$DAEMON_INSTALL_SUPPORTED" == "1" ]]; then
+    dry openclaw onboard "$@" --install-daemon --daemon-runtime node
+  else
+    dry openclaw onboard "$@"
+  fi
+}
 
 # ============================================================================
 # 1. 입력 수집
@@ -276,7 +296,8 @@ install_apt unzip unzip
 # Node.js (nvm 방식 — 최신 LTS 보장)
 if command -v node &>/dev/null; then
   NODE_VER=$(node --version)
-  NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v\([0-9]*\).*/\1/')
+  NODE_MAJOR="${NODE_VER#v}"
+  NODE_MAJOR="${NODE_MAJOR%%.*}"
   if [[ "$NODE_MAJOR" -ge 22 ]]; then
     ok "Node.js $NODE_VER 확인됨"
   else
@@ -306,6 +327,7 @@ fi
 echo ""
 info "Step 3/6: AI 모델 연결 및 Gateway 설정"
 
+ONBOARD_OK=0
 case "$AUTH_MODE" in
   "setup-token")
     # Claude CLI 설치 (setup-token 발급에 필요)
@@ -335,21 +357,23 @@ case "$AUTH_MODE" in
       echo "  │  3. 나온 토큰을 복사해서 아래에 붙여넣기      │"
       echo "  └─────────────────────────────────────────────┘"
       echo ""
-      dry openclaw onboard --auth-choice setup-token \
+      if run_openclaw_onboard --auth-choice setup-token \
         --gateway-port 18789 --gateway-bind loopback \
-        --install-daemon --daemon-runtime node \
         --skip-channels --skip-skills \
-        --accept-risk
+        --accept-risk; then
+        ONBOARD_OK=1
+      fi
     fi
     ;;
   "anthropic-key")
-    dry openclaw onboard --non-interactive \
+    if run_openclaw_onboard --non-interactive \
       --auth-choice apiKey \
       --anthropic-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --install-daemon --daemon-runtime node \
       --skip-channels --skip-skills \
-      --accept-risk
+      --accept-risk; then
+      ONBOARD_OK=1
+    fi
     ;;
   "openai-oauth")
     echo ""
@@ -367,38 +391,43 @@ case "$AUTH_MODE" in
       info "열리지 않으면 출력되는 URL을 Windows 브라우저에 직접 붙여넣으세요."
     fi
     read -rp "  준비되셨으면 Enter를 눌러주세요..."
-    dry openclaw onboard --auth-choice openai-codex \
+    if run_openclaw_onboard --auth-choice openai-codex \
       --gateway-port 18789 --gateway-bind loopback \
-      --install-daemon --daemon-runtime node \
       --skip-channels --skip-skills \
-      --accept-risk
+      --accept-risk; then
+      ONBOARD_OK=1
+    fi
     ;;
   "openai-key")
-    dry openclaw onboard --non-interactive \
+    if run_openclaw_onboard --non-interactive \
       --auth-choice openai-api-key \
       --openai-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --install-daemon --daemon-runtime node \
       --skip-channels --skip-skills \
-      --accept-risk
+      --accept-risk; then
+      ONBOARD_OK=1
+    fi
     ;;
   "gemini-key")
-    dry openclaw onboard --non-interactive \
+    if run_openclaw_onboard --non-interactive \
       --auth-choice gemini-api-key \
       --gemini-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --install-daemon --daemon-runtime node \
       --skip-channels --skip-skills \
-      --accept-risk
+      --accept-risk; then
+      ONBOARD_OK=1
+    fi
     ;;
   *)
     echo "  * 사용자 정의 설정 모드 (대화형)"
-    dry openclaw onboard --flow manual \
-      --skip-channels --skip-skills
+    if run_openclaw_onboard --flow manual \
+      --skip-channels --skip-skills; then
+      ONBOARD_OK=1
+    fi
     ;;
 esac
 
-if [[ $? -eq 0 ]]; then
+if [[ "$ONBOARD_OK" == "1" ]]; then
   ok "OpenClaw Onboard 완료"
 else
   fail "Onboard 과정에서 오류 발생"
@@ -417,7 +446,7 @@ else
     echo '{}' > "$CONFIG_FILE"
   fi
 
-  OC_PATH="$CONFIG_FILE" OC_TOKEN="$TG_BOT_TOKEN" OC_CHAT="$CHAT_ID" node -e '
+  if OC_PATH="$CONFIG_FILE" OC_TOKEN="$TG_BOT_TOKEN" OC_CHAT="$CHAT_ID" node -e '
     const fs = require("fs");
     const {OC_PATH, OC_TOKEN, OC_CHAT} = process.env;
     try {
@@ -432,9 +461,7 @@ else
       fs.writeFileSync(OC_PATH, JSON.stringify(c, null, 2));
       console.log("Telegram config updated.");
     } catch (e) { console.error(e); process.exit(1); }
-  '
-
-  if [[ $? -eq 0 ]]; then
+  '; then
     chmod 600 "$CONFIG_FILE"
     ok "Telegram 설정 완료 (ChatID: $CHAT_ID)"
   else
@@ -676,11 +703,12 @@ info "Step 6/6: 스킬 설치 및 시작"
 # 선택적 스킬 의존성
 if ! command -v gh &>/dev/null; then
   info "GitHub CLI 설치 중..."
-  dry bash -c '(type -p wget >/dev/null || sudo apt-get install wget -y) && \
+  GH_ARCH="$(dpkg --print-architecture)"
+  dry bash -c "(type -p wget >/dev/null || sudo apt-get install wget -y) && \
     sudo mkdir -p -m 755 /etc/apt/keyrings && \
     wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
-    sudo apt-get update -qq && sudo apt-get install gh -y -qq' || warn "gh 설치 실패 (선택사항)"
+    echo 'deb [arch=${GH_ARCH} signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main' | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    sudo apt-get update -qq && sudo apt-get install gh -y -qq" || warn "gh 설치 실패 (선택사항)"
 fi
 if ! command -v ffmpeg &>/dev/null; then dry sudo apt-get install -y -qq ffmpeg || warn "ffmpeg 실패"; fi
 
@@ -689,7 +717,7 @@ if [[ "$DRY_RUN" == "1" ]]; then
   ok "[DRY] Gateway start/restart"
 else
   # WSL에서 systemd 지원 확인
-  if [[ "$IS_WSL" == "1" ]] && ! pidof systemd &>/dev/null; then
+  if [[ "$IS_WSL" == "1" ]] && [[ "$DAEMON_INSTALL_SUPPORTED" != "1" ]]; then
     warn "WSL에서 systemd가 비활성화되어 있습니다."
     echo "  /etc/wsl.conf에 다음을 추가하면 자동 시작이 가능합니다:"
     echo "    [boot]"
@@ -741,9 +769,26 @@ if [[ "$DRY_RUN" == "1" ]]; then
 else
   info "원격 접속 설정 중..."
 
-  sudo apt-get install -y -qq openssh-server 2>/dev/null
-  sudo service ssh start 2>/dev/null || sudo systemctl start sshd 2>/dev/null
-  ok "SSH 활성화 완료"
+  SSH_READY=0
+  if sudo apt-get install -y -qq openssh-server >/dev/null 2>&1; then
+    if [[ "$DAEMON_INSTALL_SUPPORTED" == "1" ]] && sudo systemctl start ssh >/dev/null 2>&1; then
+      :
+    elif sudo service ssh start >/dev/null 2>&1; then
+      :
+    elif command -v sshd &>/dev/null; then
+      sudo mkdir -p /run/sshd >/dev/null 2>&1
+      sudo sshd >/dev/null 2>&1 || true
+    fi
+
+    if pgrep -x sshd >/dev/null 2>&1; then
+      SSH_READY=1
+      ok "SSH 활성화 완료"
+    else
+      warn "SSH 시작 실패 — 원격 접속이 제한될 수 있습니다."
+    fi
+  else
+    warn "openssh-server 설치 실패 — 원격 접속이 제한될 수 있습니다."
+  fi
 
   if [[ ! -f "$HOME/.ssh/id_ed25519" ]] && [[ ! -f "$HOME/.ssh/id_rsa" ]]; then
     ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N "" -q
@@ -753,24 +798,39 @@ else
   # Tailscale 설치
   if ! command -v tailscale &>/dev/null; then
     info "Tailscale 설치 중..."
-    curl -fsSL https://tailscale.com/install.sh | sh 2>/dev/null || warn "Tailscale 자동 설치 실패"
+    curl -fsSL https://tailscale.com/install.sh | sudo sh 2>/dev/null || warn "Tailscale 자동 설치 실패"
   fi
 
   REMOTE_INFO=""
 
   if command -v tailscale &>/dev/null; then
     info "Tailscale 시작 중..."
-    sudo tailscaled --state=/var/lib/tailscale/tailscaled.state &>/dev/null &
-    sleep 2
+    TAILSCALE_READY=0
+
+    if tailscale status >/dev/null 2>&1; then
+      TAILSCALE_READY=1
+    elif [[ "$DAEMON_INSTALL_SUPPORTED" == "1" ]] && sudo systemctl start tailscaled >/dev/null 2>&1; then
+      sleep 2
+    elif command -v tailscaled &>/dev/null; then
+      if ! pgrep -x tailscaled >/dev/null 2>&1; then
+        TAILSCALED_BIN="$(command -v tailscaled)"
+        sudo mkdir -p /var/lib/tailscale >/dev/null 2>&1
+        sudo sh -c "nohup '$TAILSCALED_BIN' --state=/var/lib/tailscale/tailscaled.state >/tmp/openclaw-tailscaled.log 2>&1 &"
+        sleep 2
+      fi
+    fi
+
+    if tailscale status >/dev/null 2>&1 || pgrep -x tailscaled >/dev/null 2>&1; then
+      TAILSCALE_READY=1
+    fi
 
     # 이미 로그인되어있는지 확인
     TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
 
-    if [[ -z "$TS_IP" ]]; then
+    if [[ -z "$TS_IP" ]] && [[ "$TAILSCALE_READY" == "1" ]]; then
       # WSL에서는 브라우저가 자동으로 안 열릴 수 있음
       info "Tailscale 로그인 URL을 생성합니다..."
-      sudo tailscale up 2>&1 &
-      sleep 3
+      sudo tailscale up || warn "Tailscale 로그인 URL 생성 명령이 실패했습니다."
 
       echo ""
       echo "  ┌──────────────────────────────────────────────────┐"
@@ -803,6 +863,10 @@ else
       fi
     fi
 
+    if [[ "$TAILSCALE_READY" != "1" ]]; then
+      warn "tailscaled 시작 실패 — Tailscale 연결을 건너뜁니다."
+    fi
+
     # 결과 확인
     if [[ -n "${TS_IP:-}" ]]; then
       TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
@@ -830,7 +894,7 @@ Tailscale IP: ${TS_IP}"
 
   # 담당자 SSH 공개키 설치 (원격 접속용)
   ADMIN_PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBp/tEakTddNRrsbS1Oq1idIV31xtOiCX0q/PHnHP/T0 clawnode-admin"
-  if [[ -n "${REMOTE_INFO:-}" ]]; then
+  if [[ "$SSH_READY" == "1" ]] && [[ -n "${REMOTE_INFO:-}" ]]; then
     mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
     touch "$HOME/.ssh/authorized_keys"
@@ -860,7 +924,13 @@ if [[ "$DRY_RUN" != "1" ]]; then
   SYS_OS="$(lsb_release -ds 2>/dev/null || grep PRETTY /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"') ($(uname -m))"
   OC_VER=$(openclaw --version 2>/dev/null || echo "미설치")
   WSL_TAG=""
-  [[ "${IS_WSL:-0}" == "1" ]] && WSL_TAG=" (WSL)"
+  if [[ "${IS_WSL:-0}" == "1" ]]; then
+    if grep -qi "microsoft.*WSL2\|WSL2" /proc/version 2>/dev/null || [[ -d /run/WSL ]]; then
+      WSL_TAG=" (WSL2)"
+    else
+      WSL_TAG=" (WSL)"
+    fi
+  fi
 
   if [[ $FAILED -eq 0 ]]; then STATUS="✅ 성공"; else STATUS="⚠️ 일부 오류 (${FAILED}건)"; fi
 
@@ -871,6 +941,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
 OS: ${SYS_OS}
 OpenClaw: ${OC_VER}
 공인IP: ${SYS_IP}
+로컬IP: ${LOCAL_IP}
 유저: ${SYS_USER}
 ${TUNNEL_INFO:-원격접속: 설정안됨}
 ChatID: ${CHAT_ID}
@@ -889,9 +960,11 @@ ChatID: ${CHAT_ID}
 
   # WSL에서는 clip.exe로 Windows 클립보드에 복사
   if [[ "${IS_WSL:-0}" == "1" ]] && command -v clip.exe &>/dev/null; then
-    printf '%s' "$INSTALL_REPORT" | clip.exe 2>/dev/null && \
-      ok "클립보드 복사 완료 — Telegram에 붙여넣기(Ctrl+V) 하세요" || \
+    if printf '%s' "$INSTALL_REPORT" | clip.exe 2>/dev/null; then
+      ok "클립보드 복사 완료 — Telegram에 붙여넣기(Ctrl+V) 하세요"
+    else
       info "수동 복사: cat $REPORT_FILE"
+    fi
   else
     info "위 내용을 복사해서 담당자에게 전달해주세요"
     info "파일 위치: $REPORT_FILE"
@@ -905,4 +978,3 @@ if [[ "$DRY_RUN" != "1" ]]; then
   echo ""
 fi
 echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
-

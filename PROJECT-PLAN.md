@@ -56,7 +56,7 @@
 - **OpenClaw** (최신 안정 버전) — AI 에이전트 런타임
 - **Tailscale** — 외부 접속 보안 터널 (군사급 WireGuard 암호화)
 - **Ollama + Local LLM** — Llama 3, bge-m3 등 로컬 모델 (데이터 외부 유출 0)
-- **Docker** — 샌드박스 격리 (프롬프트 인젝션 방어)
+- **로컬 보안 하드닝** — Tailscale, 포트 최소화, 로컬 서비스 분리
 
 #### Crypto Agents (사전 탑재 3종)
 | 에이전트 | 기능 | 연동 |
@@ -154,8 +154,8 @@
 
 ### 사전 준비 (Mason)
 1. **마법의 USB** 제작
-   - `install.sh` — 원클릭 설치 스크립트 (Docker, OpenClaw, Tailscale, Ollama, 에이전트)
-   - 오프라인 캐시 — LLM 모델 파일, Docker 이미지 (인터넷 변수 제거)
+   - `install.sh` — 원클릭 설치 스크립트 (OpenClaw, Tailscale, Ollama, 에이전트, 선택적 DB 프로비저닝)
+   - 오프라인 캐시 — LLM 모델 파일, 설치 payload (인터넷 변수 제거)
 2. **5G 에그** 지참 (고객 와이파이 느릴 때 대비)
 3. **예비 Mac Mini** 확보 (초기 불량 대비 — Phase 2부터)
 
