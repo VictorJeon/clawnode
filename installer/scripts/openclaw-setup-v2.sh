@@ -19,6 +19,7 @@ set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_CORE_SETUP="${SKIP_CORE_SETUP:-0}"
+FORCE_CORE_SETUP="${FORCE_CORE_SETUP:-0}"
 GIST_BASE_URL="${GIST_BASE_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -56,6 +57,19 @@ dry() {
     return 0
   fi
   "$@"
+}
+
+core_install_present() {
+  if ! command -v openclaw >/dev/null 2>&1; then
+    return 1
+  fi
+  if [[ ! -f "${CONFIG_FILE}" ]]; then
+    return 1
+  fi
+  if ! node -e 'const fs=require("fs"); const p=process.argv[1]; const c=JSON.parse(fs.readFileSync(p,"utf8")); process.exit(c?.channels?.telegram ? 0 : 1);' "${CONFIG_FILE}" >/dev/null 2>&1; then
+    return 1
+  fi
+  return 0
 }
 
 cleanup_assets() {
@@ -110,6 +124,12 @@ prepare_installer_assets() {
 run_core_setup() {
   if [[ "${SKIP_CORE_SETUP}" == "1" ]]; then
     warn "SKIP_CORE_SETUP=1 — 기존 core setup 단계는 건너뜁니다."
+    return 0
+  fi
+
+  if [[ "${FORCE_CORE_SETUP}" != "1" ]] && core_install_present; then
+    warn "기존 OpenClaw core 설치 감지 — V2 memory 단계만 적용합니다."
+    warn "core를 다시 설치하려면 FORCE_CORE_SETUP=1 로 실행하세요."
     return 0
   fi
 
@@ -223,7 +243,7 @@ resolve_python_bin() {
     return 0
   fi
 
-  brew list --versions python@3.13 >/dev/null 2>&1 || brew install python@3.13
+  brew list --versions python@3.13 >/dev/null 2>&1 || brew install python@3.13 >&2
   brew_python_prefix="$(brew --prefix python@3.13)"
   brew_python_bin="${brew_python_prefix}/bin/python3.13"
   if [[ ! -x "${brew_python_bin}" ]] || ! is_supported_python "${brew_python_bin}"; then
