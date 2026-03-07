@@ -51,6 +51,21 @@ ok()    { printf '[ OK ] %s\n' "$*"; }
 warn()  { printf '[WARN] %s\n' "$*"; }
 err()   { printf '[ERR ] %s\n' "$*" >&2; }
 
+ensure_homebrew_on_path() {
+  local prefix
+  for prefix in /opt/homebrew /usr/local; do
+    if [[ -x "${prefix}/bin/brew" ]]; then
+      case ":${PATH}:" in
+        *":${prefix}/bin:"*) ;;
+        *) PATH="${prefix}/bin:${prefix}/sbin:${PATH}" ;;
+      esac
+      export PATH
+      return 0
+    fi
+  done
+  return 1
+}
+
 dry() {
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] $*"
@@ -942,6 +957,7 @@ health_check_memory() {
 }
 
 main() {
+  ensure_homebrew_on_path || true
   prepare_installer_assets
 
   if [[ ! -f "${CORE_SCRIPT}" ]]; then
