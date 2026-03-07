@@ -260,9 +260,10 @@ toy schema 금지.
 
 기준 문서:
 - [MEMORY-V3-BASE-SCHEMA.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-BASE-SCHEMA.md)
+- [001_base_schema.sql](/Users/nova/projects/clawnode/installer/templates/memory-v3/001_base_schema.sql)
 
 실행 순서:
-- pre-V3 base schema migration (신규 필요)
+- `installer/templates/memory-v3/001_base_schema.sql`
 - `003_memories.sql`
 - `004_memory_v3_phase2.sql`
 - `005_bilingual_facts.sql`

@@ -102,6 +102,9 @@
 3. Homebrew 기준 첫 구현은 `postgresql@16`을 기준으로 잡는 것이 안전하다
 4. `postgresql@17` 전환은 `pgvector` extension 설치/로드 검증 뒤에 별도 진행한다
 
+현재 installer 초안 파일:
+- [001_base_schema.sql](/Users/nova/projects/clawnode/installer/templates/memory-v3/001_base_schema.sql)
+
 ---
 
 ## 5. 비범위

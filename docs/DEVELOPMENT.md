@@ -223,6 +223,9 @@ V2는 “OpenClaw를 설치한다”가 아니라 아래를 완성해야 한다.
 - [MEMORY-V3-SETUP-CONTRACT.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-SETUP-CONTRACT.md)
 - [MEMORY-V3-BASE-SCHEMA.md](/Users/nova/projects/clawnode/docs/MEMORY-V3-BASE-SCHEMA.md)
 
+현재 installer 기준 base migration 파일:
+- [001_base_schema.sql](/Users/nova/projects/clawnode/installer/templates/memory-v3/001_base_schema.sql)
+
 기존 `setup.sh` 반영 방식:
 - 현재 Step 6 이후에 DB bring-up Step 추가
 - `brew`, `launchctl`, `psql`, migration 실행까지 한 흐름으로 묶기
@@ -253,7 +256,7 @@ createdb "$PG_DB" || true
 - `CREATE EXTENSION IF NOT EXISTS vector`
 
 실행 대상:
-- pre-V3 base schema migration (신규 필요)
+- `installer/templates/memory-v3/001_base_schema.sql`
 - `migrations/003_memories.sql`
 - `migrations/004_memory_v3_phase2.sql`
 - `migrations/005_bilingual_facts.sql`
