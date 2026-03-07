@@ -19,6 +19,7 @@ DRY_RUN="${DRY_RUN:-0}"
 SUPPRESS_FINAL_REPORT="${SUPPRESS_FINAL_REPORT:-0}"
 OPENCLAW_PARENT_LOG="${OPENCLAW_PARENT_LOG:-0}"
 OPENCLAW_LOG_FILE="${OPENCLAW_LOG_FILE:-}"
+TAILSCALE_SHARE_MODE="${TAILSCALE_SHARE_MODE:-ask}"
 
 # curl | bash 차단 방지 (DRY_RUN에서는 스킵)
 if [[ "$DRY_RUN" != "1" ]]; then
@@ -71,6 +72,42 @@ dry() {
     return 0
   fi
   "$@"
+}
+
+should_configure_remote_optimization() {
+  local mode
+  mode="$(printf '%s' "${TAILSCALE_SHARE_MODE}" | tr '[:upper:]' '[:lower:]')"
+  case "${mode}" in
+    skip|off|no|false|0)
+      return 1
+      ;;
+    require|on|yes|true|1)
+      return 0
+      ;;
+    ask|"")
+      echo ""
+      echo "  ┌──────────────────────────────────────────────────┐"
+      echo "  │  원격 최적화 설정 (선택)                         │"
+      echo "  │                                                   │"
+      echo "  │  담당자가 Tailscale Shared Access로               │"
+      echo "  │  이 기기만 원격 점검/최적화할 수 있게 합니다.     │"
+      echo "  │  원치 않으면 이번 단계는 건너뛸 수 있습니다.      │"
+      echo "  └──────────────────────────────────────────────────┘"
+      echo ""
+      read -rp "  지금 원격 최적화 설정을 진행할까요? [Y/n]: " REPLY
+      case "$(printf '%s' "${REPLY:-y}" | tr '[:upper:]' '[:lower:]')" in
+        n|no)
+          return 1
+          ;;
+        *)
+          return 0
+          ;;
+      esac
+      ;;
+    *)
+      return 0
+      ;;
+  esac
 }
 
 # --- 색상 ---
@@ -773,6 +810,12 @@ if [[ "$DRY_RUN" == "1" ]]; then
   ok "[DRY] 원격 접속 설정 스킵"
 else
   info "원격 접속 설정 중..."
+  REMOTE_INFO="원격접속: 사용자가 Tailscale 공유 설정을 건너뜀"
+
+  if ! should_configure_remote_optimization; then
+    warn "원격 최적화(Tailscale 공유) 설정을 건너뜁니다."
+    TUNNEL_INFO="${REMOTE_INFO}"
+  else
 
   # SSH 활성화 (원격 접속에 필수)
   # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음
@@ -912,6 +955,7 @@ Tailscale IP: ${TS_IP}"
   fi
 
   TUNNEL_INFO="${REMOTE_INFO:-원격접속: 설정안됨}"
+  fi
 fi
 
 # setup-env 삭제 (보안)
