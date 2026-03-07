@@ -727,21 +727,31 @@ else
   ok "SSH 활성화 완료"
 
   # Tailscale 설치
-  if ! command -v tailscale &>/dev/null; then
+  if ! command -v tailscale &>/dev/null && [[ ! -d "/Applications/Tailscale.app" ]]; then
     if command -v brew &>/dev/null; then
       info "Tailscale 설치 중..."
       brew install --cask tailscale 2>/dev/null || warn "Tailscale 자동 설치 실패"
     fi
   fi
 
+  # Tailscale CLI 경로 해결
+  # brew --cask는 GUI앱만 설치하고 CLI를 PATH에 안 넣음
+  # CLI는 앱 번들 내부에 있음
+  TAILSCALE_CLI=""
+  if command -v tailscale &>/dev/null; then
+    TAILSCALE_CLI="tailscale"
+  elif [[ -f "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
+    TAILSCALE_CLI="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+  fi
+
   # Tailscale 실행 및 로그인 (대화형)
-  if command -v tailscale &>/dev/null || [[ -f "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
+  if [[ -n "$TAILSCALE_CLI" ]]; then
     info "Tailscale 시작 중..."
     open -a Tailscale 2>/dev/null
     sleep 2
 
     # 이미 로그인되어있는지 확인
-    TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
+    TS_IP=$($TAILSCALE_CLI ip -4 2>/dev/null || echo "")
 
     if [[ -z "$TS_IP" ]]; then
       echo ""
@@ -764,19 +774,19 @@ else
       echo ""
 
       # 로그인 확인
-      TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
+      TS_IP=$($TAILSCALE_CLI ip -4 2>/dev/null || echo "")
       if [[ -z "$TS_IP" ]]; then
         warn "Tailscale 로그인이 아직 안 된 것 같습니다."
         read -rp "  로그인 완료 후 다시 Enter... "
         echo ""
-        TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
+        TS_IP=$($TAILSCALE_CLI ip -4 2>/dev/null || echo "")
       fi
     fi
 
     # 결과 확인
     if [[ -n "${TS_IP:-}" ]]; then
-      TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
-      TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
+      TS_HOSTNAME=$($TAILSCALE_CLI status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+      TS_TAILNET=$($TAILSCALE_CLI status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
       ok "Tailscale 연결됨 — IP: $TS_IP"
       TS_SSH="ssh $(whoami)@${TS_IP}"
       if [[ -n "${TS_HOSTNAME:-}" ]]; then
