@@ -34,6 +34,7 @@ SERVICE_ENV_FILE="${SERVICE_ROOT}/.env"
 CONFIG_DIR="${HOME}/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 WORKSPACE="${CONFIG_DIR}/workspace"
+LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 
 PG_FORMULA="${PG_FORMULA:-postgresql@16}"
 PG_DB="${PG_DB:-memory_v2}"
@@ -348,6 +349,285 @@ EOF
   ok "plugin patch 완료"
 }
 
+write_file_if_changed() {
+  local path="$1"
+  local content="$2"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] write ${path}"
+    return 0
+  fi
+  mkdir -p "$(dirname "${path}")"
+  printf '%s' "${content}" > "${path}"
+}
+
+write_wrapper_scripts() {
+  info "memory-v3 wrapper 스크립트 생성"
+  local server_wrapper atomize_wrapper llm_wrapper
+  server_wrapper="${SERVICE_ROOT}/run-server.sh"
+  atomize_wrapper="${SERVICE_ROOT}/run-atomize.sh"
+  llm_wrapper="${SERVICE_ROOT}/run-llm-atomize.sh"
+
+  write_file_if_changed "${server_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" server.py
+'
+
+  write_file_if_changed "${atomize_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" atomize_worker.py --interval 60
+'
+
+  write_file_if_changed "${llm_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" llm_atomize_worker.py
+'
+
+  if [[ "${DRY_RUN}" != "1" ]]; then
+    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}"
+  fi
+}
+
+has_google_api_key() {
+  if [[ -f "${SERVICE_ENV_FILE}" ]] && grep -q '^GOOGLE_API_KEY=' "${SERVICE_ENV_FILE}" 2>/dev/null; then
+    return 0
+  fi
+  if [[ -f "${CONFIG_FILE}" ]] && command -v jq >/dev/null 2>&1; then
+    jq -e '.env.vars.GOOGLE_API_KEY? // empty' "${CONFIG_FILE}" >/dev/null 2>&1
+    return $?
+  fi
+  return 1
+}
+
+write_launchd_plists() {
+  info "memory-v3 launchd plist 생성"
+  local path_env api_plist atomize_plist flush_plist llm_plist
+  path_env="$(get_pg_prefix 2>/dev/null || true)/bin:/opt/homebrew/bin:/usr/bin:/bin"
+  api_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist"
+  atomize_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist"
+  flush_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist"
+  llm_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist"
+
+  write_file_if_changed "${api_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-api</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-server.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-api.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-api.log</string>
+</dict>
+</plist>
+"
+
+  write_file_if_changed "${atomize_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-atomize</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-atomize.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-atomize.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-atomize.log</string>
+</dict>
+</plist>
+"
+
+  write_file_if_changed "${flush_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-flush</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/flush-cron.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-flush.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-flush.log</string>
+</dict>
+</plist>
+"
+
+  if has_google_api_key; then
+    write_file_if_changed "${llm_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-llm-atomize</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-llm-atomize.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-llm-atomize.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-llm-atomize.log</string>
+</dict>
+</plist>
+"
+  elif [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] skip llm worker plist (no GOOGLE_API_KEY)"
+  else
+    rm -f "${llm_plist}"
+    ok "llm worker plist 생략"
+  fi
+}
+
+bootstrap_launchd_service() {
+  local plist="$1"
+  local label="$2"
+  local gui_target
+  gui_target="gui/$(id -u)"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] launchctl bootout ${gui_target} ${plist}"
+    ok "[DRY] launchctl bootstrap ${gui_target} ${plist}"
+    return 0
+  fi
+
+  launchctl bootout "${gui_target}" "${plist}" >/dev/null 2>&1 || true
+  launchctl bootstrap "${gui_target}" "${plist}"
+  launchctl kickstart -k "${gui_target}/${label}" >/dev/null 2>&1 || true
+}
+
+install_launchd_services() {
+  info "memory-v3 launchd 등록"
+  write_wrapper_scripts
+  write_launchd_plists
+
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist" "ai.openclaw.memory-v3-api"
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist" "ai.openclaw.memory-v3-atomize"
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush"
+  if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" || "${DRY_RUN}" == "1" ]]; then
+    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize"
+  fi
+}
+
+restart_openclaw_gateway() {
+  info "OpenClaw gateway 재시작"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] openclaw gateway restart"
+    return 0
+  fi
+
+  if openclaw gateway status 2>/dev/null | grep -q "running"; then
+    openclaw gateway restart >/dev/null 2>&1 || openclaw gateway start >/dev/null 2>&1 || true
+  else
+    openclaw gateway start >/dev/null 2>&1 || true
+  fi
+}
+
+health_check_memory() {
+  local i
+  info "memory-v3 health check"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] curl http://127.0.0.1:18790/health"
+    ok "[DRY] curl http://127.0.0.1:18790/v1/memory/stats"
+    return 0
+  fi
+
+  for i in $(seq 1 20); do
+    if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+      ok "memory API health 확인"
+      curl -fsS "http://127.0.0.1:18790/v1/memory/stats" >/dev/null 2>&1 && ok "memory stats 확인"
+      return 0
+    fi
+    sleep 1
+  done
+  err "memory API health check 실패"
+  return 1
+}
+
 main() {
   if [[ ! -f "${CORE_SCRIPT}" ]]; then
     err "core script를 찾을 수 없습니다: ${CORE_SCRIPT}"
@@ -366,8 +646,11 @@ main() {
   configure_memory_env
   bootstrap_workspace_memory
   patch_openclaw_plugin
+  install_launchd_services
+  restart_openclaw_gateway
+  health_check_memory
 
-  warn "launchd 등록과 health check는 아직 남아 있습니다."
+  ok "setup v2 memory bring-up 완료"
 }
 
 main "$@"
