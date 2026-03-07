@@ -269,8 +269,27 @@ if ! command -v brew &>/dev/null; then
     err "관리자 권한을 확인하세요: 시스템 설정 → 사용자 및 그룹"
     exit 1
   fi
-  if [[ -f /opt/homebrew/bin/brew ]]; then eval "$(/opt/homebrew/bin/brew shellenv)"; fi
-  if [[ -f /usr/local/bin/brew ]]; then eval "$(/usr/local/bin/brew shellenv)"; fi
+  if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    # .zprofile에 영구 등록 (SSH 로그인 시에도 PATH 잡히도록)
+    BREW_SHELLENV='eval "$(/opt/homebrew/bin/brew shellenv)"'
+    for rc in "$HOME/.zprofile" "$HOME/.zshrc"; do
+      if [[ -f "$rc" ]] && grep -q "brew shellenv" "$rc" 2>/dev/null; then
+        continue
+      fi
+      echo "$BREW_SHELLENV" >> "$rc"
+    done
+  fi
+  if [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+    BREW_SHELLENV='eval "$(/usr/local/bin/brew shellenv)"'
+    for rc in "$HOME/.zprofile" "$HOME/.zshrc"; do
+      if [[ -f "$rc" ]] && grep -q "brew shellenv" "$rc" 2>/dev/null; then
+        continue
+      fi
+      echo "$BREW_SHELLENV" >> "$rc"
+    done
+  fi
 else
   ok "Homebrew 확인됨"
 fi
