@@ -39,7 +39,7 @@ CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 WORKSPACE="${CONFIG_DIR}/workspace"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 
-PG_FORMULA="${PG_FORMULA:-postgresql@16}"
+PG_FORMULA="${PG_FORMULA:-postgresql@17}"
 PG_DB="${PG_DB:-memory_v2}"
 PG_HOST="${PG_HOST:-127.0.0.1}"
 PG_PORT="${PG_PORT:-5432}"
@@ -206,7 +206,7 @@ get_createdb_bin() {
 }
 
 ensure_pgvector_extension_files() {
-  local pg_prefix pg_major target_dir source_control source_dir
+  local pg_prefix pg_major target_dir target_lib_dir source_control source_dir source_lib
 
   pg_prefix="$(get_pg_prefix 2>/dev/null || true)"
   if [[ -z "${pg_prefix}" ]]; then
@@ -216,14 +216,16 @@ ensure_pgvector_extension_files() {
 
   pg_major="${PG_FORMULA#postgresql@}"
   target_dir="${pg_prefix}/share/postgresql@${pg_major}/extension"
+  target_lib_dir="$("${pg_prefix}/bin/pg_config" --pkglibdir)"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] ensure pgvector files in ${target_dir}"
+    ok "[DRY] ensure pgvector files in ${target_dir} and ${target_lib_dir}"
     return 0
   fi
 
   mkdir -p "${target_dir}"
-  if [[ -f "${target_dir}/vector.control" ]]; then
+  mkdir -p "${target_lib_dir}"
+  if [[ -f "${target_dir}/vector.control" && ( -f "${target_lib_dir}/vector.dylib" || -f "${target_lib_dir}/vector.so" ) ]]; then
     ok "pgvector extension 파일 확인: ${target_dir}"
     return 0
   fi
@@ -239,11 +241,23 @@ ensure_pgvector_extension_files() {
 
   source_dir="$(dirname "${source_control}")"
   cp -f "${source_dir}"/vector* "${target_dir}/"
+
+  source_lib="$(find /opt/homebrew /usr/local \( -path "*/lib/postgresql@${pg_major}/vector.dylib" -o -path "*/lib/postgresql@${pg_major}/vector.so" -o -path "*/lib/postgresql/vector.dylib" -o -path "*/lib/postgresql/vector.so" \) 2>/dev/null | head -n 1)"
+  if [[ -z "${source_lib}" ]]; then
+    err "pgvector shared library를 찾지 못했습니다. ${PG_FORMULA} 조합이 현재 Homebrew bottle과 호환되는지 확인하세요."
+    return 1
+  fi
+  cp -f "${source_lib}" "${target_lib_dir}/"
+
   if [[ ! -f "${target_dir}/vector.control" ]]; then
     err "pgvector extension 파일 복사 후에도 vector.control 이 없습니다."
     return 1
   fi
-  ok "pgvector extension 파일 보정 완료: ${target_dir}"
+  if [[ ! -f "${target_lib_dir}/vector.dylib" && ! -f "${target_lib_dir}/vector.so" ]]; then
+    err "pgvector shared library 복사 후에도 vector 라이브러리가 없습니다."
+    return 1
+  fi
+  ok "pgvector extension 파일 보정 완료: ${target_dir}, ${target_lib_dir}"
 }
 
 is_supported_python() {
