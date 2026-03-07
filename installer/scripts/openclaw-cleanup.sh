@@ -7,8 +7,8 @@
 #   bash openclaw-cleanup.sh [--soft|--hard|--full]
 #
 # 모드:
-#   --soft   OpenClaw만 제거 (brew/node/git/Tailscale 유지) ← 기본값
-#   --hard   OpenClaw + brew 패키지 + Tailscale 제거 (brew 자체는 유지)
+#   --soft   OpenClaw만 제거 (brew/node/git/Tailscale/Postgres 유지) ← 기본값
+#   --hard   OpenClaw + Memory V2/V3 + Postgres + brew 패키지 + Tailscale 제거 (brew 자체는 유지)
 #   --full   모든 것 제거 (brew 포함, 완전 깡통 초기화)
 # ============================================================================
 
@@ -34,8 +34,8 @@ echo "============================================"
 echo ""
 
 case "$MODE" in
-  --soft) echo "  모드: Soft (OpenClaw만 제거, brew/node/Tailscale 유지)" ;;
-  --hard) echo "  모드: Hard (OpenClaw + brew 패키지 + Tailscale 제거)" ;;
+  --soft) echo "  모드: Soft (OpenClaw만 제거, brew/node/Tailscale/Postgres 유지)" ;;
+  --hard) echo "  모드: Hard (OpenClaw + Memory/Postgres + brew 패키지 + Tailscale 제거)" ;;
   --full) echo "  모드: Full (모든 것 제거, 깡통 초기화)" ;;
   *)      echo "  사용법: $0 [--soft|--hard|--full]"; exit 1 ;;
 esac
@@ -115,13 +115,43 @@ fi
 # ============================================================================
 # 5. LaunchAgent 제거 (자동 시작 해제)
 # ============================================================================
-PLIST="$HOME/Library/LaunchAgents/com.openclaw.gateway.plist"
-if [[ -f "$PLIST" ]]; then
-  info "LaunchAgent 제거 중..."
-  launchctl unload "$PLIST" 2>/dev/null
-  rm -f "$PLIST"
-  ok "LaunchAgent 제거됨"
+info "LaunchAgent 제거 중..."
+PLISTS=(
+  "$HOME/Library/LaunchAgents/com.openclaw.gateway.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-api.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-atomize.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-flush.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-llm-atomize.plist"
+  "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@16.plist"
+  "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@17.plist"
+)
+
+for plist in "${PLISTS[@]}"; do
+  if [[ -f "$plist" ]]; then
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl bootout "gui/$(id -u)" "$plist" 2>/dev/null || true
+    rm -f "$plist"
+    ok "  $(basename "$plist") 제거됨"
+  fi
+done
+
+# ============================================================================
+# 5.1 Memory / PostgreSQL 프로세스 중지
+# ============================================================================
+info "Memory / PostgreSQL 프로세스 정리 중..."
+pkill -f "server.py" 2>/dev/null || true
+pkill -f "atomize_worker.py" 2>/dev/null || true
+pkill -f "llm_atomize_worker.py" 2>/dev/null || true
+pkill -f "postgres -D /opt/homebrew/var/postgresql@17" 2>/dev/null || true
+pkill -f "postgres -D /opt/homebrew/var/postgresql@16" 2>/dev/null || true
+pkill -f "postgres -D /usr/local/var/postgresql@17" 2>/dev/null || true
+pkill -f "postgres -D /usr/local/var/postgresql@16" 2>/dev/null || true
+
+if command -v brew &>/dev/null; then
+  brew services stop postgresql@17 2>/dev/null || true
+  brew services stop postgresql@16 2>/dev/null || true
 fi
+ok "Memory / PostgreSQL 프로세스 정리 완료"
 
 # ============================================================================
 # 6. OpenClaw 언인스톨
@@ -166,17 +196,50 @@ info "임시 파일 제거 중..."
 rm -f /tmp/openclaw-tunnel.log
 rm -f /tmp/openclaw-setup*.sh
 rm -f /tmp/openclaw-cleanup.sh
+rm -f /tmp/openclaw-memory-v3-api.log
+rm -f /tmp/openclaw-memory-v3-atomize.log
+rm -f /tmp/openclaw-memory-v3-flush.log
+rm -f /tmp/openclaw-memory-v3-llm-atomize.log
 rm -f "$HOME/.openclaw/.setup-env" 2>/dev/null
 ok "임시 파일 제거됨"
 
 # ============================================================================
-# 9. Hard 모드: brew 패키지 제거
+# 9.1 Hard 모드: PostgreSQL 데이터/캐시 제거
+# ============================================================================
+if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
+  info "PostgreSQL 데이터 제거 중..."
+  for data_dir in \
+    /opt/homebrew/var/postgresql@17 \
+    /opt/homebrew/var/postgresql@16 \
+    /usr/local/var/postgresql@17 \
+    /usr/local/var/postgresql@16
+  do
+    if [[ -d "$data_dir" ]]; then
+      rm -rf "$data_dir" 2>/dev/null && ok "  $(basename "$data_dir") data 제거됨" || warn "  $(basename "$data_dir") data 제거 실패"
+    fi
+  done
+  rm -rf "$HOME/Library/Application Support/Postgres" 2>/dev/null || true
+fi
+
+# ============================================================================
+# 10. Hard 모드: brew 패키지 제거
 # ============================================================================
 if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
   if command -v brew &>/dev/null; then
     info "brew 패키지 제거 중..."
 
-    PACKAGES=(node git gh ffmpeg)
+    PACKAGES=(
+      postgresql@17
+      postgresql@16
+      pgvector
+      python@3.13
+      python@3.12
+      python@3.11
+      node
+      git
+      gh
+      ffmpeg
+    )
     for pkg in "${PACKAGES[@]}"; do
       if brew list "$pkg" &>/dev/null; then
         brew uninstall "$pkg" 2>/dev/null && ok "  $pkg 제거됨" || warn "  $pkg 제거 실패"
@@ -189,7 +252,7 @@ if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
 fi
 
 # ============================================================================
-# 10. Full 모드: Homebrew 자체 제거
+# 11. Full 모드: Homebrew 자체 제거
 # ============================================================================
 if [[ "$MODE" == "--full" ]]; then
   if command -v brew &>/dev/null; then
@@ -219,13 +282,13 @@ echo ""
 case "$MODE" in
   --soft)
     echo "  제거됨: OpenClaw, Gateway, LaunchAgent, SSH터널"
-    echo "  유지됨: brew, node, git, Tailscale"
+    echo "  유지됨: brew, node, git, Tailscale, PostgreSQL"
     echo ""
     echo "  SSH는 비활성화됨. Tailscale은 로그아웃됨."
     echo "  재설치: bash <(curl -fsSL <GIST_URL>)"
     ;;
   --hard)
-    echo "  제거됨: OpenClaw + brew 패키지 + Tailscale + SSH"
+    echo "  제거됨: OpenClaw + Memory V2/V3 + PostgreSQL + brew 패키지 + Tailscale + SSH"
     echo "  유지됨: Homebrew 자체"
     echo ""
     echo "  재설치하면 brew install부터 다시 진행합니다."
