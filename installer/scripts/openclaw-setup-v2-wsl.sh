@@ -2,19 +2,19 @@
 set -euo pipefail
 
 # ============================================================================
-# OpenClaw Quick Setup v2-memory — 개발용 V2 래퍼
+# OpenClaw Quick Setup v2-memory (Linux/WSL)
 #
 # 목적:
-#   기존 openclaw-setup.sh는 그대로 두고,
+#   기존 openclaw-setup-wsl.sh는 그대로 두고,
 #   V2에서는 core 설치 후 Memory V3 payload를 별도 단계로 붙인다.
 #
-# 현재 범위:
-#   1. 기존 core setup 실행
+# 범위:
+#   1. 기존 Linux/WSL core setup 실행
 #   2. memory payload staging
 #   3. Native PostgreSQL + migration
 #   4. Python venv + requirements
 #   5. workspace bootstrap + plugin patch
-#   6. launchd 등록 + health check
+#   6. systemd user service 또는 nohup bring-up + health check
 # ============================================================================
 
 DRY_RUN="${DRY_RUN:-0}"
@@ -23,7 +23,7 @@ GIST_BASE_URL="${GIST_BASE_URL:-https://gist.githubusercontent.com/VictorJeon/52
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CORE_SCRIPT_LOCAL="${SCRIPT_DIR}/openclaw-setup.sh"
+CORE_SCRIPT_LOCAL="${SCRIPT_DIR}/openclaw-setup-wsl.sh"
 PAYLOAD_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/payload"
 BASE_SCHEMA_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/001_base_schema.sql"
 CORE_SCRIPT="${CORE_SCRIPT_LOCAL}"
@@ -36,14 +36,18 @@ SERVICE_ENV_FILE="${SERVICE_ROOT}/.env"
 CONFIG_DIR="${HOME}/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 WORKSPACE="${CONFIG_DIR}/workspace"
-LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 
-PG_FORMULA="${PG_FORMULA:-postgresql@16}"
 PG_DB="${PG_DB:-memory_v2}"
-PG_HOST="${PG_HOST:-127.0.0.1}"
+PG_HOST="${PG_HOST:-/var/run/postgresql}"
 PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+
+SYSTEMD_USER_AVAILABLE=0
+if command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]] && systemctl --user show-environment >/dev/null 2>&1; then
+  SYSTEMD_USER_AVAILABLE=1
+fi
 
 info()  { printf '[INFO] %s\n' "$*"; }
 ok()    { printf '[ OK ] %s\n' "$*"; }
@@ -85,10 +89,10 @@ prepare_installer_assets() {
 
   info "local installer assets 없음 — gist payload bootstrap 사용"
   ASSET_TMP="$(mktemp -d)"
-  CORE_SCRIPT="${ASSET_TMP}/openclaw-setup.sh"
+  CORE_SCRIPT="${ASSET_TMP}/openclaw-setup-wsl.sh"
   local payload_archive="${ASSET_TMP}/openclaw-memory-v3-payload.tar.gz"
 
-  download_to_file "${GIST_BASE_URL}/openclaw-setup.sh" "${CORE_SCRIPT}"
+  download_to_file "${GIST_BASE_URL}/openclaw-setup-wsl.sh" "${CORE_SCRIPT}"
   download_to_file "${GIST_BASE_URL}/openclaw-memory-v3-payload.tar.gz" "${payload_archive}"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
@@ -111,7 +115,7 @@ run_core_setup() {
     return 0
   fi
 
-  info "기존 core setup 실행"
+  info "기존 Linux/WSL core setup 실행"
   dry bash "${CORE_SCRIPT}"
 }
 
@@ -132,21 +136,27 @@ replace_or_append_env() {
   fi
 }
 
-get_pg_prefix() {
-  if command -v brew >/dev/null 2>&1; then
-    brew --prefix "${PG_FORMULA}"
+ensure_apt_updated() {
+  if [[ -f /tmp/.openclaw-v2-apt-updated ]]; then
     return 0
   fi
-  return 1
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] sudo apt-get update -qq"
+    return 0
+  fi
+  sudo apt-get update -qq
+  touch /tmp/.openclaw-v2-apt-updated
+}
+
+apt_install() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] sudo apt-get install -y -qq $*"
+    return 0
+  fi
+  sudo apt-get install -y -qq "$@"
 }
 
 get_psql_bin() {
-  local prefix
-  prefix="$(get_pg_prefix 2>/dev/null || true)"
-  if [[ -n "${prefix}" && -x "${prefix}/bin/psql" ]]; then
-    printf '%s\n' "${prefix}/bin/psql"
-    return 0
-  fi
   if command -v psql >/dev/null 2>&1; then
     command -v psql
     return 0
@@ -155,12 +165,6 @@ get_psql_bin() {
 }
 
 get_createdb_bin() {
-  local prefix
-  prefix="$(get_pg_prefix 2>/dev/null || true)"
-  if [[ -n "${prefix}" && -x "${prefix}/bin/createdb" ]]; then
-    printf '%s\n' "${prefix}/bin/createdb"
-    return 0
-  fi
   if command -v createdb >/dev/null 2>&1; then
     command -v createdb
     return 0
@@ -170,14 +174,14 @@ get_createdb_bin() {
 
 is_supported_python() {
   local python_bin="$1"
-  "${python_bin}" - <<'EOF' >/dev/null 2>&1
+  "${python_bin}" - <<'PYEOF' >/dev/null 2>&1
 import sys
 raise SystemExit(0 if (3, 11) <= sys.version_info[:2] <= (3, 13) else 1)
-EOF
+PYEOF
 }
 
 resolve_python_bin() {
-  local candidate brew_python_prefix brew_python_bin
+  local candidate
 
   if [[ -n "${PYTHON_BIN_OVERRIDE:-}" ]]; then
     if [[ ! -x "${PYTHON_BIN_OVERRIDE}" ]]; then
@@ -192,17 +196,9 @@ resolve_python_bin() {
     return 0
   fi
 
-  for candidate in \
-    /opt/homebrew/bin/python3.13 \
-    /opt/homebrew/bin/python3.12 \
-    /opt/homebrew/bin/python3.11 \
-    python3.13 \
-    python3.12 \
-    python3.11 \
-    python3
-  do
-    if [[ -x "${candidate}" ]] || command -v "${candidate}" >/dev/null 2>&1; then
-      candidate="$(command -v "${candidate}" 2>/dev/null || printf '%s' "${candidate}")"
+  for candidate in python3.13 python3.12 python3.11 python3; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      candidate="$(command -v "${candidate}")"
       if is_supported_python "${candidate}"; then
         printf '%s\n' "${candidate}"
         return 0
@@ -210,45 +206,57 @@ resolve_python_bin() {
     fi
   done
 
-  if ! command -v brew >/dev/null 2>&1; then
-    err "Python 3.11~3.13이 필요하지만 brew를 찾을 수 없습니다."
-    return 1
-  fi
+  ensure_apt_updated
+  apt_install python3 python3-venv
 
-  if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] brew install python@3.13"
-    printf '%s\n' "/opt/homebrew/bin/python3.13"
-    return 0
-  fi
+  for candidate in python3.13 python3.12 python3.11 python3; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      candidate="$(command -v "${candidate}")"
+      if is_supported_python "${candidate}"; then
+        printf '%s\n' "${candidate}"
+        return 0
+      fi
+    fi
+  done
 
-  brew list --versions python@3.13 >/dev/null 2>&1 || brew install python@3.13
-  brew_python_prefix="$(brew --prefix python@3.13)"
-  brew_python_bin="${brew_python_prefix}/bin/python3.13"
-  if [[ ! -x "${brew_python_bin}" ]] || ! is_supported_python "${brew_python_bin}"; then
-    err "brew로 설치한 python@3.13을 확인할 수 없습니다."
-    return 1
-  fi
-  printf '%s\n' "${brew_python_bin}"
+  err "호환되는 Python 3.11~3.13을 찾을 수 없습니다."
+  return 1
 }
 
 python_mm() {
   local python_bin="$1"
-  "${python_bin}" - <<'EOF'
+  "${python_bin}" - <<'PYEOF'
 import sys
 print(f"{sys.version_info[0]}.{sys.version_info[1]}")
-EOF
+PYEOF
 }
 
 wait_for_postgres() {
-  local psql_bin="$1"
+  local user="$1"
   local i
   for i in $(seq 1 20); do
-    if "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d postgres -Atqc 'SELECT 1' >/dev/null 2>&1; then
+    if psql -h "${PG_HOST}" -p "${PG_PORT}" -U "${user}" -d postgres -Atqc 'SELECT 1' >/dev/null 2>&1; then
       return 0
     fi
     sleep 1
   done
   return 1
+}
+
+find_vector_control() {
+  find /usr/share /usr/lib -path '*extension/vector.control' 2>/dev/null | head -n 1
+}
+
+ensure_pgvector_package() {
+  local pkg
+  pkg="$(apt-cache search '^postgresql-[0-9]+-pgvector$' 2>/dev/null | awk '{print $1}' | sort -V | tail -1)"
+  if [[ -z "${pkg}" ]]; then
+    pkg="$(apt-cache search 'pgvector' 2>/dev/null | awk '/postgresql/ {print $1; exit}')"
+  fi
+  if [[ -z "${pkg}" ]]; then
+    return 1
+  fi
+  apt_install "${pkg}"
 }
 
 stage_memory_payload() {
@@ -284,45 +292,55 @@ stage_memory_payload() {
 }
 
 ensure_native_postgres() {
-  local psql_bin createdb_bin pg_prefix
+  local psql_bin createdb_bin
 
   info "native PostgreSQL 준비"
-  if ! command -v brew >/dev/null 2>&1; then
-    err "brew가 필요합니다. core setup이 먼저 완료되어야 합니다."
-    return 1
+  ensure_apt_updated
+  apt_install postgresql postgresql-contrib
+
+  if [[ -z "$(find_vector_control || true)" ]]; then
+    if ! ensure_pgvector_package; then
+      err "pgvector 패키지를 찾지 못했습니다. apt source에서 pgvector 제공이 필요합니다."
+      return 1
+    fi
   fi
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] brew install ${PG_FORMULA} pgvector"
-    ok "[DRY] brew services start ${PG_FORMULA}"
+    ok "[DRY] sudo systemctl start postgresql || sudo service postgresql start"
+    ok "[DRY] ensure postgres role ${PG_USER}"
+    ok "[DRY] ensure database ${PG_DB}"
     return 0
   fi
 
-  brew list --versions "${PG_FORMULA}" >/dev/null 2>&1 || brew install "${PG_FORMULA}"
-  if ! find /opt/homebrew "$(brew --prefix 2>/dev/null || true)" -name 'vector.control' 2>/dev/null | grep -q 'vector.control'; then
-    brew list --versions pgvector >/dev/null 2>&1 || brew install pgvector
-  fi
+  sudo systemctl start postgresql >/dev/null 2>&1 || sudo service postgresql start >/dev/null 2>&1 || true
 
-  brew services start "${PG_FORMULA}" >/dev/null 2>&1 || true
-  psql_bin="$(get_psql_bin)"
-  createdb_bin="$(get_createdb_bin)"
-  pg_prefix="$(get_pg_prefix)"
-
-  if [[ -z "${psql_bin}" || -z "${createdb_bin}" ]]; then
-    err "PostgreSQL CLI를 찾을 수 없습니다."
-    return 1
-  fi
-  if [[ -d "${pg_prefix}/share/${PG_FORMULA}/extension" ]]; then
-    ok "PostgreSQL formula 확인: ${pg_prefix}"
-  fi
-  if ! wait_for_postgres "${psql_bin}"; then
+  if ! wait_for_postgres postgres; then
     err "PostgreSQL 기동 확인 실패"
     return 1
   fi
   ok "PostgreSQL 응답 확인"
 
-  if ! "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname='${PG_DB}'" | grep -q 1; then
-    "${createdb_bin}" -h "${PG_HOST}" -p "${PG_PORT}" "${PG_DB}"
+  if ! sudo -u postgres psql -Atqc "SELECT 1 FROM pg_roles WHERE rolname='${PG_USER}'" | grep -q '^1$'; then
+    sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres -c "CREATE ROLE \"${PG_USER}\" LOGIN CREATEDB;" >/dev/null
+    ok "DB role 생성: ${PG_USER}"
+  else
+    ok "DB role 이미 존재: ${PG_USER}"
+  fi
+
+  psql_bin="$(get_psql_bin)"
+  createdb_bin="$(get_createdb_bin)"
+  if [[ -z "${psql_bin}" || -z "${createdb_bin}" ]]; then
+    err "PostgreSQL CLI를 찾을 수 없습니다."
+    return 1
+  fi
+
+  if ! wait_for_postgres "${PG_USER}"; then
+    err "현재 사용자 role로 PostgreSQL 접속 확인 실패"
+    return 1
+  fi
+
+  if ! psql -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname='${PG_DB}'" | grep -q '^1$'; then
+    "${createdb_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" "${PG_DB}"
     ok "DB 생성: ${PG_DB}"
   else
     ok "DB 이미 존재: ${PG_DB}"
@@ -334,11 +352,7 @@ setup_python_env() {
   info "memory-v3 Python 환경 준비"
 
   python_bin="$(resolve_python_bin)"
-  if [[ -z "${python_bin}" ]]; then
-    err "호환되는 Python 3.11~3.13을 찾을 수 없습니다."
-    return 1
-  fi
-  ok "Python 런타임 선택: $(${python_bin} --version 2>&1)"
+  ok "Python 런타임 선택: $("${python_bin}" --version 2>&1)"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] ${python_bin} -m venv ${SERVICE_ROOT}/.venv"
@@ -361,29 +375,9 @@ setup_python_env() {
     ok "기존 venv 재사용: Python ${existing_mm}"
   fi
 
-  venv_python="${SERVICE_ROOT}/.venv/bin/python"
   "${venv_python}" -m pip install --upgrade pip
   "${venv_python}" -m pip install -r "${SERVICE_ROOT}/requirements.txt"
   ok "venv 준비 완료"
-}
-
-run_memory_migrations() {
-  local psql_bin
-  info "memory-v3 migration 실행"
-
-  psql_bin="$(get_psql_bin)"
-  if [[ -z "${psql_bin}" ]]; then
-    err "psql을 찾을 수 없습니다."
-    return 1
-  fi
-
-  ensure_migration_tracking "${psql_bin}"
-  apply_tracked_migration "${psql_bin}" "001_base_schema.sql" "${SERVICE_ROOT}/001_base_schema.sql"
-  apply_tracked_migration "${psql_bin}" "003_memories.sql" "${SERVICE_ROOT}/migrations/003_memories.sql"
-  apply_tracked_migration "${psql_bin}" "004_memory_v3_phase2.sql" "${SERVICE_ROOT}/migrations/004_memory_v3_phase2.sql"
-  apply_tracked_migration "${psql_bin}" "005_bilingual_facts.sql" "${SERVICE_ROOT}/migrations/005_bilingual_facts.sql"
-  apply_tracked_migration "${psql_bin}" "006_eviction.sql" "${SERVICE_ROOT}/migrations/006_eviction.sql"
-  ok "migration 완료"
 }
 
 ensure_migration_tracking() {
@@ -392,8 +386,7 @@ ensure_migration_tracking() {
     ok "[DRY] ensure installer_schema_migrations table"
     return 0
   fi
-
-  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc "
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d "${PG_DB}" -Atqc "
     CREATE TABLE IF NOT EXISTS installer_schema_migrations (
       name TEXT PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -404,25 +397,21 @@ ensure_migration_tracking() {
 migration_recorded() {
   local psql_bin="$1"
   local name="$2"
-
   if [[ "${DRY_RUN}" == "1" ]]; then
     return 1
   fi
-
-  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc \
+  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d "${PG_DB}" -Atqc \
     "SELECT 1 FROM installer_schema_migrations WHERE name = '${name}'" | grep -q '^1$'
 }
 
 mark_migration_recorded() {
   local psql_bin="$1"
   local name="$2"
-
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] mark migration ${name}"
     return 0
   fi
-
-  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc \
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d "${PG_DB}" -Atqc \
     "INSERT INTO installer_schema_migrations (name) VALUES ('${name}') ON CONFLICT (name) DO NOTHING;" >/dev/null
 }
 
@@ -472,7 +461,7 @@ migration_signature_present() {
     return 1
   fi
 
-  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc "${query}" | grep -q '^1$'
+  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d "${PG_DB}" -Atqc "${query}" | grep -q '^1$'
 }
 
 apply_tracked_migration() {
@@ -481,7 +470,7 @@ apply_tracked_migration() {
   local file="$3"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] ${psql_bin} -h ${PG_HOST} -p ${PG_PORT} -d ${PG_DB} -f ${file}"
+    ok "[DRY] ${psql_bin} -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DB} -f ${file}"
     ok "[DRY] record migration ${name}"
     return 0
   fi
@@ -497,9 +486,28 @@ apply_tracked_migration() {
     return 0
   fi
 
-  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -f "${file}"
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -U "${PG_USER}" -d "${PG_DB}" -f "${file}"
   mark_migration_recorded "${psql_bin}" "${name}"
   ok "migration 적용: ${name}"
+}
+
+run_memory_migrations() {
+  local psql_bin
+  info "memory-v3 migration 실행"
+
+  psql_bin="$(get_psql_bin)"
+  if [[ -z "${psql_bin}" ]]; then
+    err "psql을 찾을 수 없습니다."
+    return 1
+  fi
+
+  ensure_migration_tracking "${psql_bin}"
+  apply_tracked_migration "${psql_bin}" "001_base_schema.sql" "${SERVICE_ROOT}/001_base_schema.sql"
+  apply_tracked_migration "${psql_bin}" "003_memories.sql" "${SERVICE_ROOT}/migrations/003_memories.sql"
+  apply_tracked_migration "${psql_bin}" "004_memory_v3_phase2.sql" "${SERVICE_ROOT}/migrations/004_memory_v3_phase2.sql"
+  apply_tracked_migration "${psql_bin}" "005_bilingual_facts.sql" "${SERVICE_ROOT}/migrations/005_bilingual_facts.sql"
+  apply_tracked_migration "${psql_bin}" "006_eviction.sql" "${SERVICE_ROOT}/migrations/006_eviction.sql"
+  ok "migration 완료"
 }
 
 configure_memory_env() {
@@ -534,11 +542,11 @@ bootstrap_workspace_memory() {
 
   mkdir -p "${WORKSPACE}/memory/logs" "${WORKSPACE}/memory/system"
   if [[ ! -f "${WORKSPACE}/MEMORY.md" ]]; then
-    cat > "${WORKSPACE}/MEMORY.md" <<'EOF'
+    cat > "${WORKSPACE}/MEMORY.md" <<'MD'
 # MEMORY.md
 
 이 파일은 사용자 선호, 장기 상태, 중요한 결정사항을 기록하는 메모리 루트입니다.
-EOF
+MD
     ok "MEMORY.md 생성"
   else
     ok "MEMORY.md 이미 존재 — 보존"
@@ -556,7 +564,7 @@ patch_openclaw_plugin() {
   mkdir -p "${CONFIG_DIR}"
   [[ -f "${CONFIG_FILE}" ]] || printf '{}\n' > "${CONFIG_FILE}"
 
-  OC_PATH="${CONFIG_FILE}" node - <<'EOF'
+  OC_PATH="${CONFIG_FILE}" node - <<'NODEEOF'
 const fs = require("fs");
 const path = process.env.OC_PATH;
 const raw = fs.readFileSync(path, "utf8");
@@ -593,7 +601,7 @@ c.plugins.entries["memory-v3"] = {
 };
 
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
-EOF
+NODEEOF
   chmod 600 "${CONFIG_FILE}"
   ok "plugin patch 완료"
 }
@@ -611,10 +619,11 @@ write_file_if_changed() {
 
 write_wrapper_scripts() {
   info "memory-v3 wrapper 스크립트 생성"
-  local server_wrapper atomize_wrapper llm_wrapper
+  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper
   server_wrapper="${SERVICE_ROOT}/run-server.sh"
   atomize_wrapper="${SERVICE_ROOT}/run-atomize.sh"
   llm_wrapper="${SERVICE_ROOT}/run-llm-atomize.sh"
+  flush_wrapper="${SERVICE_ROOT}/run-flush.sh"
 
   write_file_if_changed "${server_wrapper}" '#!/bin/bash
 set -euo pipefail
@@ -664,8 +673,15 @@ cd "${WORKDIR}"
 exec "${PYTHON_BIN}" llm_atomize_worker.py
 '
 
+  write_file_if_changed "${flush_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${WORKDIR}"
+exec /bin/bash "${WORKDIR}/flush-cron.sh"
+'
+
   if [[ "${DRY_RUN}" != "1" ]]; then
-    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}"
+    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}"
   fi
 }
 
@@ -680,165 +696,146 @@ has_google_api_key() {
   return 1
 }
 
-write_launchd_plists() {
-  info "memory-v3 launchd plist 생성"
-  local path_env api_plist atomize_plist flush_plist llm_plist
-  path_env="$(get_pg_prefix 2>/dev/null || true)/bin:/opt/homebrew/bin:/usr/bin:/bin"
-  api_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist"
-  atomize_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist"
-  flush_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist"
-  llm_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist"
+write_systemd_units() {
+  local api_service atomize_service llm_service flush_service flush_timer
+  api_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-api.service"
+  atomize_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-atomize.service"
+  llm_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-llm-atomize.service"
+  flush_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-flush.service"
+  flush_timer="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-flush.timer"
 
-  write_file_if_changed "${api_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
-<dict>
-  <key>Label</key>
-  <string>ai.openclaw.memory-v3-api</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>${SERVICE_ROOT}/run-server.sh</string>
-  </array>
-  <key>WorkingDirectory</key>
-  <string>${SERVICE_ROOT}</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key>
-    <string>${path_env}</string>
-  </dict>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>StandardOutPath</key>
-  <string>/tmp/openclaw-memory-v3-api.log</string>
-  <key>StandardErrorPath</key>
-  <string>/tmp/openclaw-memory-v3-api.log</string>
-</dict>
-</plist>
+  write_file_if_changed "${api_service}" "[Unit]
+Description=OpenClaw Memory V3 API
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-server.sh
+Restart=always
+RestartSec=3
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
 "
 
-  write_file_if_changed "${atomize_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
-<dict>
-  <key>Label</key>
-  <string>ai.openclaw.memory-v3-atomize</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>${SERVICE_ROOT}/run-atomize.sh</string>
-  </array>
-  <key>WorkingDirectory</key>
-  <string>${SERVICE_ROOT}</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key>
-    <string>${path_env}</string>
-  </dict>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>StandardOutPath</key>
-  <string>/tmp/openclaw-memory-v3-atomize.log</string>
-  <key>StandardErrorPath</key>
-  <string>/tmp/openclaw-memory-v3-atomize.log</string>
-</dict>
-</plist>
+  write_file_if_changed "${atomize_service}" "[Unit]
+Description=OpenClaw Memory V3 Atomize Worker
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-atomize.sh
+Restart=always
+RestartSec=3
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
 "
 
-  write_file_if_changed "${flush_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
-<dict>
-  <key>Label</key>
-  <string>ai.openclaw.memory-v3-flush</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>${SERVICE_ROOT}/flush-cron.sh</string>
-  </array>
-  <key>WorkingDirectory</key>
-  <string>${SERVICE_ROOT}</string>
-  <key>StartInterval</key>
-  <integer>300</integer>
-  <key>RunAtLoad</key>
-  <false/>
-  <key>StandardOutPath</key>
-  <string>/tmp/openclaw-memory-v3-flush.log</string>
-  <key>StandardErrorPath</key>
-  <string>/tmp/openclaw-memory-v3-flush.log</string>
-</dict>
-</plist>
+  write_file_if_changed "${flush_service}" "[Unit]
+Description=OpenClaw Memory V3 Flush
+
+[Service]
+Type=oneshot
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-flush.sh
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+"
+
+  write_file_if_changed "${flush_timer}" "[Unit]
+Description=Run OpenClaw Memory V3 Flush every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=ai.openclaw.memory-v3-flush.service
+
+[Install]
+WantedBy=timers.target
 "
 
   if has_google_api_key; then
-    write_file_if_changed "${llm_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
-<dict>
-  <key>Label</key>
-  <string>ai.openclaw.memory-v3-llm-atomize</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>${SERVICE_ROOT}/run-llm-atomize.sh</string>
-  </array>
-  <key>WorkingDirectory</key>
-  <string>${SERVICE_ROOT}</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key>
-    <string>${path_env}</string>
-  </dict>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>StandardOutPath</key>
-  <string>/tmp/openclaw-memory-v3-llm-atomize.log</string>
-  <key>StandardErrorPath</key>
-  <string>/tmp/openclaw-memory-v3-llm-atomize.log</string>
-</dict>
-</plist>
+    write_file_if_changed "${llm_service}" "[Unit]
+Description=OpenClaw Memory V3 LLM Atomize Worker
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-llm-atomize.sh
+Restart=always
+RestartSec=3
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
 "
   elif [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] skip llm worker plist (no GOOGLE_API_KEY)"
+    ok "[DRY] skip llm systemd unit (no GOOGLE_API_KEY)"
   else
-    rm -f "${llm_plist}"
-    ok "llm worker plist 생략"
+    rm -f "${llm_service}"
+    ok "llm worker unit 생략"
   fi
 }
 
-bootstrap_launchd_service() {
-  local plist="$1"
-  local label="$2"
-  local gui_target
-  gui_target="gui/$(id -u)"
-
+systemd_enable_user_unit() {
+  local unit="$1"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] launchctl bootout ${gui_target} ${plist}"
-    ok "[DRY] launchctl bootstrap ${gui_target} ${plist}"
+    ok "[DRY] systemctl --user enable --now ${unit}"
     return 0
   fi
-
-  launchctl bootout "${gui_target}" "${plist}" >/dev/null 2>&1 || true
-  launchctl bootstrap "${gui_target}" "${plist}"
-  launchctl kickstart -k "${gui_target}/${label}" >/dev/null 2>&1 || true
+  systemctl --user enable --now "${unit}" >/dev/null
 }
 
-install_launchd_services() {
-  info "memory-v3 launchd 등록"
-  write_wrapper_scripts
-  write_launchd_plists
+start_manual_service() {
+  local name="$1"
+  local cmd="$2"
+  local log_file="/tmp/${name}.log"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] nohup ${cmd} > ${log_file} 2>&1 &"
+    return 0
+  fi
+  if pgrep -f "${cmd}" >/dev/null 2>&1; then
+    ok "manual service already running: ${name}"
+    return 0
+  fi
+  nohup /bin/bash -lc "${cmd}" > "${log_file}" 2>&1 &
+  ok "manual service 시작: ${name}"
+}
 
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist" "ai.openclaw.memory-v3-api"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist" "ai.openclaw.memory-v3-atomize"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush"
-  if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" || "${DRY_RUN}" == "1" ]]; then
-    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize"
+install_linux_services() {
+  info "memory-v3 Linux 서비스 등록"
+  write_wrapper_scripts
+
+  if [[ "${SYSTEMD_USER_AVAILABLE}" == "1" ]]; then
+    write_systemd_units
+    if [[ "${DRY_RUN}" == "1" ]]; then
+      ok "[DRY] systemctl --user daemon-reload"
+    else
+      systemctl --user daemon-reload
+    fi
+    systemd_enable_user_unit "ai.openclaw.memory-v3-api.service"
+    systemd_enable_user_unit "ai.openclaw.memory-v3-atomize.service"
+    systemd_enable_user_unit "ai.openclaw.memory-v3-flush.timer"
+    if [[ -f "${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-llm-atomize.service" || "${DRY_RUN}" == "1" ]]; then
+      systemd_enable_user_unit "ai.openclaw.memory-v3-llm-atomize.service"
+    fi
+  else
+    warn "systemd user session이 없어 nohup 방식으로 memory 서비스를 시작합니다."
+    start_manual_service "openclaw-memory-v3-api" "cd '${SERVICE_ROOT}' && exec /bin/bash '${SERVICE_ROOT}/run-server.sh'"
+    start_manual_service "openclaw-memory-v3-atomize" "cd '${SERVICE_ROOT}' && exec /bin/bash '${SERVICE_ROOT}/run-atomize.sh'"
+    if has_google_api_key; then
+      start_manual_service "openclaw-memory-v3-llm-atomize" "cd '${SERVICE_ROOT}' && exec /bin/bash '${SERVICE_ROOT}/run-llm-atomize.sh'"
+    fi
+    if [[ "${DRY_RUN}" == "1" ]]; then
+      ok "[DRY] /bin/bash ${SERVICE_ROOT}/flush-cron.sh"
+    else
+      /bin/bash "${SERVICE_ROOT}/flush-cron.sh" >/tmp/openclaw-memory-v3-flush.log 2>&1 || true
+    fi
   fi
 }
 
@@ -849,7 +846,7 @@ restart_openclaw_gateway() {
     return 0
   fi
 
-  if openclaw gateway status 2>/dev/null | grep -q "running"; then
+  if openclaw gateway status 2>/dev/null | grep -q 'running'; then
     openclaw gateway restart >/dev/null 2>&1 || openclaw gateway start >/dev/null 2>&1 || true
   else
     openclaw gateway start >/dev/null 2>&1 || true
@@ -865,10 +862,10 @@ health_check_memory() {
     return 0
   fi
 
-  for i in $(seq 1 20); do
-    if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+  for i in $(seq 1 30); do
+    if curl -fsS 'http://127.0.0.1:18790/health' >/dev/null 2>&1; then
       ok "memory API health 확인"
-      curl -fsS "http://127.0.0.1:18790/v1/memory/stats" >/dev/null 2>&1 && ok "memory stats 확인"
+      curl -fsS 'http://127.0.0.1:18790/v1/memory/stats' >/dev/null 2>&1 && ok "memory stats 확인"
       return 0
     fi
     sleep 1
@@ -878,8 +875,12 @@ health_check_memory() {
 }
 
 main() {
-  prepare_installer_assets
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    err "이 스크립트는 Linux/WSL 전용입니다. macOS에서는 openclaw-setup-v2.sh를 사용하세요."
+    exit 1
+  fi
 
+  prepare_installer_assets
   if [[ ! -f "${CORE_SCRIPT}" ]]; then
     err "core script를 찾을 수 없습니다: ${CORE_SCRIPT}"
     exit 1
@@ -897,7 +898,7 @@ main() {
   configure_memory_env
   bootstrap_workspace_memory
   patch_openclaw_plugin
-  install_launchd_services
+  install_linux_services
   restart_openclaw_gateway
   health_check_memory
 
