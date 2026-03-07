@@ -190,6 +190,47 @@ get_createdb_bin() {
   return 1
 }
 
+ensure_pgvector_extension_files() {
+  local pg_prefix pg_major target_dir source_control source_dir
+
+  pg_prefix="$(get_pg_prefix 2>/dev/null || true)"
+  if [[ -z "${pg_prefix}" ]]; then
+    err "PostgreSQL prefix를 찾을 수 없습니다."
+    return 1
+  fi
+
+  pg_major="${PG_FORMULA#postgresql@}"
+  target_dir="${pg_prefix}/share/postgresql@${pg_major}/extension"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ensure pgvector files in ${target_dir}"
+    return 0
+  fi
+
+  mkdir -p "${target_dir}"
+  if [[ -f "${target_dir}/vector.control" ]]; then
+    ok "pgvector extension 파일 확인: ${target_dir}"
+    return 0
+  fi
+
+  source_control="$(find /opt/homebrew /usr/local -path "*/share/postgresql@${pg_major}/extension/vector.control" 2>/dev/null | head -n 1)"
+  if [[ -z "${source_control}" ]]; then
+    source_control="$(find /opt/homebrew /usr/local -name 'vector.control' 2>/dev/null | head -n 1)"
+  fi
+  if [[ -z "${source_control}" ]]; then
+    err "vector.control 파일을 찾지 못했습니다. pgvector 설치 상태를 확인하세요."
+    return 1
+  fi
+
+  source_dir="$(dirname "${source_control}")"
+  cp -f "${source_dir}"/vector* "${target_dir}/"
+  if [[ ! -f "${target_dir}/vector.control" ]]; then
+    err "pgvector extension 파일 복사 후에도 vector.control 이 없습니다."
+    return 1
+  fi
+  ok "pgvector extension 파일 보정 완료: ${target_dir}"
+}
+
 is_supported_python() {
   local python_bin="$1"
   "${python_bin}" - <<'EOF' >/dev/null 2>&1
@@ -324,6 +365,7 @@ ensure_native_postgres() {
   if ! find /opt/homebrew "$(brew --prefix 2>/dev/null || true)" -name 'vector.control' 2>/dev/null | grep -q 'vector.control'; then
     brew list --versions pgvector >/dev/null 2>&1 || brew install pgvector
   fi
+  ensure_pgvector_extension_files
 
   brew services start "${PG_FORMULA}" >/dev/null 2>&1 || true
   psql_bin="$(get_psql_bin)"
