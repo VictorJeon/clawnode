@@ -86,10 +86,11 @@ prepare_installer_assets() {
   info "local installer assets 없음 — gist payload bootstrap 사용"
   ASSET_TMP="$(mktemp -d)"
   CORE_SCRIPT="${ASSET_TMP}/openclaw-setup.sh"
+  local payload_archive_b64="${ASSET_TMP}/openclaw-memory-v3-payload.tar.gz.b64"
   local payload_archive="${ASSET_TMP}/openclaw-memory-v3-payload.tar.gz"
 
   download_to_file "${GIST_BASE_URL}/openclaw-setup.sh" "${CORE_SCRIPT}"
-  download_to_file "${GIST_BASE_URL}/openclaw-memory-v3-payload.tar.gz" "${payload_archive}"
+  download_to_file "${GIST_BASE_URL}/openclaw-memory-v3-payload.tar.gz.b64" "${payload_archive_b64}"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     mkdir -p "${ASSET_TMP}/payload"
@@ -100,6 +101,7 @@ prepare_installer_assets() {
     return 0
   fi
 
+  openssl base64 -d -A -in "${payload_archive_b64}" -out "${payload_archive}"
   tar -xzf "${payload_archive}" -C "${ASSET_TMP}"
   PAYLOAD_TEMPLATE_DIR="${ASSET_TMP}/payload"
   BASE_SCHEMA_TEMPLATE="${ASSET_TMP}/001_base_schema.sql"

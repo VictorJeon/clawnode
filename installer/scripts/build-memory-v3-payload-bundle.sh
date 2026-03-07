@@ -18,3 +18,8 @@ rsync -a \
 
 tar -czf "${OUTPUT_PATH}" -C "${TMPDIR_BUNDLE}" 001_base_schema.sql payload
 printf 'bundle=%s\n' "${OUTPUT_PATH}"
+
+if [[ "${2:-}" == "--base64" ]]; then
+  openssl base64 -A -in "${OUTPUT_PATH}" -out "${OUTPUT_PATH}.b64"
+  printf 'bundle_b64=%s.b64\n' "${OUTPUT_PATH}"
+fi
