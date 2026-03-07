@@ -1,7 +1,7 @@
 # ClawNode 설치 시스템 — 개발 문서 v2.3
 
 > CLI 설치 스크립트 기반
-> 현재 기준: OpenClaw 코어 설치는 구현됨, Memory V3 전체 프로비저닝은 아직 미구현
+> 현재 기준: OpenClaw 코어 설치는 구현됨, Memory V3 V2 scaffold는 구현됨, 격리된 E2E 검증은 아직 미완료
 > 목적: 기존 `installer/scripts/openclaw-setup.sh`를 웹사이트 약속과 맞는 V2로 어떻게 확장할지 정의한다
 
 ---
@@ -104,20 +104,23 @@
 | # | 항목 | 상태 |
 |---|------|------|
 | 1 | mac용 OpenClaw 설치 스크립트 | 구현 완료 |
-| 2 | WSL용 OpenClaw 설치 스크립트 | 구현 완료 |
-| 3 | Windows `.bat` → WSL 부트스트랩 | 구현 완료 |
-| 4 | Node/OpenClaw/onboarding/Telegram/workspace 기본 설치 | 구현 완료 |
-| 5 | Tailscale 기반 원격 접속 플로우 | 구현 완료 |
-| 6 | 입력값 재사용 / 로그 / DRY_RUN | 구현 완료 |
-| 7 | WSL script dry-run | 통과 |
-| 8 | WSL/Windows bootstrap 호환성 수정 | 반영 완료 |
+| 2 | mac용 OpenClaw V2 래퍼 (`openclaw-setup-v2.sh`) | 구현 완료 |
+| 3 | WSL용 OpenClaw 설치 스크립트 | 구현 완료 |
+| 4 | Windows `.bat` → WSL 부트스트랩 | 구현 완료 |
+| 5 | mac용 V2 `.command` 런처 | 구현 완료 |
+| 6 | Node/OpenClaw/onboarding/Telegram/workspace 기본 설치 | 구현 완료 |
+| 7 | Tailscale 기반 원격 접속 플로우 | 구현 완료 |
+| 8 | 입력값 재사용 / 로그 / DRY_RUN | 구현 완료 |
+| 9 | WSL script dry-run | 통과 |
+| 10 | WSL/Windows bootstrap 호환성 수정 | 반영 완료 |
+| 11 | V2 memory payload staging / launchd / health check scaffold | 구현 완료 |
 
 ### ❌ 아직 미구현
 
 | # | 항목 | 중요도 | 비고 |
 |---|------|--------|------|
-| 1 | Memory sidecar payload 배포 방식 확정 | 높음 | 현재는 개발자 로컬 경로 의존 |
-| 2 | Memory sidecar 설정 일반화 | 높음 | 현재 `config.py`에 하드코딩 존재 |
+| 1 | Memory sidecar payload 배포 방식 확정 | 높음 | launcher/gist 배포 버전 고정 필요 |
+| 2 | 격리된 E2E 검증 환경 정착 | 높음 | active `~/.openclaw` 대상으로 검증하면 안 됨 |
 | 3 | PostgreSQL + pgvector 프로비저닝 | 높음 | 실제 DB/마이그레이션 필요 |
 | 4 | Ollama + `bge-m3:latest` 설치 | 높음 | 현재 문서와 실코드 불일치 정리 필요 |
 | 5 | Memory service daemon/worker 등록 | 높음 | API/worker/maintenance 분리 필요 |
@@ -126,6 +129,31 @@
 | 8 | 초기 ingest / stats / search 검증 | 높음 | 설치 성공과 기능 성공을 분리해야 함 |
 | 9 | maintenance schedule (flush/snapshot) | 중간 | launchd/systemd/cron 필요 |
 | 10 | gateway cron 기반 distillation jobs | 중간 | memory infra와는 별도 레이어 |
+
+### V2 구현 현황
+
+현재 repo 기준으로는 아래까지 구현되어 있다.
+
+1. 별도 V2 wrapper script
+   - `installer/scripts/openclaw-setup-v2.sh`
+2. memory payload template
+   - `installer/templates/memory-v3/payload`
+   - `installer/templates/memory-v3/001_base_schema.sql`
+3. native PostgreSQL bring-up
+4. Python 3.11~3.13 선택 + venv 구성
+5. real migration 실행 + migration tracking
+6. `openclaw.json` memory plugin merge patch
+7. launchd plist/wrapper 생성
+8. `/health`, `/v1/memory/stats` smoke check
+
+즉 V2는 더 이상 빈 초안은 아니다.
+
+다만 아직 고객 배포 가능 상태라고 보지는 않는다.
+
+이유:
+1. launcher에서 받을 gist/raw 배포본이 아직 고정되지 않았다
+2. active 사용자 프로필을 대상으로 한 실검증은 금지해야 한다
+3. 다음 E2E는 반드시 격리된 `HOME`, 별도 DB, 별도 LaunchAgents namespace에서 돌아야 한다
 
 ---
 
@@ -167,6 +195,26 @@ V2는 “OpenClaw를 설치한다”가 아니라 아래를 완성해야 한다.
 7. 초기 ingest + search 검증
 
 이 중 하나라도 빠지면 “기억하는 OpenClaw”는 성립하지 않는다.
+
+### 이번 검증에서 실제로 드러난 문제
+
+실환경 bring-up 리허설에서 아래 문제가 확인되었다.
+
+1. Python 3.14 호환성 문제
+   - `watchfiles==1.0.4` wheel/build가 실패했다
+   - 대응: V2가 Python 3.11~3.13만 자동 선택하도록 수정
+
+2. 재실행 시 payload staging이 runtime 자산을 덮어쓸 수 있었다
+   - `.env`, `.venv`, `state/`, `logs/`를 보존하지 않았다
+   - 대응: staging exclude 추가
+
+3. migration 재실행 안전성이 없었다
+   - `003_memories.sql`의 backfill insert가 다시 실행될 수 있었다
+   - 대응: `installer_schema_migrations` 추적 및 schema signature 기반 skip 추가
+
+4. 실환경 검증 자체가 잘못된 방식이었다
+   - active `~/.openclaw`와 live `memory_v2`를 직접 건드리면 안 된다
+   - 이후 검증 원칙: 격리된 `HOME`/DB/launchd label namespace 필수
 
 ---
 
@@ -437,6 +485,7 @@ mac 기준 권장:
 ### 기본 설치 테스트
 
 - mac installer E2E
+- mac installer V2 launcher smoke test
 - WSL installer dry-run
 - Windows `.bat` → WSL bootstrap 흐름 점검
 
@@ -501,6 +550,33 @@ curl -s -X POST http://127.0.0.1:18790/v1/memory/search \
 
 즉 setup V2는 `DRY_RUN + 실제 smoke test` 둘 다 필요하다.
 
+### 실환경 리허설 결과
+
+리허설 기준:
+- `SKIP_CORE_SETUP=1 bash installer/scripts/openclaw-setup-v2.sh`
+- macOS 로컬 PostgreSQL/launchd/OpenClaw gateway 기준
+
+확인된 점:
+1. payload staging
+2. native PostgreSQL 확인
+3. Python runtime 선택
+4. migration 적용
+5. plugin patch
+6. launchd bring-up
+7. `/health`, `/v1/memory/stats` 응답
+
+문제:
+- active 사용자 환경에 직접 적용하면 운영 중 profile과 DB를 건드리게 된다
+
+따라서 이 검증은 "기능 경로 확인"으로만 기록하고, 다음 검증부터는 아래로 제한한다.
+
+필수 격리 원칙:
+1. `HOME`을 임시 디렉터리로 분리
+2. `openclaw.json`은 테스트 전용 복사본 사용
+3. PostgreSQL은 별도 테스트 DB 사용
+4. launchd label도 test namespace 사용
+5. 운영 중 gateway/profile에는 절대 적용하지 않음
+
 ---
 
 ## 6. 배포
@@ -520,6 +596,7 @@ curl -s -X POST http://127.0.0.1:18790/v1/memory/search \
 권장:
 - installer script와 memory payload를 같은 버전으로 묶어 배포
 - Gist만 업데이트하고 payload 버전이 안 맞는 상태를 만들지 말 것
+- V2 launcher도 V2 script raw URL만 가리키게 유지할 것
 
 ### 웹사이트와의 정합성
 
