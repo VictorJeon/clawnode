@@ -38,6 +38,7 @@ SERVICE_ROOT="${HOME}/.openclaw/services/memory-v2"
 SERVICE_ENV_FILE="${SERVICE_ROOT}/.env"
 CONFIG_DIR="${HOME}/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
+SETUP_ENV="${CONFIG_DIR}/.setup-env"
 EXTENSIONS_DIR="${CONFIG_DIR}/extensions"
 PLUGIN_ROOT="${EXTENSIONS_DIR}/memory-v3"
 WORKSPACE="${CONFIG_DIR}/workspace"
@@ -50,6 +51,8 @@ PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 CORE_STEP_RESULT="pending"
+USER_NAME="${USER_NAME:-}"
+CHAT_ID="${CHAT_ID:-}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -167,6 +170,35 @@ core_install_present() {
     return 1
   fi
   return 0
+}
+
+load_existing_identity() {
+  local user_file
+
+  if [[ -z "${USER_NAME}" || -z "${CHAT_ID}" ]]; then
+    if [[ -f "${SETUP_ENV}" ]]; then
+      d64() { echo "$1" | base64 -d 2>/dev/null || echo "$1"; }
+      while IFS='=' read -r key value; do
+        case "$key" in
+          USER_NAME) [[ -z "${USER_NAME}" ]] && USER_NAME="$(d64 "$value")" ;;
+          CHAT_ID) [[ -z "${CHAT_ID}" ]] && CHAT_ID="$(d64 "$value")" ;;
+        esac
+      done < "${SETUP_ENV}"
+    fi
+  fi
+
+  user_file="${WORKSPACE}/USER.md"
+  if [[ -f "${user_file}" ]]; then
+    if [[ -z "${USER_NAME}" ]]; then
+      USER_NAME="$(sed -n 's/^- 이름: //p' "${user_file}" | head -n 1)"
+    fi
+    if [[ -z "${CHAT_ID}" ]]; then
+      CHAT_ID="$(sed -n 's/^- Chat ID: //p' "${user_file}" | head -n 1)"
+    fi
+  fi
+
+  [[ -n "${USER_NAME}" ]] || USER_NAME="$(whoami)"
+  [[ -n "${CHAT_ID}" ]] || CHAT_ID="unknown"
 }
 
 cleanup_assets() {
@@ -884,6 +916,7 @@ ensure_agents_memory_guidance() {
   tmp_file="$(mktemp)"
   out_file="$(mktemp)"
 
+  load_existing_identity
   repair_stock_agents_template_if_broken
 
   cat > "${tmp_file}" <<'EOF'
