@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.log
+*.db
+*.json
+!requirements.txt
+!eval_queries*.json
+!backfill_failures_cron.json
