@@ -111,7 +111,7 @@ if %INSTALL_EXIT% equ 0 (
 ) else (
     echo.
     echo  Installation failed.
-    echo  Check the log in WSL: ~/.openclaw/setup-*.log
+    echo  Check the log in WSL: ~/.openclaw/setup-v2-*.log
 )
 
 echo.
