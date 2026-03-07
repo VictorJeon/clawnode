@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env
+.env.local
+.vercel
+*.DS_Store
+.setup-env
+*.log
+
+# 서브프로젝트 (각자 별도 repo)
+clawnode-app/
+website/
+website-v2/
