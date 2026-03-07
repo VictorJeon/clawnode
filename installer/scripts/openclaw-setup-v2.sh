@@ -179,6 +179,14 @@ resolve_python_bin() {
   printf '%s\n' "${brew_python_bin}"
 }
 
+python_mm() {
+  local python_bin="$1"
+  "${python_bin}" - <<'EOF'
+import sys
+print(f"{sys.version_info[0]}.{sys.version_info[1]}")
+EOF
+}
+
 wait_for_postgres() {
   local psql_bin="$1"
   local i
@@ -199,6 +207,10 @@ stage_memory_payload() {
     ok "[DRY] rsync -a ${PAYLOAD_TEMPLATE_DIR}/ ${SERVICE_ROOT}/"
   else
     rsync -a --delete \
+      --exclude='.env' \
+      --exclude='.venv/' \
+      --exclude='state/' \
+      --exclude='logs/' \
       --exclude='__pycache__' \
       --exclude='.pytest_cache' \
       "${PAYLOAD_TEMPLATE_DIR}/" "${SERVICE_ROOT}/"
@@ -266,7 +278,7 @@ ensure_native_postgres() {
 }
 
 setup_python_env() {
-  local python_bin venv_python
+  local python_bin venv_python target_mm existing_mm
   info "memory-v3 Python 환경 준비"
 
   python_bin="$(resolve_python_bin)"
@@ -282,7 +294,21 @@ setup_python_env() {
     return 0
   fi
 
-  "${python_bin}" -m venv --clear "${SERVICE_ROOT}/.venv"
+  target_mm="$(python_mm "${python_bin}")"
+  venv_python="${SERVICE_ROOT}/.venv/bin/python"
+  if [[ -x "${venv_python}" ]]; then
+    existing_mm="$(python_mm "${venv_python}" 2>/dev/null || true)"
+  else
+    existing_mm=""
+  fi
+
+  if [[ ! -x "${venv_python}" || "${existing_mm}" != "${target_mm}" ]]; then
+    "${python_bin}" -m venv --clear "${SERVICE_ROOT}/.venv"
+    venv_python="${SERVICE_ROOT}/.venv/bin/python"
+  else
+    ok "기존 venv 재사용: Python ${existing_mm}"
+  fi
+
   venv_python="${SERVICE_ROOT}/.venv/bin/python"
   "${venv_python}" -m pip install --upgrade pip
   "${venv_python}" -m pip install -r "${SERVICE_ROOT}/requirements.txt"
@@ -290,7 +316,7 @@ setup_python_env() {
 }
 
 run_memory_migrations() {
-  local psql_bin migration
+  local psql_bin
   info "memory-v3 migration 실행"
 
   psql_bin="$(get_psql_bin)"
@@ -299,19 +325,129 @@ run_memory_migrations() {
     return 1
   fi
 
+  ensure_migration_tracking "${psql_bin}"
+  apply_tracked_migration "${psql_bin}" "001_base_schema.sql" "${SERVICE_ROOT}/001_base_schema.sql"
+  apply_tracked_migration "${psql_bin}" "003_memories.sql" "${SERVICE_ROOT}/migrations/003_memories.sql"
+  apply_tracked_migration "${psql_bin}" "004_memory_v3_phase2.sql" "${SERVICE_ROOT}/migrations/004_memory_v3_phase2.sql"
+  apply_tracked_migration "${psql_bin}" "005_bilingual_facts.sql" "${SERVICE_ROOT}/migrations/005_bilingual_facts.sql"
+  apply_tracked_migration "${psql_bin}" "006_eviction.sql" "${SERVICE_ROOT}/migrations/006_eviction.sql"
+  ok "migration 완료"
+}
+
+ensure_migration_tracking() {
+  local psql_bin="$1"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] ${psql_bin} -h ${PG_HOST} -p ${PG_PORT} -d ${PG_DB} -f ${SERVICE_ROOT}/001_base_schema.sql"
-    for migration in 003_memories.sql 004_memory_v3_phase2.sql 005_bilingual_facts.sql 006_eviction.sql; do
-      ok "[DRY] ${psql_bin} -h ${PG_HOST} -p ${PG_PORT} -d ${PG_DB} -f ${SERVICE_ROOT}/migrations/${migration}"
-    done
+    ok "[DRY] ensure installer_schema_migrations table"
     return 0
   fi
 
-  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -f "${SERVICE_ROOT}/001_base_schema.sql"
-  for migration in 003_memories.sql 004_memory_v3_phase2.sql 005_bilingual_facts.sql 006_eviction.sql; do
-    "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -f "${SERVICE_ROOT}/migrations/${migration}"
-  done
-  ok "migration 완료"
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc "
+    CREATE TABLE IF NOT EXISTS installer_schema_migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  " >/dev/null
+}
+
+migration_recorded() {
+  local psql_bin="$1"
+  local name="$2"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    return 1
+  fi
+
+  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc \
+    "SELECT 1 FROM installer_schema_migrations WHERE name = '${name}'" | grep -q '^1$'
+}
+
+mark_migration_recorded() {
+  local psql_bin="$1"
+  local name="$2"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] mark migration ${name}"
+    return 0
+  fi
+
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc \
+    "INSERT INTO installer_schema_migrations (name) VALUES ('${name}') ON CONFLICT (name) DO NOTHING;" >/dev/null
+}
+
+migration_signature_present() {
+  local psql_bin="$1"
+  local name="$2"
+  local query
+
+  case "${name}" in
+    001_base_schema.sql)
+      query="SELECT CASE WHEN to_regclass('public.memory_documents') IS NOT NULL AND to_regclass('public.memory_chunks') IS NOT NULL THEN 1 ELSE 0 END"
+      ;;
+    003_memories.sql)
+      query="SELECT CASE WHEN to_regclass('public.memories') IS NOT NULL AND to_regclass('public.pending_atomize') IS NOT NULL AND to_regclass('public.project_snapshots') IS NOT NULL THEN 1 ELSE 0 END"
+      ;;
+    004_memory_v3_phase2.sql)
+      query="SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memories' AND column_name = 'hit_count') THEN 1 ELSE 0 END"
+      ;;
+    005_bilingual_facts.sql)
+      query="SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memories' AND column_name = 'fact_ko') THEN 1 ELSE 0 END"
+      ;;
+    006_eviction.sql)
+      query="SELECT CASE
+        WHEN to_regclass('public.memories') IS NULL THEN 0
+        WHEN EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conrelid = 'public.memories'::regclass
+            AND conname = 'memories_status_check'
+            AND pg_get_constraintdef(oid) LIKE '%archived%'
+        ) AND EXISTS (
+          SELECT 1
+          FROM pg_indexes
+          WHERE schemaname = 'public'
+            AND tablename = 'memories'
+            AND indexname = 'idx_memories_eviction'
+        ) THEN 1
+        ELSE 0
+      END"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    return 1
+  fi
+
+  "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -Atqc "${query}" | grep -q '^1$'
+}
+
+apply_tracked_migration() {
+  local psql_bin="$1"
+  local name="$2"
+  local file="$3"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ${psql_bin} -h ${PG_HOST} -p ${PG_PORT} -d ${PG_DB} -f ${file}"
+    ok "[DRY] record migration ${name}"
+    return 0
+  fi
+
+  if migration_recorded "${psql_bin}" "${name}"; then
+    ok "migration already recorded: ${name}"
+    return 0
+  fi
+
+  if migration_signature_present "${psql_bin}" "${name}"; then
+    mark_migration_recorded "${psql_bin}" "${name}"
+    ok "기존 스키마 감지 — migration 기록만 추가: ${name}"
+    return 0
+  fi
+
+  "${psql_bin}" -v ON_ERROR_STOP=1 -h "${PG_HOST}" -p "${PG_PORT}" -d "${PG_DB}" -f "${file}"
+  mark_migration_recorded "${psql_bin}" "${name}"
+  ok "migration 적용: ${name}"
 }
 
 configure_memory_env() {
