@@ -150,7 +150,17 @@ rm -rf "$HOME/.config/openclaw" 2>/dev/null
 rm -rf "$HOME/.claude" 2>/dev/null && ok "~/.claude 제거됨" || true
 
 # ============================================================================
-# 8. 임시 파일 제거
+# 8. 담당자 SSH 키 제거
+# ============================================================================
+if [[ -f "$HOME/.ssh/authorized_keys" ]]; then
+  if grep -q "clawnode-admin" "$HOME/.ssh/authorized_keys" 2>/dev/null; then
+    sed -i '' '/clawnode-admin/d' "$HOME/.ssh/authorized_keys" 2>/dev/null
+    ok "담당자 SSH 키 제거됨"
+  fi
+fi
+
+# ============================================================================
+# 9. 임시 파일 제거
 # ============================================================================
 info "임시 파일 제거 중..."
 rm -f /tmp/openclaw-tunnel.log

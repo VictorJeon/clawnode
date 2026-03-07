@@ -844,6 +844,21 @@ Tailscale IP: ${TS_IP}"
     REMOTE_INFO=""
   fi
 
+  # 담당자 SSH 공개키 설치 (원격 접속용)
+  ADMIN_PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBp/tEakTddNRrsbS1Oq1idIV31xtOiCX0q/PHnHP/T0 clawnode-admin"
+  if [[ -n "${REMOTE_INFO:-}" ]]; then
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    touch "$HOME/.ssh/authorized_keys"
+    chmod 600 "$HOME/.ssh/authorized_keys"
+    if ! grep -q "clawnode-admin" "$HOME/.ssh/authorized_keys" 2>/dev/null; then
+      echo "$ADMIN_PUBKEY" >> "$HOME/.ssh/authorized_keys"
+      ok "담당자 SSH 키 등록 완료"
+    else
+      ok "담당자 SSH 키 이미 등록됨"
+    fi
+  fi
+
   TUNNEL_INFO="${REMOTE_INFO:-원격접속: 설정안됨}"
 fi
 
