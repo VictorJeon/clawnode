@@ -26,9 +26,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CORE_SCRIPT_LOCAL="${SCRIPT_DIR}/openclaw-setup.sh"
 PAYLOAD_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/payload"
+EXTENSION_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/extension"
 BASE_SCHEMA_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/001_base_schema.sql"
 CORE_SCRIPT="${CORE_SCRIPT_LOCAL}"
 PAYLOAD_TEMPLATE_DIR="${PAYLOAD_TEMPLATE_LOCAL}"
+EXTENSION_TEMPLATE_DIR="${EXTENSION_TEMPLATE_LOCAL}"
 BASE_SCHEMA_TEMPLATE="${BASE_SCHEMA_LOCAL}"
 ASSET_TMP=""
 
@@ -36,6 +38,8 @@ SERVICE_ROOT="${HOME}/.openclaw/services/memory-v2"
 SERVICE_ENV_FILE="${SERVICE_ROOT}/.env"
 CONFIG_DIR="${HOME}/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
+EXTENSIONS_DIR="${CONFIG_DIR}/extensions"
+PLUGIN_ROOT="${EXTENSIONS_DIR}/memory-v3"
 WORKSPACE="${CONFIG_DIR}/workspace"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 
@@ -105,9 +109,10 @@ download_to_file() {
 }
 
 prepare_installer_assets() {
-  if [[ -f "${CORE_SCRIPT_LOCAL}" && -d "${PAYLOAD_TEMPLATE_LOCAL}" && -f "${BASE_SCHEMA_LOCAL}" ]]; then
+  if [[ -f "${CORE_SCRIPT_LOCAL}" && -d "${PAYLOAD_TEMPLATE_LOCAL}" && -d "${EXTENSION_TEMPLATE_LOCAL}" && -f "${BASE_SCHEMA_LOCAL}" ]]; then
     CORE_SCRIPT="${CORE_SCRIPT_LOCAL}"
     PAYLOAD_TEMPLATE_DIR="${PAYLOAD_TEMPLATE_LOCAL}"
+    EXTENSION_TEMPLATE_DIR="${EXTENSION_TEMPLATE_LOCAL}"
     BASE_SCHEMA_TEMPLATE="${BASE_SCHEMA_LOCAL}"
     return 0
   fi
@@ -122,10 +127,11 @@ prepare_installer_assets() {
   download_to_file "${GIST_BASE_URL}/openclaw-memory-v3-payload.tar.gz.b64" "${payload_archive_b64}"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    mkdir -p "${ASSET_TMP}/payload"
+    mkdir -p "${ASSET_TMP}/payload" "${ASSET_TMP}/extension"
     : > "${CORE_SCRIPT}"
     : > "${ASSET_TMP}/001_base_schema.sql"
     PAYLOAD_TEMPLATE_DIR="${ASSET_TMP}/payload"
+    EXTENSION_TEMPLATE_DIR="${ASSET_TMP}/extension"
     BASE_SCHEMA_TEMPLATE="${ASSET_TMP}/001_base_schema.sql"
     return 0
   fi
@@ -133,6 +139,7 @@ prepare_installer_assets() {
   openssl base64 -d -A -in "${payload_archive_b64}" -out "${payload_archive}"
   tar -xzf "${payload_archive}" -C "${ASSET_TMP}"
   PAYLOAD_TEMPLATE_DIR="${ASSET_TMP}/payload"
+  EXTENSION_TEMPLATE_DIR="${ASSET_TMP}/extension"
   BASE_SCHEMA_TEMPLATE="${ASSET_TMP}/001_base_schema.sql"
 }
 
@@ -178,6 +185,28 @@ replace_or_append_env() {
   ' "${SERVICE_ENV_FILE}" > "${tmp_file}"
   mv "${tmp_file}" "${SERVICE_ENV_FILE}"
   chmod 600 "${SERVICE_ENV_FILE}"
+}
+
+stage_memory_extension() {
+  info "memory-v3 plugin staging"
+
+  if [[ ! -d "${EXTENSION_TEMPLATE_DIR}" ]]; then
+    err "extension template을 찾을 수 없습니다: ${EXTENSION_TEMPLATE_DIR}"
+    return 1
+  fi
+
+  dry mkdir -p "${PLUGIN_ROOT}"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] rsync -a ${EXTENSION_TEMPLATE_DIR}/ ${PLUGIN_ROOT}/"
+    return 0
+  fi
+
+  rsync -a --delete \
+    --exclude='memory.db' \
+    --exclude='*.log' \
+    --exclude='__pycache__' \
+    "${EXTENSION_TEMPLATE_DIR}/" "${PLUGIN_ROOT}/"
+  ok "plugin 복사 완료: ${PLUGIN_ROOT}"
 }
 
 get_pg_prefix() {
@@ -997,9 +1026,14 @@ main() {
     err "payload template을 찾을 수 없습니다: ${PAYLOAD_TEMPLATE_DIR}"
     exit 1
   fi
+  if [[ ! -d "${EXTENSION_TEMPLATE_DIR}" ]]; then
+    err "extension template을 찾을 수 없습니다: ${EXTENSION_TEMPLATE_DIR}"
+    exit 1
+  fi
 
   run_core_setup
   stage_memory_payload
+  stage_memory_extension
   ensure_native_postgres
   setup_python_env
   run_memory_migrations

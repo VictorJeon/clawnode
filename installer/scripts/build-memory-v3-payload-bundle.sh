@@ -15,8 +15,12 @@ rsync -a \
   --exclude='__pycache__' \
   --exclude='.pytest_cache' \
   "${SOURCE_DIR}/payload/" "${TMPDIR_BUNDLE}/payload/"
+rsync -a \
+  --exclude='memory.db' \
+  --exclude='*.log' \
+  "${SOURCE_DIR}/extension/" "${TMPDIR_BUNDLE}/extension/"
 
-tar -czf "${OUTPUT_PATH}" -C "${TMPDIR_BUNDLE}" 001_base_schema.sql payload
+tar -czf "${OUTPUT_PATH}" -C "${TMPDIR_BUNDLE}" 001_base_schema.sql payload extension
 printf 'bundle=%s\n' "${OUTPUT_PATH}"
 
 if [[ "${2:-}" == "--base64" ]]; then

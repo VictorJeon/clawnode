@@ -1,0 +1,140 @@
+{
+  "id": "memory-v3",
+  "kind": "memory",
+  "uiHints": {
+    "baseUrl": {
+      "label": "V3 Memory API URL",
+      "placeholder": "http://127.0.0.1:18790",
+      "help": "Base URL of the Memory V3 server"
+    },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Automatically inject relevant memories into context before each turn"
+    },
+    "maxResults": {
+      "label": "Max Results",
+      "help": "Maximum number of memory results to inject",
+      "placeholder": "8"
+    },
+    "minScore": {
+      "label": "Minimum Score",
+      "help": "Minimum cosine similarity score (0-1) for results",
+      "placeholder": "0.3"
+    },
+    "prefetchTimeoutMs": {
+      "label": "Prefetch Timeout (ms)",
+      "help": "Per-search timeout for auto-recall prefetch under load",
+      "placeholder": "1200"
+    },
+    "maxInflightPrefetch": {
+      "label": "Max Inflight Prefetch",
+      "help": "Skip prefetch when concurrent prefetches exceed this limit",
+      "placeholder": "2"
+    },
+    "smartEntityLimit": {
+      "label": "Smart Entity Limit",
+      "help": "How many entity snapshots to query in smart prefetch mode",
+      "placeholder": "1"
+    },
+    "qualityFirstAgents": {
+      "label": "Quality-First Agents",
+      "help": "Agent IDs that should prioritize recall quality over latency",
+      "placeholder": "[\"nova\"]"
+    },
+    "qualityFirstPrefetchTimeoutMs": {
+      "label": "Quality Timeout (ms)",
+      "help": "Per-search timeout for quality-first agents",
+      "placeholder": "3000"
+    },
+    "qualityFirstMaxInflightPrefetch": {
+      "label": "Quality Max Inflight",
+      "help": "Concurrent prefetch budget for quality-first agents",
+      "placeholder": "8"
+    },
+    "qualityFirstSmartEntityLimit": {
+      "label": "Quality Smart Entity Limit",
+      "help": "Entity snapshot fanout for quality-first agents",
+      "placeholder": "3"
+    },
+    "prefetchFailureCooldownMs": {
+      "label": "Prefetch Failure Cooldown (ms)",
+      "help": "Cooldown after prefetch failures before trying again",
+      "placeholder": "5000"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "default": "http://127.0.0.1:18790"
+      },
+      "autoRecall": {
+        "type": "boolean",
+        "default": true
+      },
+      "maxResults": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20,
+        "default": 8
+      },
+      "minScore": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.3
+      },
+      "prefetchTimeoutMs": {
+        "type": "number",
+        "minimum": 200,
+        "maximum": 10000,
+        "default": 1200
+      },
+      "maxInflightPrefetch": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20,
+        "default": 2
+      },
+      "smartEntityLimit": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10,
+        "default": 1
+      },
+      "qualityFirstAgents": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "qualityFirstPrefetchTimeoutMs": {
+        "type": "number",
+        "minimum": 200,
+        "maximum": 10000,
+        "default": 3000
+      },
+      "qualityFirstMaxInflightPrefetch": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20,
+        "default": 8
+      },
+      "qualityFirstSmartEntityLimit": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10,
+        "default": 3
+      },
+      "prefetchFailureCooldownMs": {
+        "type": "number",
+        "minimum": 500,
+        "maximum": 60000,
+        "default": 5000
+      }
+    }
+  }
+}
