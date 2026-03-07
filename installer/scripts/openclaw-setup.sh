@@ -736,28 +736,30 @@ else
 
   # Tailscale 실행 및 로그인
   if command -v tailscale &>/dev/null || [[ -f "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]]; then
-    # Tailscale 앱 실행
-    if ! tailscale status &>/dev/null 2>&1; then
-      info "Tailscale 앱 시작 중..."
-      open -a Tailscale 2>/dev/null
-      sleep 3
-    fi
+    # Tailscale 앱 실행 + 데몬 대기
+    info "Tailscale 시작 중..."
+    open -a Tailscale 2>/dev/null
 
-    # 로그인 상태 확인
-    if tailscale status &>/dev/null 2>&1; then
+    # 데몬이 올라올 때까지 대기 (최대 30초)
+    TS_DAEMON_READY=false
+    for i in $(seq 1 30); do
+      if tailscale status &>/dev/null 2>&1; then
+        TS_DAEMON_READY=true
+        break
+      fi
+      printf "\r  Tailscale 데몬 대기 중... %ds" "$i"
+      sleep 1
+    done
+    echo ""
+
+    if [[ "$TS_DAEMON_READY" == "false" ]]; then
+      warn "Tailscale 데몬 시작 타임아웃 (30초)"
+      REMOTE_INFO=""
+    else
+      # 이미 로그인되어있는지 확인
       TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
-      TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
-      TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
-      if [[ -n "$TS_IP" ]]; then
-        ok "Tailscale 연결됨 — IP: $TS_IP"
-        REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
-        if [[ -n "${TS_HOSTNAME:-}" ]]; then
-          REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
-        fi
-        if [[ -n "${TS_TAILNET:-}" ]]; then
-          REMOTE_INFO="${REMOTE_INFO}\nTailnet: ${TS_TAILNET}"
-        fi
-      else
+
+      if [[ -z "$TS_IP" ]]; then
         # 로그인 필요
         echo ""
         echo "  ┌──────────────────────────────────────────────────┐"
@@ -771,34 +773,36 @@ else
         echo "  └──────────────────────────────────────────────────┘"
         echo ""
 
-        # 로그인 시도
+        # 브라우저 로그인 트리거
         tailscale up 2>/dev/null &
         TS_UP_PID=$!
 
-        # 로그인 대기 (최대 120초)
-        for i in $(seq 1 60); do
+        # 로그인 완료 대기 (최대 180초)
+        for i in $(seq 1 90); do
           TS_IP=$(tailscale ip -4 2>/dev/null || echo "")
           if [[ -n "$TS_IP" ]]; then break; fi
           printf "\r  로그인 대기 중... %ds" "$((i*2))"
           sleep 2
         done
         echo ""
-
-        if [[ -n "${TS_IP:-}" ]]; then
-          TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
-          ok "Tailscale 연결됨 — IP: $TS_IP"
-          REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
-          if [[ -n "${TS_HOSTNAME:-}" ]]; then
-            REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
-          fi
-        else
-          warn "Tailscale 로그인 타임아웃"
-          REMOTE_INFO=""
-        fi
       fi
-    else
-      warn "Tailscale 데몬 시작 실패"
-      REMOTE_INFO=""
+
+      # 결과 확인
+      if [[ -n "${TS_IP:-}" ]]; then
+        TS_HOSTNAME=$(tailscale status --self --json 2>/dev/null | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+        TS_TAILNET=$(tailscale status --self --json 2>/dev/null | grep -o '"MagicDNSSuffix":"[^"]*"' | head -1 | cut -d'"' -f4)
+        ok "Tailscale 연결됨 — IP: $TS_IP"
+        REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_IP}"
+        if [[ -n "${TS_HOSTNAME:-}" ]]; then
+          REMOTE_INFO="Tailscale: ssh $(whoami)@${TS_HOSTNAME} (${TS_IP})"
+        fi
+        if [[ -n "${TS_TAILNET:-}" ]]; then
+          REMOTE_INFO="${REMOTE_INFO}\nTailnet: ${TS_TAILNET}"
+        fi
+      else
+        warn "Tailscale 로그인 타임아웃 (180초)"
+        REMOTE_INFO=""
+      fi
     fi
   else
     warn "Tailscale 설치를 찾을 수 없음"
