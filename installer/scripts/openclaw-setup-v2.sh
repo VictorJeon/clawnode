@@ -52,6 +52,7 @@ PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
+GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 CORE_STEP_RESULT="pending"
 USER_NAME="${USER_NAME:-}"
 CHAT_ID="${CHAT_ID:-}"
@@ -437,6 +438,20 @@ replace_or_append_env() {
       if (!replaced) print key "=" value
     }
   ' "${SERVICE_ENV_FILE}" > "${tmp_file}"
+  mv "${tmp_file}" "${SERVICE_ENV_FILE}"
+  chmod 600 "${SERVICE_ENV_FILE}"
+}
+
+remove_env_key() {
+  local key="$1"
+  local tmp_file
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] remove env ${key}"
+    return 0
+  fi
+  [[ -f "${SERVICE_ENV_FILE}" ]] || return 0
+  tmp_file="$(mktemp)"
+  awk -v key="${key}" 'index($0, key "=") != 1 { print }' "${SERVICE_ENV_FILE}" > "${tmp_file}"
   mv "${tmp_file}" "${SERVICE_ENV_FILE}"
   chmod 600 "${SERVICE_ENV_FILE}"
 }
@@ -963,6 +978,7 @@ configure_memory_env() {
   replace_or_append_env "MEMORY_SESSION_OFFSET_FILE" "${SERVICE_ROOT}/state/session-offsets.json"
   replace_or_append_env "OPENCLAW_CONFIG_PATH" "${CONFIG_FILE}"
   replace_or_append_env "PYTHON_BIN" "${python_bin}"
+  configure_optional_google_api_key
 
   if [[ "${DRY_RUN}" != "1" ]]; then
     chmod 600 "${SERVICE_ENV_FILE}"
@@ -1409,6 +1425,92 @@ has_google_api_key() {
     return 0
   fi
   return 1
+}
+
+get_google_api_key_value() {
+  local env_value cfg_value
+  if [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+    printf '%s\n' "${GOOGLE_API_KEY}"
+    return 0
+  fi
+  if [[ -f "${SERVICE_ENV_FILE}" ]]; then
+    env_value="$(awk -F= '/^GOOGLE_API_KEY=/{sub(/^GOOGLE_API_KEY=/,""); print; exit}' "${SERVICE_ENV_FILE}" 2>/dev/null || true)"
+    env_value="${env_value%$'\r'}"
+    env_value="${env_value%\"}"
+    env_value="${env_value#\"}"
+    if [[ -n "${env_value//[[:space:]]/}" ]]; then
+      printf '%s\n' "${env_value}"
+      return 0
+    fi
+  fi
+  cfg_value="$(config_json_value 'obj.get("env", {}).get("vars", {}).get("GOOGLE_API_KEY", "")' 2>/dev/null || true)"
+  if [[ -n "${cfg_value//[[:space:]]/}" ]]; then
+    printf '%s\n' "${cfg_value}"
+    return 0
+  fi
+  return 1
+}
+
+configure_optional_google_api_key() {
+  local mode existing_key reply api_key
+  mode="$(printf '%s' "${GOOGLE_API_KEY_MODE}" | tr '[:upper:]' '[:lower:]')"
+  existing_key="$(get_google_api_key_value 2>/dev/null || true)"
+
+  if [[ -n "${existing_key}" ]]; then
+    replace_or_append_env "GOOGLE_API_KEY" "${existing_key}"
+    ok "Gemini API Key 기존 설정 재사용"
+    return 0
+  fi
+
+  case "${mode}" in
+    skip)
+      remove_env_key "GOOGLE_API_KEY"
+      ok "Gemini enrichment 건너뜀"
+      return 0
+      ;;
+    require)
+      ;;
+    ask|"")
+      if [[ ! -t 0 ]]; then
+        warn "비대화식 실행이라 Gemini enrichment를 건너뜁니다."
+        remove_env_key "GOOGLE_API_KEY"
+        return 0
+      fi
+      echo ""
+      echo "  Gemini 2.5 Flash enrichment는 선택사항입니다."
+      echo "  있으면 Tier2 atomization / contradiction / snapshot 품질이 좋아집니다."
+      read -rp "  Gemini enrichment를 활성화할까요? [y/N]: " reply
+      if [[ ! "${reply}" =~ ^[Yy]$ ]]; then
+        remove_env_key "GOOGLE_API_KEY"
+        ok "Gemini enrichment 건너뜀"
+        return 0
+      fi
+      ;;
+    *)
+      err "알 수 없는 GOOGLE_API_KEY_MODE: ${GOOGLE_API_KEY_MODE}"
+      return 1
+      ;;
+  esac
+
+  if [[ ! -t 0 ]]; then
+    err "GOOGLE_API_KEY_MODE=require 인데 대화형 입력이 불가능합니다. GOOGLE_API_KEY 환경변수로 전달하세요."
+    return 1
+  fi
+
+  read -rsp "  Google API Key 입력: " api_key
+  echo ""
+  if [[ -z "${api_key}" ]]; then
+    if [[ "${mode}" == "require" ]]; then
+      err "Google API Key가 필요합니다."
+      return 1
+    fi
+    remove_env_key "GOOGLE_API_KEY"
+    warn "입력 없음 — Gemini enrichment 건너뜀"
+    return 0
+  fi
+
+  replace_or_append_env "GOOGLE_API_KEY" "${api_key}"
+  ok "Gemini API Key 저장 완료"
 }
 
 write_launchd_plists() {
