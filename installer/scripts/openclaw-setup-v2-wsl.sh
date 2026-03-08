@@ -119,7 +119,7 @@ json_query_python() {
     python_bin="$(command -v python3 2>/dev/null || true)"
   fi
   [[ -n "${python_bin}" ]] || return 1
-  "${python_bin}" - "${expr}" <<'EOF'
+  "${python_bin}" -c '
 import json
 import sys
 
@@ -137,7 +137,7 @@ elif isinstance(value, (dict, list)):
     print(json.dumps(value))
 else:
     print(value)
-EOF
+' "${expr}"
 }
 
 write_log_header() {
