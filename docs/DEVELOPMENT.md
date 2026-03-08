@@ -1,7 +1,7 @@
 # ClawNode 설치 시스템 — 개발 문서 v2.3
 
 > CLI 설치 스크립트 기반
-> 현재 기준: OpenClaw 코어 설치는 구현됨, Memory V3 V2 scaffold는 구현됨, 격리된 E2E 검증은 아직 미완료
+> 현재 기준: OpenClaw 코어 설치는 구현됨, Memory V3 V2 install path는 구현됨, 격리된 E2E 검증은 계속 필요함
 > 목적: 기존 `installer/scripts/openclaw-setup.sh`를 웹사이트 약속과 맞는 V2로 어떻게 확장할지 정의한다
 
 ---
@@ -121,13 +121,13 @@
 |---|------|--------|------|
 | 1 | Memory sidecar payload 배포 방식 확정 | 높음 | launcher/gist 배포 버전 고정 필요 |
 | 2 | 격리된 E2E 검증 환경 정착 | 높음 | active `~/.openclaw` 대상으로 검증하면 안 됨 |
-| 3 | PostgreSQL + pgvector 프로비저닝 | 높음 | 실제 DB/마이그레이션 필요 |
-| 4 | Ollama + `bge-m3:latest` 설치 | 높음 | 현재 문서와 실코드 불일치 정리 필요 |
-| 5 | Memory service daemon/worker 등록 | 높음 | API/worker/maintenance 분리 필요 |
+| 3 | PostgreSQL + pgvector 프로비저닝 | 완료 | mac baseline `postgresql@17`, WSL native PostgreSQL |
+| 4 | Ollama + `bge-m3:latest` 설치 | 완료 | install / serve / model pull / tags check 포함 |
+| 5 | Memory service daemon/worker 등록 | 완료 | API / atomize / flush / snapshot / eviction 등록 |
 | 6 | `openclaw.json`에 memory-v3 plugin 연결 | 높음 | 실제 plugin config 방식으로 패치해야 함 |
 | 7 | MEMORY.md + memory 디렉토리 bootstrap | 중간 | 설치 후 즉시 ingest 가능해야 함 |
-| 8 | 초기 ingest / stats / search 검증 | 높음 | 설치 성공과 기능 성공을 분리해야 함 |
-| 9 | maintenance schedule (flush/snapshot) | 중간 | launchd/systemd/cron 필요 |
+| 8 | 초기 ingest / stats / search 검증 | 완료 | `/health` + `/stats` + `/search` smoke test |
+| 9 | maintenance schedule (flush/snapshot) | 완료 | flush / snapshot / eviction / ko backfill 등록 |
 | 10 | gateway cron 기반 distillation jobs | 중간 | memory infra와는 별도 레이어 |
 
 ### V2 구현 현황
@@ -143,8 +143,10 @@
 4. Python 3.11~3.13 선택 + venv 구성
 5. real migration 실행 + migration tracking
 6. `openclaw.json` memory plugin merge patch
-7. launchd plist/wrapper 생성
-8. `/health`, `/v1/memory/stats` smoke check
+7. launchd/systemd plist-wrapper 및 timer 생성
+8. Ollama install / serve / `bge-m3:latest` pull
+9. `/health`, `/v1/memory/stats`, `/v1/memory/search`, gateway plugin load smoke check
+10. snapshot / eviction / ko backfill maintenance job 등록
 
 즉 V2는 더 이상 빈 초안은 아니다.
 
@@ -254,11 +256,10 @@ V2는 “OpenClaw를 설치한다”가 아니라 아래를 완성해야 한다.
 - OpenClaw 본체는 계속 native process로 유지한다
 - loopback bind만 허용
 - DB 이름은 실제 코드 기준 `memory_v2`
-- 현재 검증된 기준 버전은 `Homebrew postgresql@16`이다
+- 현재 mac V2 baseline은 `Homebrew postgresql@17`이다
 
 현재까지 확인된 사실:
-- dev DB는 `postgresql@16`으로 운영 중이다
-- `psql`/`pg_config` 경로도 `/opt/homebrew/opt/postgresql@16/...` 기준으로 맞아 있다
+- `pgvector` extension file/link 보정이 필요할 수 있다
 - `vector` extension은 설치되어 있고, `gen_random_uuid()`는 `pg_catalog`에 있으므로 최소 bring-up에 `pgcrypto` extension은 필수가 아니다
 - 반면 `memory-v2` repo에는 `003` 이전 base migration이 없다
 
@@ -286,8 +287,8 @@ PG_PORT=5433
 PG_DB="memory_v2"
 PG_PASSWORD="$(openssl rand -hex 16)"
 
-brew install postgresql@16 pgvector
-brew services start postgresql@16
+brew install postgresql@17 pgvector
+brew services start postgresql@17
 createdb "$PG_DB" || true
 ```
 
@@ -449,7 +450,8 @@ workspace/
 - memory API server
 - Tier1 worker
 - Tier2 worker (선택)
-- periodic flush / snapshot jobs
+- periodic flush / snapshot / eviction jobs
+- Korean backfill job (optional, `GOOGLE_API_KEY` 있을 때만)
 
 mac 기준 권장:
 - `launchd` plist 여러 개로 분리

@@ -235,7 +235,7 @@ Phase 0에서 고정할 권장 프로세스는 아래다.
 권장 기본값:
 - mac target에서는 native PostgreSQL + native `pgvector` extension
 - `Docker`는 기본 경로가 아니라 fallback 후보
-- 첫 구현 기준 버전은 `Homebrew postgresql@16`
+- mac V2 기본 기준 버전은 `Homebrew postgresql@17`
 
 이유:
 - OpenClaw 본체가 native process인 만큼 운영 모델을 단순하게 유지할 수 있음
@@ -409,7 +409,7 @@ curl -s -X POST http://127.0.0.1:18790/v1/memory/search \
 1. payload는 versioned artifact로 배포한다
 2. sidecar 설치 경로는 `~/.openclaw/services/memory-v2`
 3. env file 기반 설정으로 바꾼다
-4. DB는 mac 기준 native PostgreSQL + pgvector를 기본 경로로 두고, 첫 구현은 `postgresql@16` 기준으로 맞춘다
+4. DB는 mac 기준 native PostgreSQL + pgvector를 기본 경로로 두고, 현재 baseline은 `postgresql@17`로 맞춘다
 5. pre-V3 base schema migration을 별도로 확보한다
 6. first release는 `global` workspace만 필수 지원
 7. Gemini는 optional feature로 둔다

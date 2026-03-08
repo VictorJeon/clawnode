@@ -1,7 +1,7 @@
 # Memory V3 Base Schema
 
 > 목적: `003_memories.sql` 이전에 이미 존재해야 하는 base schema를 고정한다.
-> 출처: 현재 dev DB `memory_v2`의 live schema (`postgresql@16`) 확인 결과.
+> 출처: 현재 installer 기준 `memory_v2` bring-up 및 live schema 검토 결과.
 
 ---
 
@@ -26,11 +26,11 @@
 
 ## 2. 검증된 기준 환경
 
-- PostgreSQL: `Homebrew postgresql@16`
+- PostgreSQL: `Homebrew postgresql@17`
 - DB: `memory_v2`
-- `psql`: `/opt/homebrew/opt/postgresql@16/bin/psql`
-- `pg_config --sharedir`: `/opt/homebrew/opt/postgresql@16/share/postgresql@16`
-- `pg_config --pkglibdir`: `/opt/homebrew/opt/postgresql@16/lib/postgresql`
+- `psql`: `/opt/homebrew/opt/postgresql@17/bin/psql`
+- `pg_config --sharedir`: `/opt/homebrew/opt/postgresql@17/share/postgresql@17`
+- `pg_config --pkglibdir`: `/opt/homebrew/opt/postgresql@17/lib/postgresql`
 
 추가 확인:
 - 설치된 extension: `vector 0.8.0`
@@ -99,8 +99,8 @@
 
 1. `003_memories.sql` 이전에 base schema migration이 새로 필요하다
 2. 그 migration은 최소한 `vector` extension + `memory_documents` + `memory_chunks`를 포함해야 한다
-3. Homebrew 기준 첫 구현은 `postgresql@16`을 기준으로 잡는 것이 안전하다
-4. `postgresql@17` 전환은 `pgvector` extension 설치/로드 검증 뒤에 별도 진행한다
+3. mac V2 installer 기준 PostgreSQL baseline은 `postgresql@17`이다
+4. `pgvector` extension file/link 검증은 설치 단계에서 함께 처리해야 한다
 
 현재 installer 초안 파일:
 - [001_base_schema.sql](/Users/nova/projects/clawnode/installer/templates/memory-v3/001_base_schema.sql)
