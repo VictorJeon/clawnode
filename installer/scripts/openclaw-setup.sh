@@ -412,7 +412,7 @@ case "$AUTH_MODE" in
       dry openclaw onboard --auth-choice setup-token \
         --gateway-port 18789 --gateway-bind loopback \
         --install-daemon --daemon-runtime node \
-        --skip-channels --skip-skills \
+        --skip-channels \
         --accept-risk
     fi
     ;;
@@ -422,7 +422,7 @@ case "$AUTH_MODE" in
       --anthropic-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk
     ;;
   "openai-oauth")
@@ -440,7 +440,7 @@ case "$AUTH_MODE" in
     dry openclaw onboard --auth-choice openai-codex \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk
     ;;
   "openai-key")
@@ -449,7 +449,7 @@ case "$AUTH_MODE" in
       --openai-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk
     ;;
   "gemini-key")
@@ -458,13 +458,13 @@ case "$AUTH_MODE" in
       --gemini-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk
     ;;
   *)
     echo "  * 사용자 정의 설정 모드 (대화형)"
     dry openclaw onboard --flow manual \
-      --skip-channels --skip-skills
+      --skip-channels
     ;;
 esac
 

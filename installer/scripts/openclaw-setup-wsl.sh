@@ -405,7 +405,7 @@ case "$AUTH_MODE" in
       echo ""
       if run_openclaw_onboard --auth-choice setup-token \
         --gateway-port 18789 --gateway-bind loopback \
-        --skip-channels --skip-skills \
+        --skip-channels \
         --accept-risk; then
         ONBOARD_OK=1
       fi
@@ -416,7 +416,7 @@ case "$AUTH_MODE" in
       --auth-choice apiKey \
       --anthropic-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk; then
       ONBOARD_OK=1
     fi
@@ -439,7 +439,7 @@ case "$AUTH_MODE" in
     read -rp "  준비되셨으면 Enter를 눌러주세요..."
     if run_openclaw_onboard --auth-choice openai-codex \
       --gateway-port 18789 --gateway-bind loopback \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk; then
       ONBOARD_OK=1
     fi
@@ -449,7 +449,7 @@ case "$AUTH_MODE" in
       --auth-choice openai-api-key \
       --openai-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk; then
       ONBOARD_OK=1
     fi
@@ -459,7 +459,7 @@ case "$AUTH_MODE" in
       --auth-choice gemini-api-key \
       --gemini-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
-      --skip-channels --skip-skills \
+      --skip-channels \
       --accept-risk; then
       ONBOARD_OK=1
     fi
@@ -467,7 +467,7 @@ case "$AUTH_MODE" in
   *)
     echo "  * 사용자 정의 설정 모드 (대화형)"
     if run_openclaw_onboard --flow manual \
-      --skip-channels --skip-skills; then
+      --skip-channels; then
       ONBOARD_OK=1
     fi
     ;;
