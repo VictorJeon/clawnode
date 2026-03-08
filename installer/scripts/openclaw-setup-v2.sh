@@ -51,6 +51,7 @@ PG_HOST="${PG_HOST:-127.0.0.1}"
 PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
 CORE_STEP_RESULT="pending"
 USER_NAME="${USER_NAME:-}"
 CHAT_ID="${CHAT_ID:-}"
@@ -71,11 +72,11 @@ err()   { printf "${RED}[ERR ]${NC} %s\n" "$*" >&2; }
 print_hero() {
   echo ""
   echo "============================================================"
-  printf "  ${BOLD}OpenClaw V2 + Memory V3${NC}\n"
+  printf '  %b\n' "${BOLD}OpenClaw V2 + Memory V3${NC}"
   echo "  local agent runtime + recall memory + hybrid search stack"
   echo "============================================================"
   echo ""
-  printf "  ${CYAN}Components${NC}\n"
+  printf '  %b\n' "${CYAN}Components${NC}"
   echo "  - OpenClaw core runtime"
   echo "  - Memory V3 plugin"
   echo "  - Memory API + atomize worker"
@@ -87,6 +88,59 @@ print_hero() {
 stage() {
   echo ""
   printf "${BOLD}[%s]${NC}\n" "$1"
+}
+
+config_json_value() {
+  local expr="$1"
+  local python_bin
+  python_bin="$(command -v python3 2>/dev/null || true)"
+  [[ -n "${python_bin}" && -f "${CONFIG_FILE}" ]] || return 1
+  "${python_bin}" - "${CONFIG_FILE}" "${expr}" <<'EOF'
+import json
+import sys
+
+path = sys.argv[1]
+expr = sys.argv[2]
+with open(path, "r", encoding="utf-8") as fh:
+    obj = json.load(fh)
+value = eval(expr, {"__builtins__": {}}, {"obj": obj})
+if value is None:
+    raise SystemExit(1)
+if isinstance(value, bool):
+    print("true" if value else "false")
+elif isinstance(value, (dict, list)):
+    print(json.dumps(value))
+else:
+    print(value)
+EOF
+}
+
+json_query_python() {
+  local expr="$1"
+  local python_bin="${SERVICE_ROOT}/.venv/bin/python"
+  if [[ ! -x "${python_bin}" ]]; then
+    python_bin="$(command -v python3 2>/dev/null || true)"
+  fi
+  [[ -n "${python_bin}" ]] || return 1
+  "${python_bin}" - "${expr}" <<'EOF'
+import json
+import sys
+
+expr = sys.argv[1]
+raw = sys.stdin.read().strip()
+if not raw:
+    raise SystemExit(1)
+obj = json.loads(raw)
+value = eval(expr, {"__builtins__": {}}, {"obj": obj})
+if value is None:
+    raise SystemExit(1)
+if isinstance(value, bool):
+    print("true" if value else "false")
+elif isinstance(value, (dict, list)):
+    print(json.dumps(value))
+else:
+    print(value)
+EOF
 }
 
 write_log_header() {
@@ -116,7 +170,7 @@ tailscale_ip() {
 }
 
 render_final_summary() {
-  local oc_ver sys_ip sys_host sys_os sys_user ts_ip memory_api plugin_state memory_state report_file report
+  local oc_ver sys_ip sys_host sys_os sys_user ts_ip memory_api plugin_state memory_state report_file report ollama_state gemini_state
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] final summary"
@@ -136,13 +190,25 @@ render_final_summary() {
     memory_api="offline"
   fi
 
+  if curl -fsS "${OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
+    ollama_state="ready (${OLLAMA_MODEL})"
+  else
+    ollama_state="offline"
+  fi
+
   if [[ -f "${PLUGIN_ROOT}/openclaw.plugin.json" && -f "${PLUGIN_ROOT}/index.ts" ]]; then
     plugin_state="installed"
   else
     plugin_state="missing"
   fi
 
-  if [[ "${memory_api}" == "online" && "${plugin_state}" == "installed" ]]; then
+  if has_google_api_key; then
+    gemini_state="enabled"
+  else
+    gemini_state="disabled (optional)"
+  fi
+
+  if [[ "${memory_api}" == "online" && "${plugin_state}" == "installed" && "${ollama_state}" == ready* ]]; then
     memory_state="ready"
   else
     memory_state="degraded"
@@ -159,6 +225,8 @@ OpenClaw: ${oc_ver}
 Memory 상태: ${memory_state}
 Memory API: ${memory_api} (http://127.0.0.1:18790)
 Memory Plugin: ${plugin_state}
+Ollama: ${ollama_state}
+Gemini Enrichment: ${gemini_state}
 Memory DB: ${PG_FORMULA} / ${PG_DB} / pgvector
 Workspace: ${WORKSPACE}
 AGENTS.md: memory protocol applied
@@ -175,17 +243,18 @@ Tailscale IP: ${ts_ip}"
 
   echo ""
   echo "============================================================"
-  printf "  ${GREEN}${BOLD}OpenClaw V2 + Memory V3 Ready${NC}\n"
+  printf '  %b\n' "${GREEN}${BOLD}OpenClaw V2 + Memory V3 Ready${NC}"
   echo "============================================================"
   echo ""
-  printf "  ${CYAN}Provisioned Stack${NC}\n"
+  printf '  %b\n' "${CYAN}Provisioned Stack${NC}"
   echo "  - OpenClaw core"
   echo "  - Memory V3 plugin"
   echo "  - Memory API + atomize worker"
   echo "  - PostgreSQL pgvector backend"
+  echo "  - Ollama embeddings (${OLLAMA_MODEL})"
   echo "  - Workspace memory protocol"
   echo ""
-  printf "  ${CYAN}Installation Report${NC}\n"
+  printf '  %b\n' "${CYAN}Installation Report${NC}"
   printf '%s\n' "${report}"
   echo ""
 
@@ -562,9 +631,20 @@ EOF
 
 wait_for_postgres() {
   local psql_bin="$1"
-  local i
-  for i in $(seq 1 20); do
+  for _ in $(seq 1 20); do
     if "${psql_bin}" -h "${PG_HOST}" -p "${PG_PORT}" -d postgres -Atqc 'SELECT 1' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+wait_for_http_ok() {
+  local url="$1"
+  local tries="${2:-20}"
+  for _ in $(seq 1 "${tries}"); do
+    if curl -fsS "${url}" >/dev/null 2>&1; then
       return 0
     fi
     sleep 1
@@ -649,6 +729,48 @@ ensure_native_postgres() {
   else
     ok "DB 이미 존재: ${PG_DB}"
   fi
+}
+
+ensure_ollama() {
+  info "Ollama + embedding model 준비"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] brew install ollama"
+    ok "[DRY] brew services start ollama"
+    ok "[DRY] ollama pull ${OLLAMA_MODEL}"
+    return 0
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    err "brew가 필요합니다. Ollama를 자동 설치할 수 없습니다."
+    return 1
+  fi
+
+  if ! command -v ollama >/dev/null 2>&1; then
+    brew list --versions ollama >/dev/null 2>&1 || brew install ollama
+  fi
+
+  if ! command -v ollama >/dev/null 2>&1; then
+    err "ollama CLI를 찾을 수 없습니다."
+    return 1
+  fi
+
+  brew services start ollama >/dev/null 2>&1 || true
+  if ! wait_for_http_ok "${OLLAMA_URL}/api/tags" 20; then
+    err "Ollama API 기동 확인 실패: ${OLLAMA_URL}/api/tags"
+    return 1
+  fi
+  ok "Ollama API 확인"
+
+  if ! curl -fsS "${OLLAMA_URL}/api/tags" | grep -q "\"name\":\"${OLLAMA_MODEL}\""; then
+    ollama pull "${OLLAMA_MODEL}"
+  fi
+
+  if ! curl -fsS "${OLLAMA_URL}/api/tags" | grep -q "\"name\":\"${OLLAMA_MODEL}\""; then
+    err "Ollama 모델 준비 실패: ${OLLAMA_MODEL}"
+    return 1
+  fi
+  ok "Ollama 모델 확인: ${OLLAMA_MODEL}"
 }
 
 setup_python_env() {
@@ -1165,11 +1287,16 @@ write_file_if_changed() {
 
 write_wrapper_scripts() {
   info "memory-v3 wrapper 스크립트 생성"
-  local server_wrapper atomize_wrapper llm_wrapper
+  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper snapshot_wrapper eviction_wrapper backfill_wrapper
   server_wrapper="${SERVICE_ROOT}/run-server.sh"
   atomize_wrapper="${SERVICE_ROOT}/run-atomize.sh"
   llm_wrapper="${SERVICE_ROOT}/run-llm-atomize.sh"
+  flush_wrapper="${SERVICE_ROOT}/run-flush.sh"
+  snapshot_wrapper="${SERVICE_ROOT}/run-snapshot.sh"
+  eviction_wrapper="${SERVICE_ROOT}/run-eviction.sh"
+  backfill_wrapper="${SERVICE_ROOT}/run-backfill-ko.sh"
 
+  # shellcheck disable=SC2016
   write_file_if_changed "${server_wrapper}" '#!/bin/bash
 set -euo pipefail
 WORKDIR="$(cd "$(dirname "$0")" && pwd)"
@@ -1186,6 +1313,7 @@ cd "${WORKDIR}"
 exec "${PYTHON_BIN}" server.py
 '
 
+  # shellcheck disable=SC2016
   write_file_if_changed "${atomize_wrapper}" '#!/bin/bash
 set -euo pipefail
 WORKDIR="$(cd "$(dirname "$0")" && pwd)"
@@ -1202,6 +1330,7 @@ cd "${WORKDIR}"
 exec "${PYTHON_BIN}" atomize_worker.py --interval 60
 '
 
+  # shellcheck disable=SC2016
   write_file_if_changed "${llm_wrapper}" '#!/bin/bash
 set -euo pipefail
 WORKDIR="$(cd "$(dirname "$0")" && pwd)"
@@ -1218,30 +1347,81 @@ cd "${WORKDIR}"
 exec "${PYTHON_BIN}" llm_atomize_worker.py
 '
 
+  # shellcheck disable=SC2016
+  write_file_if_changed "${flush_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${WORKDIR}"
+exec /bin/bash "${WORKDIR}/flush-cron.sh"
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${snapshot_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" snapshot_generator.py --all
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${eviction_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${WORKDIR}"
+exec /bin/bash "${WORKDIR}/eviction-cron.sh"
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${backfill_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${WORKDIR}"
+exec /bin/bash "${WORKDIR}/backfill-ko-cron.sh"
+'
+
   if [[ "${DRY_RUN}" != "1" ]]; then
-    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}"
+    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}" "${snapshot_wrapper}" "${eviction_wrapper}" "${backfill_wrapper}"
   fi
 }
 
 has_google_api_key() {
-  if [[ -f "${SERVICE_ENV_FILE}" ]] && grep -q '^GOOGLE_API_KEY=' "${SERVICE_ENV_FILE}" 2>/dev/null; then
-    return 0
+  local env_value cfg_value
+  if [[ -f "${SERVICE_ENV_FILE}" ]]; then
+    env_value="$(awk -F= '/^GOOGLE_API_KEY=/{sub(/^GOOGLE_API_KEY=/,""); print; exit}' "${SERVICE_ENV_FILE}" 2>/dev/null || true)"
+    env_value="${env_value%$'\r'}"
+    env_value="${env_value%\"}"
+    env_value="${env_value#\"}"
+    if [[ -n "${env_value//[[:space:]]/}" ]]; then
+      return 0
+    fi
   fi
-  if [[ -f "${CONFIG_FILE}" ]] && command -v jq >/dev/null 2>&1; then
-    jq -e '.env.vars.GOOGLE_API_KEY? // empty' "${CONFIG_FILE}" >/dev/null 2>&1
-    return $?
+  cfg_value="$(config_json_value 'obj.get("env", {}).get("vars", {}).get("GOOGLE_API_KEY", "")' 2>/dev/null || true)"
+  if [[ -n "${cfg_value//[[:space:]]/}" ]]; then
+    return 0
   fi
   return 1
 }
 
 write_launchd_plists() {
   info "memory-v3 launchd plist 생성"
-  local path_env api_plist atomize_plist flush_plist llm_plist
+  local path_env api_plist atomize_plist flush_plist snapshot_plist eviction_plist llm_plist backfill_plist
   path_env="$(get_pg_prefix 2>/dev/null || true)/bin:/opt/homebrew/bin:/usr/bin:/bin"
   api_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist"
   atomize_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist"
   flush_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist"
+  snapshot_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-snapshot.plist"
+  eviction_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist"
   llm_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist"
+  backfill_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist"
 
   write_file_if_changed "${api_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -1328,6 +1508,61 @@ write_launchd_plists() {
 </plist>
 "
 
+  write_file_if_changed "${snapshot_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-snapshot</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-snapshot.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-snapshot.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-snapshot.log</string>
+</dict>
+</plist>
+"
+
+  write_file_if_changed "${eviction_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-eviction</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-eviction.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-eviction.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-eviction.log</string>
+</dict>
+</plist>
+"
+
   if has_google_api_key; then
     write_file_if_changed "${llm_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -1358,11 +1593,36 @@ write_launchd_plists() {
 </dict>
 </plist>
 "
+    write_file_if_changed "${backfill_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-backfill-ko</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-backfill-ko.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-backfill-ko.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-backfill-ko.log</string>
+</dict>
+</plist>
+"
   elif [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] skip llm worker plist (no GOOGLE_API_KEY)"
   else
     rm -f "${llm_plist}"
-    ok "llm worker plist 생략"
+    rm -f "${backfill_plist}"
+    ok "Gemini optional jobs 생략"
   fi
 }
 
@@ -1391,8 +1651,13 @@ install_launchd_services() {
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist" "ai.openclaw.memory-v3-api"
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist" "ai.openclaw.memory-v3-atomize"
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush"
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-snapshot.plist" "ai.openclaw.memory-v3-snapshot"
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist" "ai.openclaw.memory-v3-eviction"
   if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" || "${DRY_RUN}" == "1" ]]; then
     bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize"
+  fi
+  if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" || "${DRY_RUN}" == "1" ]]; then
+    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" "ai.openclaw.memory-v3-backfill-ko"
   fi
 }
 
@@ -1410,25 +1675,90 @@ restart_openclaw_gateway() {
   fi
 }
 
+run_initial_memory_flush() {
+  local resp
+  info "initial memory flush"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] POST /v1/memory/flush"
+    return 0
+  fi
+
+  resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/flush" \
+    -H 'Content-Type: application/json' \
+    -d '{"namespace":"global"}' 2>/dev/null || true)"
+  if [[ -z "${resp}" ]]; then
+    err "initial memory flush 실패"
+    return 1
+  fi
+  ok "initial memory flush 완료"
+}
+
+gateway_plugin_ready() {
+  local gateway_log="${CONFIG_DIR}/logs/gateway.log"
+  [[ -f "${gateway_log}" ]] || return 1
+  tail -n 400 "${gateway_log}" | grep -Eq 'memory-v3: connected|memory-v3: connected to V3 server|memory-v3: registered'
+}
+
+memory_search_ready() {
+  local resp result_count degraded error_text
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] POST /v1/memory/search"
+    return 0
+  fi
+
+  resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/search" \
+    -H 'Content-Type: application/json' \
+    -d '{"query":"운영 규칙 AGENTS MEMORY","maxResults":5}' 2>/dev/null || true)"
+  [[ -n "${resp}" ]] || return 1
+
+  degraded="$(printf '%s' "${resp}" | json_query_python 'obj.get("degraded", False)' 2>/dev/null || true)"
+  error_text="$(printf '%s' "${resp}" | json_query_python 'obj.get("error", "")' 2>/dev/null || true)"
+  result_count="$(printf '%s' "${resp}" | json_query_python 'len(obj.get("results", []))' 2>/dev/null || true)"
+
+  [[ "${degraded}" == "true" ]] && return 1
+  [[ -n "${error_text}" ]] && return 1
+  [[ "${result_count}" =~ ^[0-9]+$ ]] || return 1
+  [[ "${result_count}" -gt 0 ]]
+}
+
 health_check_memory() {
-  local i
   info "memory-v3 health check"
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] curl http://127.0.0.1:18790/health"
     ok "[DRY] curl http://127.0.0.1:18790/v1/memory/stats"
+    ok "[DRY] curl ${OLLAMA_URL}/api/tags"
+    ok "[DRY] POST /v1/memory/search"
     return 0
   fi
 
-  for i in $(seq 1 20); do
+  if ! wait_for_http_ok "${OLLAMA_URL}/api/tags" 20; then
+    err "Ollama tags 확인 실패"
+    return 1
+  fi
+  if ! curl -fsS "${OLLAMA_URL}/api/tags" | grep -q "\"name\":\"${OLLAMA_MODEL}\""; then
+    err "Ollama 모델 누락: ${OLLAMA_MODEL}"
+    return 1
+  fi
+  ok "Ollama tags/model 확인"
+
+  for _ in $(seq 1 20); do
     if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
       ok "memory API health 확인"
       curl -fsS "http://127.0.0.1:18790/v1/memory/stats" >/dev/null 2>&1 && ok "memory stats 확인"
-      return 0
+      break
     fi
     sleep 1
   done
-  err "memory API health check 실패"
-  return 1
+  if ! curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+    err "memory API health check 실패"
+    return 1
+  fi
+
+  run_initial_memory_flush || return 1
+  memory_search_ready || { err "memory search smoke test 실패"; return 1; }
+  ok "memory search smoke test 확인"
+  gateway_plugin_ready || { err "gateway memory-v3 plugin load 확인 실패"; return 1; }
+  ok "gateway memory-v3 plugin 연결 확인"
 }
 
 main() {
@@ -1455,6 +1785,8 @@ main() {
   stage_memory_extension
   stage "Database"
   ensure_native_postgres
+  stage "Embeddings"
+  ensure_ollama
   stage "Runtime"
   setup_python_env
   run_memory_migrations
