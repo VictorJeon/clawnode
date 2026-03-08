@@ -1616,30 +1616,43 @@ run_initial_memory_flush() {
 
 gateway_plugin_ready() {
   local gateway_log="${CONFIG_DIR}/logs/gateway.log"
-  [[ -f "${gateway_log}" ]] || return 1
-  tail -n 400 "${gateway_log}" | grep -Eq 'memory-v3: connected|memory-v3: connected to V3 server|memory-v3: registered'
+  local tries="${1:-20}"
+  local _
+  for _ in $(seq 1 "${tries}"); do
+    if [[ -f "${gateway_log}" ]] && tail -n 400 "${gateway_log}" | grep -Eq 'memory-v3: connected|memory-v3: connected to V3 server|memory-v3: registered'; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
 }
 
 memory_search_ready() {
-  local resp result_count degraded error_text
+  local resp result_count degraded error_text tries="${1:-10}" _
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] POST /v1/memory/search"
     return 0
   fi
 
-  resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/search" \
-    -H 'Content-Type: application/json' \
-    -d '{"query":"운영 규칙 AGENTS MEMORY","maxResults":5}' 2>/dev/null || true)"
-  [[ -n "${resp}" ]] || return 1
+  for _ in $(seq 1 "${tries}"); do
+    resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/search" \
+      -H 'Content-Type: application/json' \
+      -d '{"query":"운영 규칙 AGENTS MEMORY","maxResults":5}' 2>/dev/null || true)"
+    if [[ -z "${resp}" ]]; then
+      sleep 1
+      continue
+    fi
 
-  degraded="$(printf '%s' "${resp}" | json_query_python 'obj.get("degraded", False)' 2>/dev/null || true)"
-  error_text="$(printf '%s' "${resp}" | json_query_python 'obj.get("error", "")' 2>/dev/null || true)"
-  result_count="$(printf '%s' "${resp}" | json_query_python 'len(obj.get("results", []))' 2>/dev/null || true)"
+    degraded="$(printf '%s' "${resp}" | json_query_python 'obj.get("degraded", False)' 2>/dev/null || true)"
+    error_text="$(printf '%s' "${resp}" | json_query_python 'obj.get("error", "")' 2>/dev/null || true)"
+    result_count="$(printf '%s' "${resp}" | json_query_python 'len(obj.get("results", []))' 2>/dev/null || true)"
 
-  [[ "${degraded}" == "true" ]] && return 1
-  [[ -n "${error_text}" ]] && return 1
-  [[ "${result_count}" =~ ^[0-9]+$ ]] || return 1
-  [[ "${result_count}" -gt 0 ]]
+    if [[ "${degraded}" != "true" && -z "${error_text}" && "${result_count}" =~ ^[0-9]+$ && "${result_count}" -gt 0 ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
 }
 
 health_check_memory() {
