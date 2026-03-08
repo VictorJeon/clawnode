@@ -51,7 +51,7 @@ Phase 0에서 아직 하지 않는 것:
 현재 코드에는 개발자 환경 하드코딩이 존재한다.
 - workspace path 하드코딩
 - session path 하드코딩
-- remote Ollama fallback
+- local Ollama endpoint 고정 원칙
 - cron shell script에 절대경로 사용
 - 일부 LLM credential fallback이 `~/.openclaw/openclaw.json`에 의존
 
@@ -69,9 +69,10 @@ Phase 0에서 아직 하지 않는 것:
 - `EXTRA_GLOBAL_FILES`
   - `~/projects/polymarket-weather-bot/ANALYSIS-STATE.md`
 - `OLLAMA_URL/OLLAMA_URLS` 기본값
-  - `http://100.93.17.114:11434`
+  - `http://127.0.0.1:11434`
 
 이건 고객 설치 기본값으로 쓰면 안 된다.
+특히 원격 Ollama fallback은 더 이상 허용하지 않는다.
 
 ### 4.2 세션 ingest 경로
 

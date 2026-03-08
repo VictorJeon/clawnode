@@ -159,7 +159,6 @@ KNOWN_ENTITIES = [
     "Bella", "Meta Z",
     "Rollup Scanner",
     "claude-realtime", "claude-realtime.sh",
-    "Hetzner",
 ]
 
 # Eviction
