@@ -8,7 +8,7 @@
 #
 # 모드:
 #   --soft   OpenClaw만 제거 (brew/node/git/Tailscale/Postgres 유지) ← 기본값
-#   --hard   OpenClaw + Memory V2/V3 + Postgres + brew 패키지 + Tailscale 제거 (brew 자체는 유지)
+#   --hard   OpenClaw + Memory V2/V3 + Postgres + Ollama + brew 패키지 + Tailscale 제거 (brew 자체는 유지)
 #   --full   모든 것 제거 (brew 포함, 완전 깡통 초기화)
 # ============================================================================
 
@@ -35,7 +35,7 @@ echo ""
 
 case "$MODE" in
   --soft) echo "  모드: Soft (OpenClaw만 제거, brew/node/Tailscale/Postgres 유지)" ;;
-  --hard) echo "  모드: Hard (OpenClaw + Memory/Postgres + brew 패키지 + Tailscale 제거)" ;;
+  --hard) echo "  모드: Hard (OpenClaw + Memory/Postgres/Ollama + brew 패키지 + Tailscale 제거)" ;;
   --full) echo "  모드: Full (모든 것 제거, 깡통 초기화)" ;;
   *)      echo "  사용법: $0 [--soft|--hard|--full]"; exit 1 ;;
 esac
@@ -121,7 +121,11 @@ PLISTS=(
   "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-api.plist"
   "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-atomize.plist"
   "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-flush.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-snapshot.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-eviction.plist"
   "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-llm-atomize.plist"
+  "$HOME/Library/LaunchAgents/ai.openclaw.memory-v3-backfill-ko.plist"
+  "$HOME/Library/LaunchAgents/homebrew.mxcl.ollama.plist"
   "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@16.plist"
   "$HOME/Library/LaunchAgents/homebrew.mxcl.postgresql@17.plist"
 )
@@ -138,20 +142,26 @@ done
 # ============================================================================
 # 5.1 Memory / PostgreSQL 프로세스 중지
 # ============================================================================
-info "Memory / PostgreSQL 프로세스 정리 중..."
+info "Memory / PostgreSQL / Ollama 프로세스 정리 중..."
 pkill -f "server.py" 2>/dev/null || true
 pkill -f "atomize_worker.py" 2>/dev/null || true
 pkill -f "llm_atomize_worker.py" 2>/dev/null || true
+pkill -f "snapshot_generator.py" 2>/dev/null || true
+pkill -f "eviction-cron.sh" 2>/dev/null || true
+pkill -f "backfill-ko-cron.sh" 2>/dev/null || true
+pkill -f "ollama serve" 2>/dev/null || true
+pkill -x "ollama" 2>/dev/null || true
 pkill -f "postgres -D /opt/homebrew/var/postgresql@17" 2>/dev/null || true
 pkill -f "postgres -D /opt/homebrew/var/postgresql@16" 2>/dev/null || true
 pkill -f "postgres -D /usr/local/var/postgresql@17" 2>/dev/null || true
 pkill -f "postgres -D /usr/local/var/postgresql@16" 2>/dev/null || true
 
 if command -v brew &>/dev/null; then
+  brew services stop ollama 2>/dev/null || true
   brew services stop postgresql@17 2>/dev/null || true
   brew services stop postgresql@16 2>/dev/null || true
 fi
-ok "Memory / PostgreSQL 프로세스 정리 완료"
+ok "Memory / PostgreSQL / Ollama 프로세스 정리 완료"
 
 # ============================================================================
 # 6. OpenClaw 언인스톨
@@ -199,7 +209,11 @@ rm -f /tmp/openclaw-cleanup.sh
 rm -f /tmp/openclaw-memory-v3-api.log
 rm -f /tmp/openclaw-memory-v3-atomize.log
 rm -f /tmp/openclaw-memory-v3-flush.log
+rm -f /tmp/openclaw-memory-v3-snapshot.log
+rm -f /tmp/openclaw-memory-v3-eviction.log
 rm -f /tmp/openclaw-memory-v3-llm-atomize.log
+rm -f /tmp/openclaw-memory-v3-backfill-ko.log
+rm -f /tmp/openclaw-ollama.log
 rm -f "$HOME/.openclaw/.setup-env" 2>/dev/null
 ok "임시 파일 제거됨"
 
@@ -219,6 +233,7 @@ if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
     fi
   done
   rm -rf "$HOME/Library/Application Support/Postgres" 2>/dev/null || true
+  rm -rf "$HOME/.ollama" 2>/dev/null || true
 fi
 
 # ============================================================================
@@ -229,6 +244,7 @@ if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
     info "brew 패키지 제거 중..."
 
     PACKAGES=(
+      ollama
       postgresql@17
       postgresql@16
       pgvector
@@ -288,7 +304,7 @@ case "$MODE" in
     echo "  재설치: bash <(curl -fsSL <GIST_URL>)"
     ;;
   --hard)
-    echo "  제거됨: OpenClaw + Memory V2/V3 + PostgreSQL + brew 패키지 + Tailscale + SSH"
+    echo "  제거됨: OpenClaw + Memory V2/V3 + PostgreSQL + Ollama + brew 패키지 + Tailscale + SSH"
     echo "  유지됨: Homebrew 자체"
     echo ""
     echo "  재설치하면 brew install부터 다시 진행합니다."
