@@ -1725,7 +1725,7 @@ gateway_plugin_ready() {
 }
 
 memory_search_ready() {
-  local resp result_count degraded error_text tries="${1:-10}" _
+  local resp tries="${1:-10}" _
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] POST /v1/memory/search"
     return 0
@@ -1739,12 +1739,14 @@ memory_search_ready() {
       sleep 1
       continue
     fi
+    if printf '%s' "${resp}" | "${SERVICE_ROOT}/.venv/bin/python" -c '
+import json
+import sys
 
-    degraded="$(printf '%s' "${resp}" | json_query_python 'obj.get("degraded", False)' 2>/dev/null || true)"
-    error_text="$(printf '%s' "${resp}" | json_query_python 'obj.get("error", "")' 2>/dev/null || true)"
-    result_count="$(printf '%s' "${resp}" | json_query_python 'len(obj.get("results", []))' 2>/dev/null || true)"
-
-    if [[ "${degraded}" != "true" && -z "${error_text}" && "${result_count}" =~ ^[0-9]+$ && "${result_count}" -gt 0 ]]; then
+obj = json.loads(sys.stdin.read().strip())
+ok = obj.get("degraded", False) is not True and not obj.get("error") and len(obj.get("results", [])) > 0
+raise SystemExit(0 if ok else 1)
+' 2>/dev/null; then
       return 0
     fi
     sleep 1
