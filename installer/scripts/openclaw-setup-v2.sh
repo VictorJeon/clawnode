@@ -1629,18 +1629,24 @@ write_launchd_plists() {
 bootstrap_launchd_service() {
   local plist="$1"
   local label="$2"
+  local kickstart_now="${3:-1}"
   local gui_target
   gui_target="gui/$(id -u)"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] launchctl bootout ${gui_target} ${plist}"
     ok "[DRY] launchctl bootstrap ${gui_target} ${plist}"
+    if [[ "${kickstart_now}" == "1" ]]; then
+      ok "[DRY] launchctl kickstart -k ${gui_target}/${label}"
+    fi
     return 0
   fi
 
   launchctl bootout "${gui_target}" "${plist}" >/dev/null 2>&1 || true
   launchctl bootstrap "${gui_target}" "${plist}"
-  launchctl kickstart -k "${gui_target}/${label}" >/dev/null 2>&1 || true
+  if [[ "${kickstart_now}" == "1" ]]; then
+    launchctl kickstart -k "${gui_target}/${label}" >/dev/null 2>&1 || true
+  fi
 }
 
 install_launchd_services() {
@@ -1648,16 +1654,16 @@ install_launchd_services() {
   write_wrapper_scripts
   write_launchd_plists
 
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist" "ai.openclaw.memory-v3-api"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist" "ai.openclaw.memory-v3-atomize"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-snapshot.plist" "ai.openclaw.memory-v3-snapshot"
-  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist" "ai.openclaw.memory-v3-eviction"
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist" "ai.openclaw.memory-v3-api" 1
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist" "ai.openclaw.memory-v3-atomize" 1
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush" 0
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-snapshot.plist" "ai.openclaw.memory-v3-snapshot" 0
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist" "ai.openclaw.memory-v3-eviction" 0
   if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" || "${DRY_RUN}" == "1" ]]; then
-    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize"
+    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize" 1
   fi
   if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" || "${DRY_RUN}" == "1" ]]; then
-    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" "ai.openclaw.memory-v3-backfill-ko"
+    bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" "ai.openclaw.memory-v3-backfill-ko" 0
   fi
 }
 
@@ -1676,10 +1682,16 @@ restart_openclaw_gateway() {
 }
 
 run_initial_memory_flush() {
-  local resp
+  local resp docs_before docs_after
   info "initial memory flush"
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] POST /v1/memory/flush"
+    return 0
+  fi
+
+  docs_before="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+  if [[ "${docs_before}" =~ ^[0-9]+$ && "${docs_before}" -gt 0 ]]; then
+    ok "initial memory already present (${docs_before} docs)"
     return 0
   fi
 
@@ -1687,6 +1699,12 @@ run_initial_memory_flush() {
     -H 'Content-Type: application/json' \
     -d '{"namespace":"global"}' 2>/dev/null || true)"
   if [[ -z "${resp}" ]]; then
+    sleep 2
+    docs_after="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+    if [[ "${docs_after}" =~ ^[0-9]+$ && "${docs_after}" -gt 0 ]]; then
+      warn "initial flush 응답은 비었지만 문서는 이미 적재됨 (${docs_after} docs)"
+      return 0
+    fi
     err "initial memory flush 실패"
     return 1
   fi

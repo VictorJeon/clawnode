@@ -1528,7 +1528,7 @@ start_manual_loop_service() {
   local name="$1"
   local interval="$2"
   local script_path="$3"
-  local cmd="cd '${SERVICE_ROOT}' && while true; do /bin/bash '${script_path}'; sleep ${interval}; done"
+  local cmd="cd '${SERVICE_ROOT}' && sleep ${interval} && while true; do /bin/bash '${script_path}'; sleep ${interval}; done"
   start_manual_service "${name}" "${cmd}"
 }
 
@@ -1585,10 +1585,16 @@ restart_openclaw_gateway() {
 }
 
 run_initial_memory_flush() {
-  local resp
+  local resp docs_before docs_after
   info "initial memory flush"
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] POST /v1/memory/flush"
+    return 0
+  fi
+
+  docs_before="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+  if [[ "${docs_before}" =~ ^[0-9]+$ && "${docs_before}" -gt 0 ]]; then
+    ok "initial memory already present (${docs_before} docs)"
     return 0
   fi
 
@@ -1596,6 +1602,12 @@ run_initial_memory_flush() {
     -H 'Content-Type: application/json' \
     -d '{"namespace":"global"}' 2>/dev/null || true)"
   if [[ -z "${resp}" ]]; then
+    sleep 2
+    docs_after="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+    if [[ "${docs_after}" =~ ^[0-9]+$ && "${docs_after}" -gt 0 ]]; then
+      warn "initial flush 응답은 비었지만 문서는 이미 적재됨 (${docs_after} docs)"
+      return 0
+    fi
     err "initial memory flush 실패"
     return 1
   fi
