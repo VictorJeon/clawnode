@@ -51,6 +51,7 @@ PG_DB="${PG_DB:-memory_v2}"
 PG_HOST="${PG_HOST:-/var/run/postgresql}"
 PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
+MEMORY_PORT="${MEMORY_PORT:-18790}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
@@ -88,6 +89,10 @@ print_hero() {
 stage() {
   echo ""
   printf "${BOLD}[%s]${NC}\n" "$1"
+}
+
+memory_base_url() {
+  printf 'http://127.0.0.1:%s' "${MEMORY_PORT}"
 }
 
 config_json_value() {
@@ -181,7 +186,7 @@ render_final_summary() {
   sys_os="$(lsb_release -ds 2>/dev/null || grep PRETTY /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"') ($(uname -m))"
   sys_user="$(whoami)"
 
-  if curl -fsS "http://127.0.0.1:18790/health" >/dev/null 2>&1; then
+  if curl -fsS "$(memory_base_url)/health" >/dev/null 2>&1; then
     memory_api="online"
   else
     memory_api="offline"
@@ -227,7 +232,7 @@ OpenClaw: ${oc_ver}
 로컬IP: ${local_ip}
 유저: ${sys_user}
 Memory 상태: ${memory_state}
-Memory API: ${memory_api} (http://127.0.0.1:18790)
+Memory API: ${memory_api} ($(memory_base_url))
 Memory Plugin: ${plugin_state}
 Ollama: ${ollama_state}
 Gemini Enrichment: ${gemini_state}
@@ -299,6 +304,62 @@ resolve_openclaw_bin() {
     fi
   done
   return 1
+}
+
+current_memory_port_from_env() {
+  local value
+  [[ -f "${SERVICE_ENV_FILE}" ]] || return 1
+  value="$(sed -n "s/^MEMORY_PORT=['\"]\\{0,1\\}\\([0-9][0-9]*\\)['\"]\\{0,1\\}$/\\1/p" "${SERVICE_ENV_FILE}" | tail -n 1)"
+  [[ -n "${value}" ]] || return 1
+  printf '%s\n' "${value}"
+}
+
+port_listener_command() {
+  local port="$1"
+  sudo lsof -nP -iTCP:"${port}" -sTCP:LISTEN -Fpct 2>/dev/null | awk '
+    /^p/ { pid=substr($0,2) }
+    /^c/ { cmd=substr($0,2) }
+    END {
+      if (pid != "") printf "%s\t%s\n", pid, cmd
+    }
+  '
+}
+
+port_is_memory_service() {
+  local port="$1"
+  local info cmd
+  info="$(port_listener_command "${port}" 2>/dev/null || true)"
+  [[ -n "${info}" ]] || return 1
+  cmd="${info#*$'\t'}"
+  [[ "${cmd}" =~ ^(python|python3|uvicorn)$ ]]
+}
+
+select_memory_port() {
+  local candidate info pid cmd
+  candidate="$(current_memory_port_from_env 2>/dev/null || true)"
+  if [[ -z "${candidate}" ]]; then
+    candidate="${MEMORY_PORT}"
+  fi
+
+  while :; do
+    info="$(port_listener_command "${candidate}" 2>/dev/null || true)"
+    if [[ -z "${info}" ]]; then
+      MEMORY_PORT="${candidate}"
+      ok "Memory API 포트 선택: ${MEMORY_PORT}"
+      return 0
+    fi
+
+    pid="${info%%$'\t'*}"
+    cmd="${info#*$'\t'}"
+    if port_is_memory_service "${candidate}"; then
+      MEMORY_PORT="${candidate}"
+      ok "기존 Memory API 포트 재사용: ${MEMORY_PORT} (pid=${pid}, cmd=${cmd})"
+      return 0
+    fi
+
+    warn "포트 ${candidate} 가 이미 사용 중입니다 (pid=${pid}, cmd=${cmd})"
+    candidate="$((candidate + 1))"
+  done
 }
 
 core_install_present() {
@@ -971,13 +1032,13 @@ configure_memory_env() {
   local db_dsn python_bin
   info "memory-v3 .env 설정"
 
-  db_dsn="postgresql://${PG_USER}@127.0.0.1:${PG_PORT}/${PG_DB}"
+  db_dsn="dbname=${PG_DB} user=${PG_USER} host=${PG_HOST} port=${PG_PORT}"
   python_bin="${SERVICE_ROOT}/.venv/bin/python"
 
   replace_or_append_env "DATABASE_URL" "${db_dsn}"
   replace_or_append_env "OLLAMA_URL" "${OLLAMA_URL}"
   replace_or_append_env "MEMORY_HOST" "127.0.0.1"
-  replace_or_append_env "MEMORY_PORT" "18790"
+  replace_or_append_env "MEMORY_PORT" "${MEMORY_PORT}"
   replace_or_append_env "MEMORY_WORKSPACE_GLOBAL" "${WORKSPACE}"
   replace_or_append_env "MEMORY_SESSION_DIR_AGENT_NOVA" "${HOME}/.openclaw/agents/nova/sessions"
   replace_or_append_env "MEMORY_STATE_DIR" "${SERVICE_ROOT}/state"
@@ -1084,7 +1145,7 @@ _이 파일은 내가 어떻게 동작하는지를 정의한다._
 
 ### Memory V3 검색 규칙
 - 우선순위: `PROJECT-STATE.md` 읽기 → Memory V3 API 검색 → 작업 시작
-- 기본 검색 엔드포인트: `http://127.0.0.1:18790/v1/memory/search`
+- 기본 검색 엔드포인트: `__MEMORY_BASE_URL__/v1/memory/search`
 - 최소 2회 검색:
   1. `<entity> 현재 상태`
   2. `<entity> 최근 변경`
@@ -1182,7 +1243,7 @@ _이 파일은 내가 어떻게 동작하는지를 정의한다._
 - 사용자의 의도를 보수적으로 해석하지 말 것. 요청 그대로 실행.
 EOF
 
-  perl -0pi -e 's/__USER_NAME__/\Q'"${USER_NAME}"'\E/g; s/__CHAT_ID__/\Q'"${CHAT_ID}"'\E/g' "${template_file}"
+  perl -0pi -e 's/__USER_NAME__/\Q'"${USER_NAME}"'\E/g; s/__CHAT_ID__/\Q'"${CHAT_ID}"'\E/g; s#__MEMORY_BASE_URL__#\Q'"$(memory_base_url)"'\E#g' "${template_file}"
   mv "${template_file}" "${agents_file}"
   ok "AGENTS.md stock 템플릿 복구"
 }
@@ -1213,7 +1274,7 @@ ensure_agents_memory_guidance() {
 ### Memory V3 검색 프로토콜
 - 실행형 요청을 받으면 시작 전에 관련 기억을 먼저 검색한다.
 - 프로젝트 루트에 `PROJECT-STATE.md`가 있으면 반드시 먼저 읽는다.
-- 기본 엔드포인트: `http://127.0.0.1:18790/v1/memory/search`
+- 기본 엔드포인트: `__MEMORY_BASE_URL__/v1/memory/search`
 - 최소 2회 검색:
   1. `<entity> 현재 상태`
   2. `<entity> 최근 변경`
@@ -1235,6 +1296,8 @@ EOF
 
 EOF
   fi
+
+  perl -0pi -e 's#__MEMORY_BASE_URL__#\Q'"$(memory_base_url)"'\E#g' "${tmp_file}"
 
   if grep -q '<!-- OPENCLAW_MEMORY_V3_START -->' "${agents_file}" 2>/dev/null; then
     awk '
@@ -1293,7 +1356,7 @@ c.plugins.entries["memory-v3"] = {
   ...prev,
   enabled: true,
   config: {
-    baseUrl: prevConfig.baseUrl || "http://127.0.0.1:18790",
+    baseUrl: prevConfig.baseUrl || "__MEMORY_BASE_URL__",
     autoRecall: prevConfig.autoRecall ?? true,
     maxResults: prevConfig.maxResults ?? 8,
     minScore: prevConfig.minScore ?? 0.3,
@@ -1310,6 +1373,7 @@ c.plugins.entries["memory-v3"] = {
 
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
 NODEEOF
+  perl -0pi -e 's#__MEMORY_BASE_URL__#\Q'"$(memory_base_url)"'\E#g' "${CONFIG_FILE}"
   chmod 600 "${CONFIG_FILE}"
   ok "plugin patch 완료"
 }
@@ -1787,18 +1851,18 @@ run_initial_memory_flush() {
     return 0
   fi
 
-  docs_before="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+  docs_before="$(curl -fsS "$(memory_base_url)/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
   if [[ "${docs_before}" =~ ^[0-9]+$ && "${docs_before}" -gt 0 ]]; then
     ok "initial memory already present (${docs_before} docs)"
     return 0
   fi
 
-  resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/flush" \
+  resp="$(curl -fsS "$(memory_base_url)/v1/memory/flush" \
     -H 'Content-Type: application/json' \
     -d '{"namespace":"global"}' 2>/dev/null || true)"
   if [[ -z "${resp}" ]]; then
     sleep 2
-    docs_after="$(curl -fsS "http://127.0.0.1:18790/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
+    docs_after="$(curl -fsS "$(memory_base_url)/v1/memory/stats" 2>/dev/null | json_query_python 'obj.get("documents", 0)' 2>/dev/null || true)"
     if [[ "${docs_after}" =~ ^[0-9]+$ && "${docs_after}" -gt 0 ]]; then
       warn "initial flush 응답은 비었지만 문서는 이미 적재됨 (${docs_after} docs)"
       return 0
@@ -1830,7 +1894,7 @@ memory_search_ready() {
   fi
 
   for _ in $(seq 1 "${tries}"); do
-    resp="$(curl -fsS "http://127.0.0.1:18790/v1/memory/search" \
+    resp="$(curl -fsS "$(memory_base_url)/v1/memory/search" \
       -H 'Content-Type: application/json' \
       -d '{"query":"운영 규칙 AGENTS MEMORY","maxResults":5}' 2>/dev/null || true)"
     if [[ -z "${resp}" ]]; then
@@ -1855,10 +1919,10 @@ raise SystemExit(0 if ok else 1)
 health_check_memory() {
   info "memory-v3 health check"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] curl http://127.0.0.1:18790/health"
-    ok "[DRY] curl http://127.0.0.1:18790/v1/memory/stats"
+    ok "[DRY] curl $(memory_base_url)/health"
+    ok "[DRY] curl $(memory_base_url)/v1/memory/stats"
     ok "[DRY] curl ${OLLAMA_URL}/api/tags"
-    ok "[DRY] POST /v1/memory/search"
+    ok "[DRY] POST $(memory_base_url)/v1/memory/search"
     return 0
   fi
 
@@ -1873,14 +1937,14 @@ health_check_memory() {
   ok "Ollama tags/model 확인"
 
   for _ in $(seq 1 30); do
-    if curl -fsS 'http://127.0.0.1:18790/health' >/dev/null 2>&1; then
+    if curl -fsS "$(memory_base_url)/health" >/dev/null 2>&1; then
       ok "memory API health 확인"
-      curl -fsS 'http://127.0.0.1:18790/v1/memory/stats' >/dev/null 2>&1 && ok "memory stats 확인"
+      curl -fsS "$(memory_base_url)/v1/memory/stats" >/dev/null 2>&1 && ok "memory stats 확인"
       break
     fi
     sleep 1
   done
-  if ! curl -fsS 'http://127.0.0.1:18790/health' >/dev/null 2>&1; then
+  if ! curl -fsS "$(memory_base_url)/health" >/dev/null 2>&1; then
     err "memory API health check 실패"
     return 1
   fi
@@ -1901,6 +1965,7 @@ main() {
   ensure_bootstrap_packages
   prepare_installer_assets
   require_existing_core_for_memory_only
+  select_memory_port
   if [[ ! -f "${CORE_SCRIPT}" ]]; then
     err "core script를 찾을 수 없습니다: ${CORE_SCRIPT}"
     exit 1
