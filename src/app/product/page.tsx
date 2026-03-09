@@ -329,7 +329,7 @@ export default function ProductPage() {
         </div>
         <div className="relative z-10 max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">직접 확인하고 싶으신가요?</h2>
-          <p className="text-gray-400 mb-8">선착순 5대 한정. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 220만 원</span></p>
+          <p className="text-gray-400 mb-8">원격 설치부터 올인원 방문 세팅까지. 나에게 맞는 플랜을 골라보세요.</p>
           <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
         </div>
       </section>

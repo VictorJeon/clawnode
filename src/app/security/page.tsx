@@ -4,10 +4,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: '보안 아키텍처',
-  description: '회계 장부, 고객 DB, API 키 — 남의 서버에 맡기고 계시나요? ClawNode는 100% 로컬. Tailscale 암호화 터널 + Docker 격리 + macOS Keychain.',
+  description: '회계 장부, 고객 DB, API 키 — 남의 서버에 맡기고 계시나요? ClawNode는 100% 로컬. Tailscale 암호화 터널 + 로컬 서비스 최소 노출 + macOS Keychain.',
   openGraph: {
     title: 'ClawNode 보안 — Zero Trust Architecture',
-    description: '100% 로컬 실행. Tailscale + Docker + Keychain 다층 방어. 데이터가 절대 외부로 나가지 않습니다.',
+    description: '100% 로컬 실행. Tailscale + 로컬 서비스 최소 노출 + Keychain 다층 방어. 데이터가 절대 외부로 나가지 않습니다.',
     images: [{ url: '/images/og-image.png' }],
   },
 }
@@ -57,7 +57,7 @@ export default function SecurityPage() {
               <h3 className="text-xl font-bold mb-4">안전하지만 지옥</h3>
               <ul className="space-y-3 text-sm text-gray-400">
                 <li>✅ 데이터 주권 확보</li>
-                <li>❌ Docker, SSH, 포트 설정... 삽질 무한</li>
+                <li>❌ Tailscale, SSH, Ollama, DB 설정... 삽질 무한</li>
                 <li>❌ 에러 발생 시 스택오버플로우 순례</li>
                 <li>❌ 보안 설정 누락 시 오히려 더 위험</li>
                 <li>❌ 주말 이틀 날리고도 미완성</li>
@@ -71,7 +71,7 @@ export default function SecurityPage() {
               <ul className="space-y-3 text-sm text-gray-400">
                 <li>✅ 100% 로컬 — 데이터가 밖으로 안 나감</li>
                 <li>✅ Tailscale 암호화 터널 (군사급)</li>
-                <li>✅ Docker 샌드박스 격리</li>
+                <li>✅ 로컬 서비스만 열고 외부 포트 최소화</li>
                 <li>✅ 눈앞에서 언박싱 (백도어 원천 차단)</li>
                 <li>✅ 전문가가 2시간 만에 설치 완료</li>
               </ul>
@@ -87,9 +87,9 @@ export default function SecurityPage() {
             <SectionHeading subtitle="ClawNode의 보안 아키텍처">다층 방어 구조</SectionHeading>
             <div className="space-y-6">
               {[
-                { icon: '', title: 'Tailscale Mesh VPN', desc: 'WireGuard 기반 암호화 터널. 외부에서 맥미니의 포트에 접근하는 것 자체가 불가능합니다.' },
-                { icon: '', title: 'Docker 컨테이너 격리', desc: '에이전트는 격리된 컨테이너 안에서 실행됩니다. 호스트 OS에 영향을 줄 수 없습니다.' },
-                { icon: '', title: '모든 인바운드 포트 차단', desc: '외부에서 들어오는 모든 연결을 기본 차단합니다. SSH조차 비활성화합니다.' },
+                { icon: '', title: 'Tailscale Mesh VPN', desc: 'WireGuard 기반 암호화 터널. 외부 접근은 Tailscale 경로로만 열고, 공인 포트 노출을 피합니다.' },
+                { icon: '', title: '로컬 서비스 최소 노출', desc: 'OpenClaw와 메모리 보조 서비스는 고객 기기에서만 돌리고, 내부 서비스는 가능하면 loopback으로만 바인딩합니다.' },
+                { icon: '', title: '인바운드 포트 최소화', desc: '외부에서 들어오는 연결은 꼭 필요한 경우만 허용합니다. 기본값은 닫힘에 가깝게 유지합니다.' },
                 { icon: '', title: 'macOS Keychain', desc: 'API 키와 비밀번호는 애플의 하드웨어 암호화 키체인에 저장됩니다.' },
               ].map(item => (
                 <div key={item.title} className="flex gap-4">
@@ -115,7 +115,7 @@ export default function SecurityPage() {
               </div>
               {/* Inner ring */}
               <div className="absolute inset-16 rounded-full border-2 border-[#FF6B00]/40 flex items-center justify-center">
-                <span className="absolute top-2 text-xs text-[#FF6B00]/70 font-mono">DOCKER</span>
+                <span className="absolute top-2 text-xs text-[#FF6B00]/70 font-mono">LOCAL ONLY</span>
               </div>
               {/* Core */}
               <div className="absolute inset-24 rounded-full bg-[#FF6B00]/10 border-2 border-[#FF6B00] flex items-center justify-center">
@@ -143,11 +143,11 @@ export default function SecurityPage() {
             <div className="space-y-2 text-gray-300">
               <p><span className="text-green-400">[OK]</span> Tailscale tunnel: <span className="text-green-400">CONNECTED</span> (encrypted)</p>
               <p><span className="text-green-400">[OK]</span> Firewall: All inbound ports <span className="text-green-400">BLOCKED</span></p>
-              <p><span className="text-green-400">[OK]</span> Docker sandbox: 3 agents <span className="text-green-400">ISOLATED</span></p>
+              <p><span className="text-green-400">[OK]</span> Memory/API services: <span className="text-green-400">LOOPBACK ONLY</span></p>
               <p><span className="text-yellow-400">[WARN]</span> External SSH attempt from 45.33.xx.xx → <span className="text-red-400">REJECTED</span></p>
               <p><span className="text-green-400">[OK]</span> API keys: Stored in <span className="text-green-400">macOS Keychain</span> (hardware encrypted)</p>
-              <p><span className="text-red-400">[BLOCK]</span> Outbound to unknown endpoint → <span className="text-red-400">DENIED</span></p>
-              <p><span className="text-green-400">[OK]</span> Allowed outbound: Telegram API only</p>
+              <p><span className="text-blue-400">[INFO]</span> OpenClaw runtime: <span className="text-green-400">LOCAL MACOS PROCESS</span></p>
+              <p><span className="text-green-400">[OK]</span> Allowed remote path: <span className="text-green-400">TAILSCALE ONLY</span></p>
             </div>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function SecurityPage() {
       {/* CTA */}
       <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
-        <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 220만 원</span></p>
+        <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. 원격 설치부터 올인원까지.</p>
         <CTAButton href="/reserve">지금 예약하기</CTAButton>
       </section>
     </main>

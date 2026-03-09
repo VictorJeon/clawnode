@@ -36,7 +36,7 @@ export default function ProcessPage() {
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* On-site Track */}
           <div className="border border-[#FF6B00]/30 bg-[#FF6B00]/5 rounded-2xl p-8">
-            <div className="text-[#FF6B00] font-bold text-sm mb-2">올인원 패키지 (220만 원)</div>
+            <div className="text-[#FF6B00] font-bold text-sm mb-2">올인원 패키지</div>
             <h3 className="text-xl font-bold mb-4">방문 설치</h3>
             <p className="text-sm text-gray-400 leading-relaxed">
               서울/경기 직접 방문. 고객님 눈앞에서 미개봉 Mac Mini를 뜯고, 2시간 만에 AI 노드를 완성합니다. 설치하는 동안 1:1 활용 강의까지.

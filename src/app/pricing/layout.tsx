@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: '가격 및 FAQ',
-  description: 'ClawNode Standard 300만원. Mac Mini M4 + AI 에이전트 3종 + 현장 설치 교육 + 30일 지원. 하루 2,740원. 숨겨진 비용 없음.',
+  description: 'ClawNode 가격 안내. 원격 설치(Basic Remote)부터 올인원 프리미엄까지. V3 장기기억 시스템 포함. 숨겨진 비용 없음.',
   openGraph: {
-    title: 'ClawNode 가격 — 300만원 올인원 턴키',
-    description: '하루 2,740원. Mac Mini M4 포함. 월 구독료 없음. 평생 소유.',
-    images: [{ url: 'https://website-v2-eight-beta.vercel.app/images/og-image.png' }],
+    title: 'ClawNode 가격 — 원격부터 올인원까지',
+    description: '까먹지 않는 AI 직원. V3 장기기억 시스템 포함. 나에게 맞는 플랜을 골라보세요.',
+    images: [{ url: 'https://claw-node.com/images/og-image-new.png' }],
   },
 }
 
