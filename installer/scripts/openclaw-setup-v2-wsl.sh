@@ -1356,7 +1356,7 @@ c.plugins.entries["memory-v3"] = {
   ...prev,
   enabled: true,
   config: {
-    baseUrl: prevConfig.baseUrl || "__MEMORY_BASE_URL__",
+    baseUrl: "__MEMORY_BASE_URL__",
     autoRecall: prevConfig.autoRecall ?? true,
     maxResults: prevConfig.maxResults ?? 8,
     minScore: prevConfig.minScore ?? 0.3,
