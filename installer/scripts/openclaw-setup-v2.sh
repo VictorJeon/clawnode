@@ -21,6 +21,7 @@ DRY_RUN="${DRY_RUN:-0}"
 SKIP_CORE_SETUP="${SKIP_CORE_SETUP:-0}"
 FORCE_CORE_SETUP="${FORCE_CORE_SETUP:-0}"
 MEMORY_ONLY="${MEMORY_ONLY:-0}"
+MEMORY_ONLY_PATCH_AGENTS="${MEMORY_ONLY_PATCH_AGENTS:-0}"
 GIST_BASE_URL="${GIST_BASE_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -211,7 +212,7 @@ render_final_summary() {
     gemini_state="disabled (optional)"
   fi
 
-  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+  if [[ "${MEMORY_ONLY}" == "1" && "${MEMORY_ONLY_PATCH_AGENTS}" != "1" ]]; then
     workspace_protocol_state="untouched (MEMORY_ONLY=1)"
   else
     workspace_protocol_state="memory protocol applied"
@@ -261,7 +262,7 @@ Tailscale IP: ${ts_ip}"
   echo "  - Memory API + atomize worker"
   echo "  - PostgreSQL pgvector backend"
   echo "  - Ollama embeddings (${OLLAMA_MODEL})"
-  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+  if [[ "${MEMORY_ONLY}" == "1" && "${MEMORY_ONLY_PATCH_AGENTS}" != "1" ]]; then
     echo "  - Existing workspace preserved"
   else
     echo "  - Workspace memory protocol"
@@ -420,6 +421,9 @@ prepare_installer_assets() {
 run_core_setup() {
   if [[ "${MEMORY_ONLY}" == "1" ]]; then
     warn "MEMORY_ONLY=1 — 기존 OpenClaw core/model/skills/workspace 문서는 유지합니다."
+    if [[ "${MEMORY_ONLY_PATCH_AGENTS}" == "1" ]]; then
+      warn "MEMORY_ONLY_PATCH_AGENTS=1 — AGENTS.md 에 memory 규칙만 추가합니다."
+    fi
     CORE_STEP_RESULT="memory-only"
     return 0
   fi
@@ -1020,11 +1024,20 @@ bootstrap_workspace_memory() {
   info "workspace memory bootstrap"
   if [[ "${MEMORY_ONLY}" == "1" ]]; then
     if [[ "${DRY_RUN}" == "1" ]]; then
-      ok "[DRY] preserve workspace docs and skip MEMORY.md/AGENTS.md changes"
+      if [[ "${MEMORY_ONLY_PATCH_AGENTS}" == "1" ]]; then
+        ok "[DRY] preserve workspace docs except AGENTS.md memory block"
+      else
+        ok "[DRY] preserve workspace docs and skip MEMORY.md/AGENTS.md changes"
+      fi
       return 0
     fi
     mkdir -p "${WORKSPACE}/memory/logs" "${WORKSPACE}/memory/system"
-    ok "MEMORY_ONLY=1 — workspace 문서(AGENTS/SOUL/USER/MEMORY) 변경 없이 디렉터리만 준비"
+    if [[ "${MEMORY_ONLY_PATCH_AGENTS}" == "1" ]]; then
+      ensure_agents_memory_guidance
+      ok "MEMORY_ONLY=1 — AGENTS.md 에 memory 규칙만 추가하고 나머지 문서는 보존"
+    else
+      ok "MEMORY_ONLY=1 — workspace 문서(AGENTS/SOUL/USER/MEMORY) 변경 없이 디렉터리만 준비"
+    fi
     return 0
   fi
   if [[ "${DRY_RUN}" == "1" ]]; then
