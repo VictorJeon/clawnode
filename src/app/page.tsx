@@ -66,7 +66,7 @@ export default function HomePage() {
       {/* Stats Counter */}
       <section className="border-y border-white/5 py-12 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <Counter value="220만" label="평생 고용 비용" />
+          <Counter value="V3" label="장기기억 시스템" />
           <Counter value="0원" label="월 구독료" />
           <Counter value="100%" label="데이터 소유권" />
           <Counter value="2시간" label="설치부터 가동까지" />
@@ -130,41 +130,156 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Cost Savings */}
-      <section className="py-24 px-4 md:px-6 overflow-hidden relative">
-        <div className="absolute inset-0 bg-[#FF6B00]/5 skew-y-3 transform scale-110" />
-        <div className="max-w-5xl mx-auto relative z-10">
-           <FadeIn>
-             <div className="text-center mb-16">
-               <h2 className="text-3xl md:text-5xl font-bold mb-6">1년이면 <span className="text-[#FF6B00]">2,780만 원</span>이 절약됩니다.</h2>
-               <p className="text-gray-400">초기 도입비 한 번으로 평생 무료. 월급도, 퇴직금도, 4대 보험도 없습니다.</p>
-             </div>
-           </FadeIn>
+      {/* Memory System — Core Differentiator */}
+      <section className="py-32 px-4 md:px-6 overflow-hidden relative">
+        {/* Background glow */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FF6B00]/[0.04] rounded-full blur-[120px]" />
+        </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-             <FadeIn delay={0}>
-               <div className="p-8 rounded-2xl bg-white/5 border border-white/10 opacity-50">
-                 <p className="text-sm text-gray-400 mb-2">신입 인턴 고용 (연봉)</p>
-                 <p className="text-3xl font-bold text-gray-500 line-through decoration-red-500/50">30,000,000원</p>
-               </div>
-             </FadeIn>
-             <FadeIn delay={0.1}>
-               <div className="p-8 rounded-2xl bg-white/5 border border-white/10 opacity-50">
-                 <p className="text-sm text-gray-400 mb-2">단순 경리 직원 (연봉)</p>
-                 <p className="text-3xl font-bold text-gray-500 line-through decoration-red-500/50">25,000,000원</p>
-               </div>
-             </FadeIn>
-             <FadeIn delay={0.2}>
-               <div className="p-8 rounded-2xl bg-[#FF6B00]/10 border border-[#FF6B00] shadow-[0_0_50px_rgba(255,107,0,0.1)] transform md:-translate-y-4">
-                 <p className="text-sm text-[#FF6B00] font-bold mb-2">ClawNode 올인원 (평생)</p>
-                 <div className="text-xl text-gray-500 line-through mb-1">3,000,000원</div>
-                 <div className="text-4xl md:text-5xl font-bold text-white flex justify-center items-center gap-1">
-                   <Counter value="2,200,000" label="" />원
-                 </div>
-                 <p className="text-xs text-[#FF6B00] mt-2">런칭 특가 · 기기값 포함 · 추가 비용 0원</p>
-               </div>
-             </FadeIn>
-           </div>
+        <div className="max-w-6xl mx-auto relative z-10">
+          <FadeIn>
+            <div className="text-center mb-6">
+              <p className="text-[#FF6B00] font-bold tracking-[0.2em] uppercase text-xs mb-4">V3 Memory System</p>
+              <h2 className="text-4xl md:text-6xl font-bold leading-tight">
+                3개월 전에 지나가듯 한 말도
+                <br />
+                <span className="bg-gradient-to-r from-[#FF6B00] to-[#FF3D00] bg-clip-text text-transparent">전부 기억합니다.</span>
+              </h2>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={0.2}>
+            <p className="text-center text-gray-500 text-lg max-w-xl mx-auto mb-20">
+              일반 AI는 창을 닫으면 끝. ClawNode는 다릅니다.
+            </p>
+          </FadeIn>
+
+          {/* Chat Comparison — Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-20">
+            {/* Left: Generic AI */}
+            <FadeIn delay={0.3}>
+              <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden h-full">
+                <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
+                  <span className="text-sm text-gray-500 font-medium">일반 AI</span>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex justify-end">
+                    <div className="bg-white/10 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-300">저번에 말한 거래처 리스트 정리해줘</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-400">죄송합니다, 이전 대화 내용을 확인할 수 없습니다. 거래처 리스트를 다시 알려주시겠어요?</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="bg-white/10 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-300">아니 지난달에 다 말했잖아...</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-400">이전 세션의 데이터에는 접근할 수 없습니다. 다시 입력해 주시면 정리해 드리겠습니다 🙏</p>
+                    </div>
+                  </div>
+                  <div className="text-center pt-2">
+                    <p className="text-xs text-red-400/80 font-medium">❌ 매번 처음부터 다시 설명해야 합니다</p>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+
+            {/* Right: ClawNode */}
+            <FadeIn delay={0.5}>
+              <div className="rounded-2xl border border-[#FF6B00]/30 bg-[#0A0A0A] overflow-hidden h-full shadow-[0_0_60px_rgba(255,107,0,0.06)]">
+                <div className="px-6 py-4 border-b border-[#FF6B00]/10 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-[#FF6B00]" />
+                  <span className="text-sm text-[#FF6B00] font-medium">ClawNode</span>
+                  <span className="ml-auto text-[10px] text-[#FF6B00]/60 font-mono">V3 MEMORY ACTIVE</span>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex justify-end">
+                    <div className="bg-[#FF6B00]/10 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-200">저번에 말한 거래처 리스트 정리해줘</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 border border-[#FF6B00]/20 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%]">
+                      <p className="text-[10px] text-[#FF6B00]/50 font-mono mb-1.5">📎 memory/2025-01-15.md 참조</p>
+                      <p className="text-sm text-gray-300">2월 15일에 말씀하신 거래처 5곳 정리했어요. 삼성물산은 단가 재협상 중이라고 하셨고, 한진은 3월 계약 갱신 예정이었죠. 엑셀로 보낼까요?</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="bg-[#FF6B00]/10 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
+                      <p className="text-sm text-gray-200">한진 계약 조건 뭐였지?</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 border border-[#FF6B00]/20 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%]">
+                      <p className="text-[10px] text-[#FF6B00]/50 font-mono mb-1.5">📎 memory/2025-01-22.md + memory/2025-02-03.md</p>
+                      <p className="text-sm text-gray-300">월 500만 원, 분기 정산, 김 과장님 담당이에요. 2월 3일에 단가 5% 인상 요청하셨고 아직 회신 안 온 상태예요.</p>
+                    </div>
+                  </div>
+                  <div className="text-center pt-2">
+                    <p className="text-xs text-[#FF6B00] font-medium">✦ 한 번 말하면 영원히 기억합니다</p>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* Memory Architecture Strip */}
+          <FadeIn delay={0.6}>
+            <div className="relative rounded-2xl border border-white/10 bg-[#0A0A0A] p-8 md:p-12 overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF6B00]/[0.03] rounded-full blur-[80px]" />
+              <div className="relative z-10">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-8 md:gap-16">
+                  {/* Flow visualization */}
+                  <div className="flex-1 w-full">
+                    <h3 className="text-xl font-bold mb-8">어떻게 기억하나요?</h3>
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-0">
+                      {[
+                        { step: '대화', desc: '텔레그램으로 평소처럼 대화', icon: '💬' },
+                        { step: '추출', desc: '중요 정보를 자동 감지', icon: '⚡' },
+                        { step: '벡터화', desc: 'pgvector로 의미 단위 저장', icon: '🧬' },
+                        { step: '회상', desc: '"그때 그거" 한마디에 즉시 검색', icon: '🎯' },
+                      ].map((item, i) => (
+                        <div key={item.step} className="flex items-center gap-4 md:gap-0 flex-1 w-full md:w-auto">
+                          <div className="flex flex-col items-center text-center min-w-[80px]">
+                            <div className="text-2xl mb-2">{item.icon}</div>
+                            <div className="text-sm font-bold text-white">{item.step}</div>
+                            <div className="text-[11px] text-gray-500 mt-1 max-w-[120px]">{item.desc}</div>
+                          </div>
+                          {i < 3 && (
+                            <div className="hidden md:block flex-1 h-px bg-gradient-to-r from-[#FF6B00]/30 to-[#FF6B00]/10 mx-2" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom stats */}
+                <div className="mt-10 pt-8 border-t border-white/5 grid grid-cols-3 gap-8 text-center">
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-[#FF6B00]">∞</div>
+                    <div className="text-xs text-gray-500 mt-1">기억 용량 제한 없음</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-white">&lt;1s</div>
+                    <div className="text-xs text-gray-500 mt-1">기억 검색 속도</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-white">100%</div>
+                    <div className="text-xs text-gray-500 mt-1">로컬 저장 (외부 전송 없음)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -207,19 +322,24 @@ export default function HomePage() {
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-4xl mx-auto">
              <FadeIn delay={0}>
-               <div className="p-8 rounded-3xl border border-white/10 bg-[#0A0A0A] hover:border-white/20 transition-colors relative flex flex-col h-full">
+               <div className="p-8 rounded-3xl border border-white/10 bg-[#0A0A0A] hover:border-[#FF6B00]/20 transition-colors relative flex flex-col h-full group">
+                 <div className="absolute top-0 right-0 bg-white/10 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">
+                   QUICK START
+                 </div>
                  <div className="mb-6">
-                   <h3 className="text-xl font-bold text-gray-300">Basic Remote</h3>
+                   <h3 className="text-xl font-bold text-white">Basic Remote</h3>
                    <div className="text-4xl font-bold mt-4 mb-2">30만 원</div>
-                   <p className="text-sm text-gray-500">VAT 별도 · 기존 PC 보유자용</p>
+                   <p className="text-sm text-gray-400">VAT 별도 · 기존 PC 보유자용 · Mac/Windows</p>
                  </div>
                  <ul className="space-y-4 mb-8 flex-1">
-                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 원격 오픈클로 설치 지원</li>
-                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> AI 연산 최적화 세팅</li>
-                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 기본 기능 활용 원격 가이드</li>
-                   <li className="flex gap-3 text-sm text-gray-300"><span className="text-[#FF6B00]">✓</span> 텔레그램 지원 채널</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 원격 오픈클로 설치 + 세팅</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> SOUL/AGENTS 페르소나 구성</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 텔레그램 봇 연동</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 1주일 사후 지원</li>
+                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> 기기 미포함 (기존 PC 사용)</li>
+                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> V3 기억 시스템 미포함</li>
                  </ul>
-                 <a href="/reserve" className="block w-full text-center py-4 rounded-xl border border-white/20 hover:bg-white/5 text-white font-bold transition-colors">원격 설치 예약하기</a>
+                 <a href="/reserve" className="block w-full text-center py-4 rounded-xl border border-[#FF6B00]/30 hover:bg-[#FF6B00]/10 text-[#FF6B00] font-bold transition-colors">원격 설치 예약하기</a>
                </div>
              </FadeIn>
 
@@ -234,14 +354,14 @@ export default function HomePage() {
                      <div className="text-4xl font-bold text-white">220만 원</div>
                      <div className="text-xl text-gray-500 line-through">300만 원</div>
                    </div>
-                   <p className="text-sm text-gray-400">VAT 포함 · 기기값 포함 · <span className="text-[#FF6B00] font-bold">런칭 할인가</span></p>
+                   <p className="text-sm text-gray-400">VAT 포함 · 기기값 포함</p>
                  </div>
                  <ul className="space-y-4 mb-8 flex-1">
                    <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> Apple Mac Mini M4 (신품) 포함</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 서울/경기 방문 설치 (투명한 언박싱)</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 1:1 현장 활용 강의 (2시간)</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 맞춤형 자동화 봇 1개 즉석 제작</li>
-                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템(DB) 구축</li>
+                   <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템 구축 (pgvector)</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 무상 A/S 지원</li>
                  </ul>
                  <CTAButton href="/reserve">올인원 패키지 예약하기</CTAButton>

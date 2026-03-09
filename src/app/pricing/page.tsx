@@ -7,7 +7,7 @@ import FadeIn from '@/components/FadeIn'
 import Accordion from '@/components/Accordion'
 
 const FAQ_ITEMS = [
-  { q: '해킹당하면 책임지나요?', a: '하드웨어와 소프트웨어 세팅을 제공하는 서비스입니다. 기기는 100% 고객님 소유이며, 보안 관리 책임도 고객님께 있습니다. 다만 업계 표준 보안(Tailscale, Docker 격리, 포트 폐쇄)을 적용하여 위험을 최소화합니다.' },
+  { q: '해킹당하면 책임지나요?', a: '하드웨어와 소프트웨어 세팅을 제공하는 서비스입니다. 기기는 100% 고객님 소유이며, 보안 관리 책임도 고객님께 있습니다. 다만 Tailscale, 로컬 실행, 포트 최소화, OS 보안 저장소를 중심으로 위험을 낮추는 방향으로 세팅합니다.' },
   { q: '지방도 설치 가능한가요?', a: '현재 서울/경기권만 직접 방문 설치가 가능합니다. 그 외 지역은 출장비 별도 청구 또는 화상(Zoom) 원격 설치 가이드로 진행할 수 있습니다.' },
   { q: '코인 지갑(Private Key) 연결해도 되나요?', a: '"읽기 전용(View-Only)" 권한만 연결하는 것을 강력히 권장합니다. Private Key나 출금 권한이 있는 API Key는 절대 입력하지 마세요.' },
   { q: 'M4 Pro로 업그레이드 가능한가요?', a: '가능합니다. 주문 시 미리 말씀해 주시면 하드웨어 차액만큼 추가 결제 후 M4 Pro 모델로 준비해 드립니다.' },
@@ -16,7 +16,7 @@ const FAQ_ITEMS = [
   { q: 'API 비용은 별도인가요?', a: '네, LLM API(Claude, GPT 등) 사용료는 고객님이 직접 부담합니다. 다만 온보딩 시 spending limit 설정을 도와드려서 예상치 못한 과금을 방지합니다.' },
   { q: '모니터/키보드 없이 쓸 수 있나요?', a: '네, 설치 완료 후에는 텔레그램으로만 대화하면 됩니다. 맥미니에 모니터 연결할 필요 없이 전원만 꽂아두시면 됩니다.' },
   { q: '베이직과 올인원의 차이가 뭔가요?', a: '베이직(30만 원)은 이미 맥미니나 PC를 가지고 계신 분을 위한 원격 세팅 서비스입니다. 올인원(220만 원)은 Mac Mini M4 기기값이 포함되어 있고, 직접 방문해서 눈앞에서 설치 + 1:1 강의 + 맞춤 봇 제작까지 해드리는 프리미엄 패키지입니다.' },
-  { q: '베이직 패키지는 어떤 기기에서 가능한가요?', a: 'Mac, Windows, Linux 어떤 기기든 가능합니다. Docker 등을 활용해서 원격으로 세팅해 드립니다.' },
+  { q: '베이직 패키지는 어떤 기기에서 가능한가요?', a: 'Mac, Windows, Linux 어떤 기기든 가능합니다. 다만 현재 가장 안정적인 타깃은 macOS이며, 원격으로 OpenClaw와 필수 보조 서비스를 세팅해 드립니다.' },
 ]
 
 export default function PricingPage() {
@@ -93,20 +93,20 @@ export default function PricingPage() {
                 <div className="text-sm text-gray-400 mt-1">VAT 포함 · 기기값 포함</div>
               </div>
 
-              {/* ROI */}
+              {/* Value Props */}
               <div className="bg-[#FF6B00]/10 border border-[#FF6B00]/20 rounded-xl p-4 mb-8">
                 <div className="grid grid-cols-3 gap-4 text-center divide-x divide-[#FF6B00]/20">
                   <div>
-                    <div className="text-xl font-bold text-white">6,027원</div>
-                    <div className="text-xs text-gray-400">하루 비용</div>
+                    <div className="text-xl font-bold text-white">V3</div>
+                    <div className="text-xs text-gray-400">장기기억 시스템</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-white">18.3만</div>
-                    <div className="text-xs text-gray-400">월 비용</div>
+                    <div className="text-xl font-bold text-white">1:1</div>
+                    <div className="text-xs text-gray-400">방문 설치 강의</div>
                   </div>
                   <div>
                     <div className="text-xl font-bold text-white">∞</div>
-                    <div className="text-xs text-gray-400">1년 후 비용</div>
+                    <div className="text-xs text-gray-400">추가 구독료 없음</div>
                   </div>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function PricingPage() {
             {[
               '이미 OpenClaw를 직접 설치해서 잘 쓰고 계신 분 (DIY 능력자)',
 
-              '220만 원이 부담되시는 분 (무리하지 마세요 — 베이직 30만 원 패키지도 있습니다)',
+              '단순 챗봇만 필요하신 분 (ChatGPT로 충분합니다)',
             ].map(item => (
               <div key={item} className="flex items-start gap-3 p-4 bg-[#0A0A0A] border border-white/10 rounded-xl">
                 <span className="text-red-400 text-lg">✕</span>
