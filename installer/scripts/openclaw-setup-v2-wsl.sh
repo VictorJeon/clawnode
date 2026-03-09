@@ -162,14 +162,19 @@ core_step_label() {
 }
 
 render_final_summary() {
-  local oc_ver sys_ip local_ip sys_host sys_os sys_user memory_api memory_state report report_file ollama_state gemini_state plugin_state workspace_protocol_state
+  local oc_ver sys_ip local_ip sys_host sys_os sys_user memory_api memory_state report report_file ollama_state gemini_state plugin_state workspace_protocol_state openclaw_bin
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] final summary"
     return 0
   fi
 
-  oc_ver="$(openclaw --version 2>/dev/null || echo "미설치")"
+  openclaw_bin="$(resolve_openclaw_bin 2>/dev/null || true)"
+  if [[ -n "${openclaw_bin}" ]]; then
+    oc_ver="$("${openclaw_bin}" --version 2>/dev/null || echo "미설치")"
+  else
+    oc_ver="미설치"
+  fi
   sys_ip="$(curl -s --max-time 5 ifconfig.me 2>/dev/null || echo "감지실패")"
   local_ip="$(hostname -I 2>/dev/null | awk '{print $1}' || echo "N/A")"
   sys_host="$(hostname)"
@@ -274,8 +279,30 @@ dry() {
   "$@"
 }
 
+resolve_openclaw_bin() {
+  local candidate
+  for candidate in \
+    openclaw \
+    "${HOME}/.local/share/pnpm/openclaw" \
+    "${HOME}/.npm-global/bin/openclaw" \
+    "${HOME}/.local/bin/openclaw" \
+    /usr/local/bin/openclaw \
+    /usr/bin/openclaw
+  do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      command -v "${candidate}"
+      return 0
+    fi
+    if [[ -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 core_install_present() {
-  if ! command -v openclaw >/dev/null 2>&1; then
+  if [[ -z "$(resolve_openclaw_bin 2>/dev/null || true)" ]]; then
     return 1
   fi
   if [[ ! -f "${CONFIG_FILE}" ]]; then
