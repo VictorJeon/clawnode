@@ -609,6 +609,16 @@ wait_for_postgres() {
   return 1
 }
 
+wait_for_postgres_admin() {
+  for _ in $(seq 1 20); do
+    if sudo -u postgres psql -d postgres -Atqc 'SELECT 1' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 wait_for_http_ok() {
   local url="$1"
   local tries="${2:-20}"
@@ -714,7 +724,7 @@ ensure_native_postgres() {
 
   sudo systemctl start postgresql >/dev/null 2>&1 || sudo service postgresql start >/dev/null 2>&1 || true
 
-  if ! wait_for_postgres postgres; then
+  if ! wait_for_postgres_admin; then
     err "PostgreSQL 기동 확인 실패"
     return 1
   fi
