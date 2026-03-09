@@ -755,6 +755,9 @@ ensure_native_postgres() {
   else
     ok "DB 이미 존재: ${PG_DB}"
   fi
+
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${PG_DB}" -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null
+  ok "pgvector extension 확인: ${PG_DB}"
 }
 
 ensure_ollama() {
