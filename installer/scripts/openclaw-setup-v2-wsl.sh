@@ -20,6 +20,7 @@ set -euo pipefail
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_CORE_SETUP="${SKIP_CORE_SETUP:-0}"
 FORCE_CORE_SETUP="${FORCE_CORE_SETUP:-0}"
+MEMORY_ONLY="${MEMORY_ONLY:-0}"
 GIST_BASE_URL="${GIST_BASE_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -151,6 +152,7 @@ write_log_header() {
 
 core_step_label() {
   case "${CORE_STEP_RESULT}" in
+    memory-only) printf '%s\n' "기존 OpenClaw 유지 + Memory V3만 추가" ;;
     skipped-existing) printf '%s\n' "기존 OpenClaw 유지 + Memory V3 업그레이드" ;;
     skipped-env) printf '%s\n' "core 단계 생략 (SKIP_CORE_SETUP=1)" ;;
     ran) printf '%s\n' "OpenClaw core 신규/재실행 후 Memory V3 적용" ;;
@@ -159,7 +161,7 @@ core_step_label() {
 }
 
 render_final_summary() {
-  local oc_ver sys_ip local_ip sys_host sys_os sys_user memory_api memory_state report report_file ollama_state gemini_state plugin_state
+  local oc_ver sys_ip local_ip sys_host sys_os sys_user memory_api memory_state report report_file ollama_state gemini_state plugin_state workspace_protocol_state
 
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] final summary"
@@ -197,6 +199,12 @@ render_final_summary() {
     gemini_state="disabled (optional)"
   fi
 
+  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+    workspace_protocol_state="untouched (MEMORY_ONLY=1)"
+  else
+    workspace_protocol_state="memory protocol applied"
+  fi
+
   if [[ "${memory_api}" == "online" && "${plugin_state}" == "installed" && "${ollama_state}" == ready* ]]; then
     memory_state="ready"
   else
@@ -219,7 +227,7 @@ Ollama: ${ollama_state}
 Gemini Enrichment: ${gemini_state}
 Memory DB: ${PG_DB} / pgvector
 Workspace: ${WORKSPACE}
-AGENTS.md: memory protocol applied
+AGENTS.md: ${workspace_protocol_state}
 리포트: ${CONFIG_DIR}/install-report-v2.txt
 설치 로그: ${LOG_FILE}"
 
@@ -237,7 +245,11 @@ AGENTS.md: memory protocol applied
   echo "  - Memory API + atomize worker"
   echo "  - PostgreSQL pgvector backend"
   echo "  - Ollama embeddings (${OLLAMA_MODEL})"
-  echo "  - Workspace memory protocol"
+  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+    echo "  - Existing workspace preserved"
+  else
+    echo "  - Workspace memory protocol"
+  fi
   echo ""
   printf '  %b\n' "${CYAN}Installation Report${NC}"
   printf '%s\n' "${report}"
@@ -272,6 +284,20 @@ core_install_present() {
     return 1
   fi
   return 0
+}
+
+require_existing_core_for_memory_only() {
+  if [[ "${MEMORY_ONLY}" != "1" ]]; then
+    return 0
+  fi
+  SKIP_CORE_SETUP="1"
+  if core_install_present; then
+    CORE_STEP_RESULT="memory-only"
+    return 0
+  fi
+  err "MEMORY_ONLY=1 은 기존 OpenClaw 설치가 있어야 합니다."
+  err "먼저 기본 setup을 실행하거나 MEMORY_ONLY를 빼고 V2를 실행하세요."
+  exit 1
 }
 
 load_existing_identity() {
@@ -376,6 +402,11 @@ ensure_bootstrap_packages() {
 }
 
 run_core_setup() {
+  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+    warn "MEMORY_ONLY=1 — 기존 OpenClaw core/model/skills/workspace 문서는 유지합니다."
+    CORE_STEP_RESULT="memory-only"
+    return 0
+  fi
   if [[ "${SKIP_CORE_SETUP}" == "1" ]]; then
     warn "SKIP_CORE_SETUP=1 — 기존 core setup 단계는 건너뜁니다."
     CORE_STEP_RESULT="skipped-env"
@@ -918,6 +949,15 @@ configure_memory_env() {
 
 bootstrap_workspace_memory() {
   info "workspace memory bootstrap"
+  if [[ "${MEMORY_ONLY}" == "1" ]]; then
+    if [[ "${DRY_RUN}" == "1" ]]; then
+      ok "[DRY] preserve workspace docs and skip MEMORY.md/AGENTS.md changes"
+      return 0
+    fi
+    mkdir -p "${WORKSPACE}/memory/logs" "${WORKSPACE}/memory/system"
+    ok "MEMORY_ONLY=1 — workspace 문서(AGENTS/SOUL/USER/MEMORY) 변경 없이 디렉터리만 준비"
+    return 0
+  fi
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] create ${WORKSPACE}/MEMORY.md, AGENTS.md and memory dirs"
     return 0
@@ -1807,6 +1847,7 @@ main() {
 
   ensure_bootstrap_packages
   prepare_installer_assets
+  require_existing_core_for_memory_only
   if [[ ! -f "${CORE_SCRIPT}" ]]; then
     err "core script를 찾을 수 없습니다: ${CORE_SCRIPT}"
     exit 1
