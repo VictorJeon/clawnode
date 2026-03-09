@@ -1857,7 +1857,7 @@ run_initial_memory_flush() {
     return 0
   fi
 
-  resp="$(curl -fsS "$(memory_base_url)/v1/memory/flush" \
+  resp="$(curl --max-time 10 -fsS "$(memory_base_url)/v1/memory/flush" \
     -H 'Content-Type: application/json' \
     -d '{"namespace":"global"}' 2>/dev/null || true)"
   if [[ -z "${resp}" ]]; then
