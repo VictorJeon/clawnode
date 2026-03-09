@@ -281,7 +281,7 @@ core_install_present() {
   if [[ ! -f "${CONFIG_FILE}" ]]; then
     return 1
   fi
-  if ! node -e 'const fs=require("fs"); const p=process.argv[1]; const c=JSON.parse(fs.readFileSync(p,"utf8")); process.exit(c?.channels?.telegram ? 0 : 1);' "${CONFIG_FILE}" >/dev/null 2>&1; then
+  if ! node -e 'const fs=require("fs"); const p=process.argv[1]; const c=JSON.parse(fs.readFileSync(p,"utf8")); const ok=typeof c==="object" && c !== null && (c.agents || c.channels || c.plugins || c.global || c.sessions || c.model || c.providers); process.exit(ok ? 0 : 1);' "${CONFIG_FILE}" >/dev/null 2>&1; then
     return 1
   fi
   return 0
