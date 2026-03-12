@@ -105,9 +105,11 @@ export default function PricingPageClient() {
                   <h4 className="font-bold border-b border-white/10 pb-2 mb-4 text-sm">하드웨어</h4>
                   <ul className="space-y-3">
                     {[
-                      'Apple Mac Mini M4 (16GB/256GB) 신품',
-                      'Apple 정품 악세사리 일체',
-                      '애플 1년 무상보증',
+                      'Apple Mac Mini M4 신품',
+                      '10코어 CPU / 10코어 GPU',
+                      '16GB 통합 메모리 / 256GB SSD',
+                      '팬리스 무소음 · 유휴 7W',
+                      'Thunderbolt 4 ×3 · HDMI · Wi-Fi 6E',
                     ].map(item => (
                       <li key={item} className="flex items-start gap-2 text-sm text-gray-300">
                         <span className="text-[#FF6B00] mt-0.5">✓</span> {item}
