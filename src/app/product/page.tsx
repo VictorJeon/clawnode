@@ -1,21 +1,49 @@
 import Image from 'next/image'
+import type { Metadata } from 'next'
+import StructuredData from '@/components/StructuredData'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
-import type { Metadata } from 'next'
+import {
+  breadcrumbJsonLd,
+  createPageMetadata,
+  serviceJsonLd,
+  webPageJsonLd,
+} from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: '제품 소개',
-  description: 'Mac Mini M4 + OpenClaw AI 에이전트. 경리, 리서치, 쇼핑몰 운영, 크립토 트레이딩까지. 하드웨어 + AI 두뇌 + 교육 올인원.',
-  openGraph: {
-    title: 'ClawNode 제품 소개 — 하드웨어 + AI 두뇌 + 교육 올인원',
-    description: '단순 설치가 아닙니다. 수천 시간 검증된 AI 두뇌를 이식합니다.',
-    images: [{ url: '/images/og-image.png' }],
-  },
-}
+const productTitle = '제품 소개'
+const productDescription =
+  'Mac Mini M4 기반 로컬 AI 환경, OpenClaw 에이전트, V3 장기기억 시스템과 설치 교육까지 포함한 ClawNode 제품 구성을 소개합니다.'
+
+export const metadata: Metadata = createPageMetadata({
+  title: productTitle,
+  description: productDescription,
+  path: '/product',
+  keywords: ['Mac Mini AI', 'OpenClaw', 'V3 장기기억', '로컬 AI 서버'],
+})
+
+const structuredData = [
+  webPageJsonLd({
+    title: `ClawNode | ${productTitle}`,
+    description: productDescription,
+    path: '/product',
+  }),
+  breadcrumbJsonLd([
+    { name: '홈', path: '/' },
+    { name: productTitle, path: '/product' },
+  ]),
+  serviceJsonLd({
+    name: 'ClawNode 제품 구성',
+    description: productDescription,
+    path: '/product',
+    serviceType: 'AI 자동화 환경 구축',
+  }),
+]
 
 export default function ProductPage() {
   return (
-    <main>
+    <>
+      <StructuredData data={structuredData} />
+      <main>
       {/* Hero */}
       <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
@@ -322,17 +350,18 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 px-4 md:px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-20">
-          <Image src="/images/hero-bg.png" alt="" fill className="object-cover" />
-        </div>
-        <div className="relative z-10 max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">직접 확인하고 싶으신가요?</h2>
-          <p className="text-gray-400 mb-8">원격 설치부터 올인원 방문 세팅까지. 나에게 맞는 플랜을 골라보세요.</p>
-          <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
-        </div>
-      </section>
-    </main>
+        {/* CTA */}
+        <section className="py-24 px-4 md:px-6 text-center relative overflow-hidden">
+          <div className="absolute inset-0 z-0 opacity-20">
+            <Image src="/images/hero-bg.png" alt="" fill className="object-cover" />
+          </div>
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">직접 확인하고 싶으신가요?</h2>
+            <p className="text-gray-400 mb-8">원격 설치부터 올인원 방문 세팅까지. 나에게 맞는 플랜을 골라보세요.</p>
+            <CTAButton href="/reserve">내 자리 확보하기</CTAButton>
+          </div>
+        </section>
+      </main>
+    </>
   )
 }

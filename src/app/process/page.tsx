@@ -1,21 +1,49 @@
 import Image from 'next/image'
+import type { Metadata } from 'next'
+import StructuredData from '@/components/StructuredData'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
-import type { Metadata } from 'next'
+import {
+  breadcrumbJsonLd,
+  createPageMetadata,
+  serviceJsonLd,
+  webPageJsonLd,
+} from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: '설치 과정',
-  description: '예약부터 가동까지 단 2시간. 미개봉 언박싱 → 원클릭 설치 → 현장 교육 → 핸드오버. 복잡한 건 저희가 다 합니다.',
-  openGraph: {
-    title: 'ClawNode 설치 — 예약부터 가동까지 2시간',
-    description: '고객님 눈앞에서 미개봉 씰을 뜯고, 2시간 만에 AI 노드를 완성합니다.',
-    images: [{ url: '/images/og-image.png' }],
-  },
-}
+const processTitle = '설치 과정'
+const processDescription =
+  '예약부터 설치 완료까지 ClawNode 온보딩 절차를 안내합니다. 방문 설치와 원격 설치 모두 빠르게 세팅하고 교육까지 제공합니다.'
+
+export const metadata: Metadata = createPageMetadata({
+  title: processTitle,
+  description: processDescription,
+  path: '/process',
+  keywords: ['AI 설치 과정', '원격 설치', '방문 설치', 'ClawNode 온보딩'],
+})
+
+const structuredData = [
+  webPageJsonLd({
+    title: `ClawNode | ${processTitle}`,
+    description: processDescription,
+    path: '/process',
+  }),
+  breadcrumbJsonLd([
+    { name: '홈', path: '/' },
+    { name: processTitle, path: '/process' },
+  ]),
+  serviceJsonLd({
+    name: 'ClawNode 설치 및 온보딩 절차',
+    description: processDescription,
+    path: '/process',
+    serviceType: 'AI 자동화 설치 온보딩',
+  }),
+]
 
 export default function ProcessPage() {
   return (
-    <main>
+    <>
+      <StructuredData data={structuredData} />
+      <main>
       {/* Hero */}
       <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
@@ -152,12 +180,13 @@ export default function ProcessPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 직원이 출근합니다.</h2>
-        <p className="text-gray-400 mb-6">방문 설치 또는 원격 설치. 선택은 당신의 몫.</p>
-        <CTAButton href="/reserve">지금 예약하기</CTAButton>
-      </section>
-    </main>
+        {/* CTA */}
+        <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 직원이 출근합니다.</h2>
+          <p className="text-gray-400 mb-6">방문 설치 또는 원격 설치. 선택은 당신의 몫.</p>
+          <CTAButton href="/reserve">지금 예약하기</CTAButton>
+        </section>
+      </main>
+    </>
   )
 }

@@ -18,7 +18,7 @@ export default function Nav() {
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-[#050505]/80 border-b border-white/5">
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2 text-[#FF6B00] font-bold text-xl tracking-tight">
-          <img src="/images/clawnode-logo.png" alt="" className="w-7 h-7" />
+          <img src="/images/clawnode-logo.png" alt="ClawNode 로고" className="w-7 h-7" />
           ClawNode
         </Link>
 
@@ -35,12 +35,12 @@ export default function Nav() {
             </li>
           ))}
           <li>
-            <a
+            <Link
               href="/reserve"
               className="bg-[#FF6B00] text-black text-sm font-bold px-5 py-2 rounded-md hover:opacity-90 transition-opacity"
             >
               예약하기
-            </a>
+            </Link>
           </li>
         </ul>
 
@@ -76,12 +76,12 @@ export default function Nav() {
               </li>
             ))}
             <li className="pt-2 border-t border-white/10">
-              <a
+              <Link
                 href="/reserve"
                 className="bg-[#FF6B00] text-black text-sm font-bold px-5 py-3 rounded-md block text-center"
               >
                 예약하기
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

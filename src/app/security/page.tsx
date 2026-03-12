@@ -1,20 +1,48 @@
+import type { Metadata } from 'next'
+import StructuredData from '@/components/StructuredData'
 import SectionHeading from '@/components/SectionHeading'
 import CTAButton from '@/components/CTAButton'
-import type { Metadata } from 'next'
+import {
+  breadcrumbJsonLd,
+  createPageMetadata,
+  serviceJsonLd,
+  webPageJsonLd,
+} from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: '보안 아키텍처',
-  description: '회계 장부, 고객 DB, API 키 — 남의 서버에 맡기고 계시나요? ClawNode는 100% 로컬. Tailscale 암호화 터널 + 로컬 서비스 최소 노출 + macOS Keychain.',
-  openGraph: {
-    title: 'ClawNode 보안 — Zero Trust Architecture',
-    description: '100% 로컬 실행. Tailscale + 로컬 서비스 최소 노출 + Keychain 다층 방어. 데이터가 절대 외부로 나가지 않습니다.',
-    images: [{ url: '/images/og-image.png' }],
-  },
-}
+const securityTitle = '보안 아키텍처'
+const securityDescription =
+  'ClawNode 보안 구조를 설명합니다. 로컬 실행, Tailscale, 최소 포트 노출, macOS Keychain을 기반으로 데이터 주권을 지키는 방식입니다.'
+
+export const metadata: Metadata = createPageMetadata({
+  title: securityTitle,
+  description: securityDescription,
+  path: '/security',
+  keywords: ['로컬 AI 보안', 'Zero Trust', 'Tailscale', 'macOS Keychain'],
+})
+
+const structuredData = [
+  webPageJsonLd({
+    title: `ClawNode | ${securityTitle}`,
+    description: securityDescription,
+    path: '/security',
+  }),
+  breadcrumbJsonLd([
+    { name: '홈', path: '/' },
+    { name: securityTitle, path: '/security' },
+  ]),
+  serviceJsonLd({
+    name: 'ClawNode 로컬 보안 아키텍처',
+    description: securityDescription,
+    path: '/security',
+    serviceType: '로컬 AI 보안 설계',
+  }),
+]
 
 export default function SecurityPage() {
   return (
-    <main>
+    <>
+      <StructuredData data={structuredData} />
+      <main>
       {/* Hero */}
       <section className="py-24 px-4 md:px-6 text-center">
         <div className="max-w-3xl mx-auto">
@@ -153,12 +181,13 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
-        <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. 원격 설치부터 올인원까지.</p>
-        <CTAButton href="/reserve">지금 예약하기</CTAButton>
-      </section>
-    </main>
+        {/* CTA */}
+        <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
+          <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. 원격 설치부터 올인원까지.</p>
+          <CTAButton href="/reserve">지금 예약하기</CTAButton>
+        </section>
+      </main>
+    </>
   )
 }
