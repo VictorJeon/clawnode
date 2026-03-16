@@ -12,13 +12,19 @@ import {
 
 const pricingTitle = '가격 및 FAQ'
 const pricingDescription =
-  'ClawNode 가격 안내. 원격 설치부터 올인원 프리미엄까지, 로컬 AI 자동화 환경과 V3 장기기억 시스템을 맞춤 세팅합니다.'
+  'ClawNode 오픈클로 설치 서비스 가격 안내. 원격 설치(30만 원)부터 맥미니 AI 올인원 패키지(220만 원)까지, AI 자동화 서비스 비용을 투명하게 공개합니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: pricingTitle,
   description: pricingDescription,
   path: '/pricing',
-  keywords: ['AI 설치 가격', '로컬 AI 구축 비용', 'AI 자동화 컨설팅 가격'],
+  keywords: [
+    'AI 설치 서비스 가격',
+    '오픈클로 설치 비용',
+    '로컬 AI 구축 비용',
+    '맥미니 AI 서비스',
+    'AI 자동화 서비스 비용',
+  ],
 })
 
 const structuredData = [

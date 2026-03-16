@@ -7,15 +7,22 @@ import {
   webPageJsonLd,
 } from '@/lib/seo'
 
-const homeTitle = '로컬 AI 직원 설치 서비스'
+const homeTitle = 'ClawNode - 로컬 AI 직원 설치 서비스 | 오픈클로 맥미니 에이전트'
 const homeDescription =
-  'ClawNode는 로컬 AI 자동화 환경, V3 장기기억 시스템, 맞춤형 AI 에이전트 설치와 온보딩을 제공해 반복 업무를 자동화합니다.'
+  '오픈클로(OpenClaw) 기반 로컬 AI 에이전트를 맥미니에 설치해 드립니다. V3 장기기억 AI 비서, 업무 자동화, 텔레그램 연동까지 한 번에 세팅합니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: homeTitle,
   description: homeDescription,
   path: '/',
-  keywords: ['로컬 AI 직원', 'AI 비서 설치', 'AI 자동화 도입', '사내 AI 에이전트'],
+  keywords: [
+    '로컬 AI 직원',
+    'AI 비서 설치',
+    'AI 자동화 도입',
+    '사내 AI 에이전트',
+    '오픈클로 설치 서비스',
+    '맥미니 AI 에이전트',
+  ],
 })
 
 const structuredData = [

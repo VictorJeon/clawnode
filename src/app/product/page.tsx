@@ -12,13 +12,20 @@ import {
 
 const productTitle = '제품 소개'
 const productDescription =
-  'Mac Mini M4 기반 로컬 AI 환경, OpenClaw 에이전트, V3 장기기억 시스템과 설치 교육까지 포함한 ClawNode 제품 구성을 소개합니다.'
+  '오픈클로(OpenClaw) AI 에이전트를 맥미니 M4에 설치해 드립니다. V3 장기기억 시스템, 업무 자동화 루틴, 텔레그램 AI 비서 세팅까지 전부 포함됩니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: productTitle,
   description: productDescription,
   path: '/product',
-  keywords: ['Mac Mini AI', 'OpenClaw', 'V3 장기기억', '로컬 AI 서버'],
+  keywords: [
+    '맥미니 AI 에이전트',
+    '오픈클로 설치',
+    'AI 비서 세팅',
+    'V3 장기기억',
+    '로컬 AI 서버',
+    '업무 자동화 설치',
+  ],
 })
 
 const structuredData = [

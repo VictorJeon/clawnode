@@ -1,0 +1,122 @@
+---
+title: "오픈클로 설치 완벽 가이드: 맥미니에 AI 비서 세팅하기"
+description: "오픈클로 설치 방법을 단계별로 정리했습니다. 맥미니 M4 기준으로 Node.js 설치부터 텔레그램 연동, 첫 AI 에이전트 실행까지 30분이면 충분합니다."
+date: "2026-03-16"
+author: "ClawNode"
+tags: ["오픈클로 설치", "AI 에이전트", "맥미니"]
+keywords: ["오픈클로 설치", "openclaw 설치 방법", "맥미니 AI 설정", "AI 비서 설치", "오픈클로 세팅"]
+---
+
+# 오픈클로 설치 완벽 가이드: 맥미니에 AI 비서 세팅하기
+
+오픈클로(OpenClaw)를 맥미니에 설치하면 24시간 돌아가는 AI 비서를 만들 수 있습니다. 클라우드에 돈을 낼 필요 없고, 내 데이터가 외부로 나가지도 않습니다. 이 글에서는 맥미니 M4 기준으로 오픈클로 설치 과정 전체를 정리합니다.
+
+## 시작 전 준비물
+
+설치에 앞서 아래 항목을 확인합니다.
+
+- **맥미니 M4** (또는 M2/M3 이상)
+- macOS 14 Sonoma 이상
+- 인터넷 연결
+- 텔레그램 계정 (AI 비서와 대화할 채널)
+- Anthropic 또는 OpenAI API 키 중 하나
+
+맥미니 M4는 현재 가장 비용 대비 성능이 좋은 로컬 AI 실행 기기입니다. 16GB 메모리 기준으로 Claude Sonnet 수준의 응답 품질을 충분히 처리할 수 있습니다.
+
+## 1단계: Node.js 설치
+
+오픈클로는 Node.js 기반으로 동작합니다. 터미널을 열고 아래 명령어를 실행합니다.
+
+```bash
+# Homebrew 설치 (이미 있으면 생략)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Node.js 최신 LTS 설치
+brew install node
+
+# 설치 확인
+node --version
+```
+
+Node.js 20 이상이 출력되면 정상입니다.
+
+## 2단계: 오픈클로 설치
+
+Node.js가 준비됐다면 오픈클로를 설치합니다. pnpm을 권장하지만 npm도 사용 가능합니다.
+
+```bash
+# pnpm 설치 (권장)
+npm install -g pnpm
+
+# 오픈클로 설치
+pnpm install -g openclaw
+```
+
+설치 후 `openclaw --version` 명령으로 정상 설치를 확인합니다. 2026년 3월 기준 최신 버전은 `2026.3.x`입니다.
+
+## 3단계: API 키 설정
+
+오픈클로가 LLM과 통신하려면 API 키가 필요합니다. Anthropic Claude를 기준으로 설명합니다.
+
+```bash
+# Anthropic API 키 등록
+openclaw config set ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
+```
+
+Anthropic 콘솔(console.anthropic.com)에서 API 키를 발급받을 수 있습니다. 신규 계정은 $5 무료 크레딧을 제공합니다.
+
+## 4단계: 텔레그램 봇 연동
+
+오픈클로의 핵심 기능 중 하나가 텔레그램 통합입니다. 스마트폰에서 AI 비서에게 말을 걸고, 결과를 즉시 받아볼 수 있습니다.
+
+1. 텔레그램에서 `@BotFather`를 검색합니다.
+2. `/newbot` 명령으로 새 봇을 만듭니다.
+3. 봇 이름과 username을 설정하면 토큰이 발급됩니다.
+
+```bash
+# 텔레그램 봇 토큰 등록
+openclaw config set TELEGRAM_BOT_TOKEN=1234567890:xxxxxxxxxx
+
+# 내 텔레그램 Chat ID 등록 (봇에게 메시지 보낸 후 확인 가능)
+openclaw config set TELEGRAM_CHAT_ID=123456789
+```
+
+## 5단계: Gateway 실행
+
+설정이 끝나면 오픈클로 Gateway를 시작합니다. Gateway는 AI 에이전트의 두뇌 역할을 합니다.
+
+```bash
+openclaw gateway start
+```
+
+성공하면 `Gateway running on port 18790` 메시지가 표시됩니다. 이제 텔레그램에서 봇에게 메시지를 보내면 AI가 응답합니다.
+
+## 맥미니를 24시간 켜두는 설정
+
+AI 비서가 항상 대기하려면 맥미니가 꺼지지 않아야 합니다.
+
+1. **시스템 설정 → 에너지 절약**으로 이동합니다.
+2. "디스플레이 끄기" 시간을 "안 함"으로 설정합니다.
+3. "컴퓨터를 절전 모드로 전환"도 비활성화합니다.
+
+또한 부팅 시 자동 시작을 원한다면 launchd 서비스로 등록하는 방법도 있습니다.
+
+## 자주 묻는 질문
+
+### 오픈클로 설치 후 응답이 없어요
+
+텔레그램 Chat ID가 잘못 입력됐을 가능성이 높습니다. `openclaw config list`로 현재 설정을 확인하고, `openclaw gateway restart`로 재시작해보세요.
+
+### API 비용이 걱정돼요
+
+Claude Haiku 모델을 사용하면 한 달 일상적인 업무 자동화 기준으로 5,000~10,000원 수준입니다. 대화량에 따라 다르지만 클라우드 SaaS 구독 대비 훨씬 저렴합니다.
+
+### 맥미니 M2나 M1도 되나요?
+
+됩니다. 다만 M4 대비 응답 속도가 느릴 수 있습니다. 로컬 LLM(Ollama)을 병행하는 경우 M4 16GB 이상을 권장합니다.
+
+---
+
+직접 설치가 번거롭다면 ClawNode가 대신합니다. [제품 소개](/product)를 보시면 원격 설치부터 방문 세팅까지 옵션을 확인할 수 있습니다. [가격 안내](/pricing)도 함께 참고하세요.
+
+관련 글: [오픈클로 활용법 총정리: 비개발자도 할 수 있는 AI 자동화](/blog/openclaw-usage-guide)

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const siteConfig = {
   name: 'ClawNode',
-  title: 'ClawNode',
+  title: 'ClawNode - 로컬 AI 직원 설치 서비스 | 오픈클로 맥미니 에이전트',
   description:
     '까먹지 않는 AI 직원. 로컬 AI 자동화 환경, V3 장기기억 시스템, 맞춤형 AI 에이전트 설치와 온보딩을 제공합니다.',
   url: 'https://claw-node.com',
@@ -19,9 +19,15 @@ export const siteConfig = {
     '업무 자동화',
     '맥미니 AI 서버',
     'OpenClaw',
+    '오픈클로',
     '장기기억 AI',
     '텔레그램 자동화',
     'AI 설치 서비스',
+    '오픈클로 설치',
+    'AI 비서',
+    '맥미니 AI',
+    'AI 자동화 서비스',
+    '오픈클로 사용법',
   ],
 } as const
 

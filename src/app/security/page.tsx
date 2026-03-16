@@ -11,13 +11,13 @@ import {
 
 const securityTitle = '보안 아키텍처'
 const securityDescription =
-  'ClawNode 보안 구조를 설명합니다. 로컬 실행, Tailscale, 최소 포트 노출, macOS Keychain을 기반으로 데이터 주권을 지키는 방식입니다.'
+  'ClawNode 로컬 AI 보안 구조를 설명합니다. AI 데이터가 외부로 나가지 않는 완전 로컬 실행, Tailscale VPN, macOS Keychain으로 데이터 주권을 지킵니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: securityTitle,
   description: securityDescription,
   path: '/security',
-  keywords: ['로컬 AI 보안', 'Zero Trust', 'Tailscale', 'macOS Keychain'],
+  keywords: ['로컬 AI 보안', '온프레미스 AI', 'AI 데이터 보안', 'Tailscale', 'macOS Keychain'],
 })
 
 const structuredData = [

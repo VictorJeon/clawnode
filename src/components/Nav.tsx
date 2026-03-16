@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/security', label: '보안' },
   { href: '/process', label: '설치' },
   { href: '/pricing', label: '가격' },
+  { href: '/blog', label: '블로그' },
 ]
 
 export default function Nav() {

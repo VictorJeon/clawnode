@@ -12,7 +12,7 @@ import {
 
 const processTitle = '설치 과정'
 const processDescription =
-  '예약부터 설치 완료까지 ClawNode 온보딩 절차를 안내합니다. 방문 설치와 원격 설치 모두 빠르게 세팅하고 교육까지 제공합니다.'
+  '오픈클로 AI 에이전트 설치 과정을 안내합니다. 예약 → 상담 → 맥미니 세팅 → 교육까지, 비개발자도 하루 만에 AI 자동화 환경을 갖출 수 있습니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: processTitle,

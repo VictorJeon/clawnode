@@ -11,7 +11,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "framer-motion": "^12.34.5",
+    "gray-matter": "^4.0.3",
     "next": "^15.0.0",
+    "next-mdx-remote": "^6.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
