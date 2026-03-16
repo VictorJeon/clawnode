@@ -83,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={inter.variable}>
       <head>
+        <meta name="naver-site-verification" content="e136bb251326c90073d1fa61bf25a5da9ff0970a" />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         {/* Pretendard — Korean + Latin web font via CDN */}
