@@ -12,7 +12,7 @@ import {
 
 const productTitle = '제품 소개'
 const productDescription =
-  '오픈클로(OpenClaw) AI 에이전트를 맥미니 M4에 설치해 드립니다. V3 장기기억 시스템, 업무 자동화 루틴, 텔레그램 AI 비서 세팅까지 전부 포함됩니다.'
+  'ClawNode — 프리미엄 오픈클로(OpenClaw) AI 에이전트를 맥미니 M4에 설치해 드립니다. V3 장기기억 시스템, 업무 자동화 루틴, 텔레그램 AI 비서 세팅까지 전부 포함됩니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: productTitle,
@@ -61,7 +61,7 @@ export default function ProductPage() {
             <span className="text-[#FF6B00]">올인원.</span>
           </h1>
           <p className="text-xl text-gray-400">
-            깡통 서버가 아닙니다. 처음부터 일 잘하는 경력직 AI를 심어드립니다.
+            깡통 서버가 아닙니다. ClawNode(프리미엄 오픈클로)는 처음부터 일 잘하는 경력직 AI를 심어드립니다.
             <br />
             <span className="text-white font-medium">코딩을 아무것도 몰라도 직접 쓸 수 있게 다 셋팅해 드립니다.</span>
           </p>
@@ -198,7 +198,7 @@ export default function ProductPage() {
             <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">Long-Term Memory</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">V3 기억 시스템 — 까먹지 않는 AI</h2>
             <p className="text-gray-400">
-              일반 AI는 대화를 끊으면 모든 걸 까먹습니다. ClawNode의 V3 메모리 시스템은 다릅니다.
+              일반 AI는 대화를 끊으면 모든 걸 까먹습니다. 프리미엄 오픈클로의 V3 메모리 시스템은 다릅니다.
             </p>
           </div>
 
@@ -217,7 +217,7 @@ export default function ProductPage() {
 
           <div className="mt-8 p-6 border border-white/10 bg-[#0A0A0A] rounded-xl text-center">
             <p className="text-sm text-gray-400">
-              <span className="text-white font-bold">일반 설치 대행 vs ClawNode</span> — 가장 큰 차이가 바로 이 기억 시스템입니다.
+              <span className="text-white font-bold">일반 설치 대행 vs 프리미엄 오픈클로</span> — 가장 큰 차이가 바로 이 기억 시스템입니다.
               <br />일반 설치에는 이 기능이 없습니다. ClawNode는 DB 구축부터 데이터 마이그레이션까지 전부 해드립니다.
             </p>
           </div>

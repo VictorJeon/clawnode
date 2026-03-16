@@ -12,7 +12,7 @@ import {
 
 const pricingTitle = '가격 및 FAQ'
 const pricingDescription =
-  'ClawNode 오픈클로 설치 서비스 가격 안내. 원격 설치(30만 원)부터 맥미니 AI 올인원 패키지(220만 원)까지, AI 자동화 서비스 비용을 투명하게 공개합니다.'
+  'ClawNode 프리미엄 오픈클로 설치 서비스 가격 안내. 원격 설치(30만 원)부터 맥미니 AI 올인원 패키지(220만 원)까지, AI 자동화 서비스 비용을 투명하게 공개합니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: pricingTitle,

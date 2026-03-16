@@ -33,11 +33,11 @@ export default function HomePageClient() {
 
             <FadeIn delay={0.4}>
               <p className="text-lg text-gray-400 mb-4 leading-relaxed">
-                나만의 전용 AI 서버, <span className="text-white font-bold">ClawNode</span>.
+                프리미엄 오픈클로, <span className="text-white font-bold">ClawNode</span>.
               </p>
               <p className="text-base text-gray-500 mb-10 leading-relaxed">
-                코딩을 아무것도 몰라도 괜찮습니다. 다 셋팅해 드립니다.<br />
-                AI가 경리, 리서치, 데이터 수집을 대신합니다.
+                오픈클로는 오픈소스입니다. 하지만 '잘 쓰는 것'과 '그냥 설치하는 것'은 다릅니다.<br />
+                코딩 몰라도 됩니다. V3 기억부터 맞춤 봇까지 전부 셋팅해 드립니다.
               </p>
             </FadeIn>
 
@@ -125,7 +125,7 @@ export default function HomePageClient() {
       <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto">
           <FadeIn>
-            <SectionHeading subtitle="ClawNode 하나로 대체할 수 있는 직무들">당신의 AI 직원이 할 수 있는 일</SectionHeading>
+            <SectionHeading subtitle="프리미엄 오픈클로로 대체할 수 있는 직무들">당신의 AI 직원이 할 수 있는 일</SectionHeading>
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
@@ -172,7 +172,7 @@ export default function HomePageClient() {
 
           <FadeIn delay={0.2}>
             <p className="text-center text-gray-500 text-lg max-w-xl mx-auto mb-20">
-              일반 AI는 창을 닫으면 끝. ClawNode는 다릅니다.
+              일반 설치는 금방 까먹습니다. 프리미엄 오픈클로는 다릅니다.
             </p>
           </FadeIn>
 
@@ -218,7 +218,7 @@ export default function HomePageClient() {
               <div className="rounded-2xl border border-[#FF6B00]/30 bg-[#0A0A0A] overflow-hidden h-full shadow-[0_0_60px_rgba(255,107,0,0.06)]">
                 <div className="px-6 py-4 border-b border-[#FF6B00]/10 flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full bg-[#FF6B00]" />
-                  <span className="text-sm text-[#FF6B00] font-medium">ClawNode</span>
+                  <span className="text-sm text-[#FF6B00] font-medium">프리미엄 오픈클로</span>
                   <span className="ml-auto text-[10px] text-[#FF6B00]/60 font-mono">V3 MEMORY ACTIVE</span>
                 </div>
                 <div className="p-6 space-y-4">
@@ -312,7 +312,7 @@ export default function HomePageClient() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             {[ 
               { num: '01', title: '경력직 뇌구조 탑재', desc: '깡통 오픈클로가 아닙니다. 수천 시간 검증된 업무 루틴(AGENTS)과 페르소나(SOUL)를 심어드립니다. 처음부터 일 잘하는 경력직처럼 행동합니다.' },
-              { num: '02', title: '완벽한 V3 기억장치', desc: '일반 설치는 대화를 금방 까먹습니다. ClawNode는 엔터프라이즈급 벡터 DB를 구축해, 3개월 전 지나가듯 말한 지시사항도 완벽하게 기억합니다.' },
+              { num: '02', title: '완벽한 V3 기억장치', desc: '일반 설치는 대화를 금방 까먹습니다. 프리미엄 오픈클로는 엔터프라이즈급 벡터 DB를 구축해, 3개월 전 지나가듯 말한 지시사항도 완벽하게 기억합니다.' },
               { num: '03', title: '설치 당일, 맞춤 봇 완성', desc: '설치만 하고 떠나지 않습니다. 고객님이 가장 필요한 자동화 봇 하나를 그 자리에서 뚝딱 만들어 드립니다. 설치 당일부터 본전을 뽑으세요.' },
             ].map((item, i) => (
               <FadeIn key={item.num} delay={i * 0.15}>

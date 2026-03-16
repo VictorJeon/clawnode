@@ -7,9 +7,9 @@ import {
   webPageJsonLd,
 } from '@/lib/seo'
 
-const homeTitle = 'ClawNode - 로컬 AI 직원 설치 서비스 | 오픈클로 맥미니 에이전트'
+const homeTitle = 'ClawNode — 프리미엄 오픈클로 | V3 장기기억 AI 에이전트 설치 서비스'
 const homeDescription =
-  '오픈클로(OpenClaw) 기반 로컬 AI 에이전트를 맥미니에 설치해 드립니다. V3 장기기억 AI 비서, 업무 자동화, 텔레그램 연동까지 한 번에 세팅합니다.'
+  '프리미엄 오픈클로(OpenClaw) 설치 서비스. V3 장기기억 AI 에이전트를 맥미니에 구축해 드립니다. 업무 자동화, 텔레그램 연동, 전문 온보딩까지 한 번에.'
 
 export const metadata: Metadata = createPageMetadata({
   title: homeTitle,

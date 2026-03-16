@@ -62,7 +62,7 @@ export default function ReservePageClient() {
         <FadeIn>
           <div className="text-center mb-12">
             <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-2">Reserve</p>
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">ClawNode 예약 신청</h1>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4">프리미엄 오픈클로 예약 신청</h1>
             <p className="text-gray-400">아래 폼을 작성해 주세요.</p>
           </div>
         </FadeIn>

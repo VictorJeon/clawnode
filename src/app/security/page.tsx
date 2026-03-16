@@ -11,7 +11,7 @@ import {
 
 const securityTitle = '보안 아키텍처'
 const securityDescription =
-  'ClawNode 로컬 AI 보안 구조를 설명합니다. AI 데이터가 외부로 나가지 않는 완전 로컬 실행, Tailscale VPN, macOS Keychain으로 데이터 주권을 지킵니다.'
+  'ClawNode(프리미엄 오픈클로) 로컬 AI 보안 구조를 설명합니다. AI 데이터가 외부로 나가지 않는 완전 로컬 실행, Tailscale VPN, macOS Keychain으로 데이터 주권을 지킵니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: securityTitle,
@@ -94,7 +94,7 @@ export default function SecurityPage() {
 
             {/* ClawNode */}
             <div className="border border-[#FF6B00]/50 bg-[#FF6B00]/5 rounded-2xl p-8 ring-2 ring-[#FF6B00]/20">
-              <div className="text-[#FF6B00] font-bold text-sm mb-4">ClawNode</div>
+              <div className="text-[#FF6B00] font-bold text-sm mb-4">ClawNode (프리미엄 오픈클로)</div>
               <h3 className="text-xl font-bold mb-4">안전하고 쉽다</h3>
               <ul className="space-y-3 text-sm text-gray-400">
                 <li>✅ 100% 로컬 — 데이터가 밖으로 안 나감</li>

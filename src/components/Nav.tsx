@@ -20,7 +20,10 @@ export default function Nav() {
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2 text-[#FF6B00] font-bold text-xl tracking-tight">
           <img src="/images/clawnode-logo.png" alt="ClawNode 로고" className="w-7 h-7" />
-          ClawNode
+          <span>
+            ClawNode
+            <span className="block text-[9px] font-normal text-[#FF6B00]/60 tracking-wider leading-none -mt-0.5">프리미엄 오픈클로</span>
+          </span>
         </Link>
 
         {/* Desktop */}

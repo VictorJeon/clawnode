@@ -12,7 +12,7 @@ import {
 
 const processTitle = '설치 과정'
 const processDescription =
-  '오픈클로 AI 에이전트 설치 과정을 안내합니다. 예약 → 상담 → 맥미니 세팅 → 교육까지, 비개발자도 하루 만에 AI 자동화 환경을 갖출 수 있습니다.'
+  '프리미엄 오픈클로(ClawNode) AI 에이전트 설치 과정을 안내합니다. 예약 → 상담 → 맥미니 세팅 → 교육까지, 비개발자도 하루 만에 AI 자동화 환경을 갖출 수 있습니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: processTitle,

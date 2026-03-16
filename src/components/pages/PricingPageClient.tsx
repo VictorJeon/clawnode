@@ -153,7 +153,7 @@ export default function PricingPageClient() {
                   <th className="py-4 px-4" />
                   <th className="py-4 px-4">DIY (직접 설치)</th>
                   <th className="py-4 px-4 text-[#FF6B00] bg-[#FF6B00]/5">ClawNode Basic</th>
-                  <th className="py-4 px-4 text-[#FF6B00] bg-[#FF6B00]/10 rounded-t-lg font-bold">ClawNode 올인원</th>
+                  <th className="py-4 px-4 text-[#FF6B00] bg-[#FF6B00]/10 rounded-t-lg font-bold">프리미엄 오픈클로 올인원</th>
                 </tr>
               </thead>
               <tbody>

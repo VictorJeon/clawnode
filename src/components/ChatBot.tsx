@@ -10,7 +10,7 @@ interface Message {
 const INITIAL_MESSAGE: Message = {
   role: 'assistant',
   content:
-    '안녕하세요! 저는 ClawNode 전담 컨설턴트입니다.\n\n현재 하시는 일(직업)이나 가장 귀찮은 반복 업무가 무엇인지 알려주시면, **오픈클로로 어떻게 인건비를 0원으로 줄일 수 있는지** 즉시 진단해 드리겠습니다.',
+    '안녕하세요! 저는 프리미엄 오픈클로 전담 컨설턴트입니다.\n\n현재 하시는 일(직업)이나 가장 귀찮은 반복 업무가 무엇인지 알려주시면, **오픈클로로 어떻게 인건비를 0원으로 줄일 수 있는지** 즉시 진단해 드리겠습니다.',
 }
 
 export default function ChatBot() {
@@ -178,7 +178,7 @@ export default function ChatBot() {
           <div className="w-3 h-3 rounded-full bg-yellow-500" />
           <div className="w-3 h-3 rounded-full bg-green-500" />
         </div>
-        <span className="ml-2 text-xs text-gray-500 font-mono">ClawNode AI Consultant</span>
+        <span className="ml-2 text-xs text-gray-500 font-mono">Premium OpenClaw Consultant</span>
         {isStreaming && (
           <span className="ml-auto text-xs text-[#FF6B00] animate-pulse">typing...</span>
         )}
