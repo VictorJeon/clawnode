@@ -108,10 +108,18 @@ def vector_search(conn, embedding: list[float], scopes: list[str], limit: int = 
         """, (str(embedding), scopes, str(embedding), limit))
         return cur.fetchall()
 
+def _sanitize_tsquery_word(w: str) -> str:
+    """Strip characters that break to_tsquery('simple', ...) parsing."""
+    import re
+    # Keep only word characters (letters, digits, underscore) and hyphens
+    cleaned = re.sub(r'[^\w\-]', '', w)
+    return cleaned
+
 def lexical_search(conn, query: str, scopes: list[str], limit: int = 20):
     """BM25 full-text search."""
-    # Build tsquery: split words, join with &, handle Korean
-    words = [w for w in query.split() if len(w) > 1][:10]
+    # Build tsquery: split words, sanitize, join with |, handle Korean
+    words = [_sanitize_tsquery_word(w) for w in query.split()]
+    words = [w for w in words if len(w) > 1][:10]
     if not words:
         return []
     tsquery = " | ".join(words)  # OR for better Korean recall
