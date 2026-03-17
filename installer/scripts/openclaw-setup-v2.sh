@@ -1334,6 +1334,33 @@ const path = process.env.OC_PATH;
 const raw = fs.readFileSync(path, "utf8");
 const c = raw.trim() ? JSON.parse(raw) : {};
 
+// === Model: Opus 4.6 primary + Sonnet 4.6 fallback + 1M context ===
+c.agents = c.agents || {};
+c.agents.defaults = c.agents.defaults || {};
+if (!c.agents.defaults.model || c.agents.defaults.model.primary === "anthropic/claude-sonnet-4-6") {
+  c.agents.defaults.model = {
+    primary: "anthropic/claude-opus-4-6",
+    fallbacks: ["anthropic/claude-sonnet-4-6"],
+  };
+}
+c.agents.defaults.models = c.agents.defaults.models || {};
+c.agents.defaults.models["anthropic/claude-opus-4-6"] = c.agents.defaults.models["anthropic/claude-opus-4-6"] || {};
+c.agents.defaults.models["anthropic/claude-sonnet-4-6"] = c.agents.defaults.models["anthropic/claude-sonnet-4-6"] || {};
+
+c.models = c.models || {};
+c.models.mode = "merge";
+c.models.providers = c.models.providers || {};
+c.models.providers.anthropic = {
+  baseUrl: "https://api.anthropic.com",
+  auth: "token",
+  api: "anthropic-messages",
+  models: [
+    { id: "claude-opus-4-6", name: "Claude Opus 4.6", api: "anthropic-messages", reasoning: false, input: ["text","image"], contextWindow: 1000000, maxTokens: 16384 },
+    { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", api: "anthropic-messages", reasoning: false, input: ["text","image"], contextWindow: 1000000, maxTokens: 16384 },
+  ],
+};
+
+// === Plugins ===
 c.plugins = c.plugins || {};
 c.plugins.allow = Array.isArray(c.plugins.allow) ? c.plugins.allow : [];
 for (const name of ["memory-v3"]) {
