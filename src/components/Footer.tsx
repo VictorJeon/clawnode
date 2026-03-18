@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <span className="text-[#FF6B00] font-bold text-xl">ClawNode</span>
-            <p className="text-xs text-[#FF6B00]/50 mt-0.5 font-medium">프리미엄 오픈클로 설치 서비스</p>
+            <p className="text-xs text-[#FF6B00]/50 mt-0.5 font-medium">클로노드 · 프리미엄 오픈클로 설치 서비스</p>
             <p className="text-sm text-gray-500 mt-3 max-w-sm leading-relaxed">
               당신의 24시간 무급 직원.
               Mac Mini M4 + AI 두뇌 + 현장 설치 교육 올인원.

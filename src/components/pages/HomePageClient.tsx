@@ -33,7 +33,7 @@ export default function HomePageClient() {
 
             <FadeIn delay={0.4}>
               <p className="text-lg text-gray-400 mb-4 leading-relaxed">
-                프리미엄 오픈클로, <span className="text-white font-bold">ClawNode</span>.
+                프리미엄 오픈클로, <span className="text-white font-bold">ClawNode(클로노드)</span>.
               </p>
               <p className="text-base text-gray-500 mb-10 leading-relaxed">
                 오픈클로는 오픈소스입니다. 하지만 '잘 쓰는 것'과 '그냥 설치하는 것'은 다릅니다.<br />

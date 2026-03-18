@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 
 export const siteConfig = {
-  name: 'ClawNode — 프리미엄 오픈클로',
-  title: 'ClawNode — 프리미엄 오픈클로 | V3 장기기억 AI 에이전트 설치 서비스',
+  name: 'ClawNode',
+  title: 'ClawNode(클로노드) — 프리미엄 오픈클로 | V3 장기기억 AI 에이전트 설치 서비스',
   description:
-    '프리미엄 오픈클로 설치 서비스. V3 장기기억 시스템, 맞춤형 AI 에이전트 구축, 전문 온보딩까지 — 오픈클로의 모든 잠재력을 끌어내 드립니다.',
+    '클로노드(ClawNode)는 프리미엄 오픈클로 설치 서비스입니다. V3 장기기억 시스템, 맞춤형 AI 에이전트 구축, 전문 온보딩까지 — 오픈클로의 모든 잠재력을 끌어내 드립니다.',
   url: 'https://claw-node.com',
   locale: 'ko_KR',
   ogImagePath: '/images/og-image-new.png',
@@ -13,6 +13,10 @@ export const siteConfig = {
   supportUrl: 'http://pf.kakao.com/_kBxdZX/chat',
   defaultKeywords: [
     'ClawNode',
+    '클로노드',
+    '클로노드 설치',
+    '클로노드 가격',
+    '클로노드 상담',
     '로컬 AI',
     'AI 자동화',
     'AI 에이전트',
@@ -145,6 +149,7 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     '@id': absoluteUrl('/#organization'),
     name: siteConfig.name,
+    alternateName: ['클로노드', 'ClawNode(클로노드)'],
     url: siteConfig.url,
     logo: absoluteUrl(siteConfig.logoPath),
     image: absoluteUrl(siteConfig.ogImagePath),
@@ -170,6 +175,7 @@ export function websiteJsonLd() {
     '@id': absoluteUrl('/#website'),
     url: siteConfig.url,
     name: siteConfig.name,
+    alternateName: ['클로노드', 'ClawNode(클로노드)'],
     inLanguage: 'ko-KR',
     publisher: {
       '@id': absoluteUrl('/#organization'),
