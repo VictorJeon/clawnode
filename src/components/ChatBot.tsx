@@ -10,7 +10,7 @@ interface Message {
 const INITIAL_MESSAGE: Message = {
   role: 'assistant',
   content:
-    '안녕하세요! 저는 프리미엄 오픈클로 전담 컨설턴트입니다.\n\n현재 하시는 일(직업)이나 가장 귀찮은 반복 업무가 무엇인지 알려주시면, **오픈클로로 어떻게 인건비를 0원으로 줄일 수 있는지** 즉시 진단해 드리겠습니다.',
+    '안녕하세요, ClawNode 컨설턴트입니다.\n\n하시는 일이나 가장 귀찮은 반복 업무를 알려주시면, **AI로 어떻게 자동화할 수 있는지** 바로 진단해 드릴게요.',
 }
 
 export default function ChatBot() {
