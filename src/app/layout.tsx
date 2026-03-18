@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import './globals.css'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
@@ -10,6 +11,8 @@ import {
   siteConfig,
   websiteJsonLd,
 } from '@/lib/seo'
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 
 const inter = Inter({
   subsets: ['latin'],
@@ -99,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex-1">{children}</div>
         <Footer />
       </body>
+      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   )
 }

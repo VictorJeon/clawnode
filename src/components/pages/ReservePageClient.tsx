@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import FadeIn from '@/components/FadeIn'
+import { trackKakaoChat, trackReserveSubmit } from '@/lib/analytics'
 
 export default function ReservePageClient() {
   const [form, setForm] = useState({
@@ -28,6 +29,7 @@ export default function ReservePageClient() {
       })
 
       if (res.ok) {
+        trackReserveSubmit(form.package)
         setStatus('success')
       } else {
         setStatus('error')
@@ -78,6 +80,7 @@ export default function ReservePageClient() {
               href="http://pf.kakao.com/_kBxdZX/chat"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackKakaoChat('reserve_banner')}
               className="shrink-0 flex items-center gap-2 bg-yellow-400 text-black font-bold px-5 py-3 rounded-xl hover:bg-yellow-300 transition-colors text-sm whitespace-nowrap"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

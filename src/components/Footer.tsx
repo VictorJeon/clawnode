@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import KakaoChatLink from '@/components/KakaoChatLink'
 
 export default function Footer() {
   return (
@@ -39,10 +40,10 @@ export default function Footer() {
             <h4 className="text-sm font-bold text-gray-400 mb-4">연락처</h4>
             <ul className="space-y-2">
               <li>
-                <a href="http://pf.kakao.com/_kBxdZX/chat" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-2">
+                <KakaoChatLink location="footer" className="text-sm text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
                   카카오톡 채널 상담
-                </a>
+                </KakaoChatLink>
               </li>
               <li>
                 <a href="mailto:help@claw-node.com" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
