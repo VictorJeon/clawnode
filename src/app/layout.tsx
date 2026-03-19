@@ -103,6 +103,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
       </body>
       {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+      {/* Google Ads conversion tracking */}
+      <GoogleAnalytics gaId="AW-17999714736" />
     </html>
   )
 }
