@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { GoogleAnalytics } from '@next/third-parties/google'
+import Script from 'next/script'
 import './globals.css'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
@@ -95,6 +95,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
           crossOrigin="anonymous"
         />
+        {/* Google Analytics 4 + Google Ads - manual gtag for reliable tracking */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-LCYQQE3T5B"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-LCYQQE3T5B');
+            gtag('config', 'AW-17999714736');
+          `}
+        </Script>
       </head>
       <body className="bg-bg text-foreground min-h-screen flex flex-col">
         <StructuredData data={[organizationJsonLd(), websiteJsonLd()]} />
@@ -102,9 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex-1">{children}</div>
         <Footer />
       </body>
-      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
-      {/* Google Ads conversion tracking */}
-      <GoogleAnalytics gaId="AW-17999714736" />
+      
     </html>
   )
 }
