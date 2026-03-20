@@ -45,7 +45,7 @@ const structuredData = [
     offers: [
       {
         name: 'Basic Remote',
-        description: '기존 PC를 활용한 원격 설치 플랜',
+        description: '기존 PC에 OpenClaw + V3 장기기억 시스템을 원격 설치하는 플랜',
         price: '300000',
       },
       {

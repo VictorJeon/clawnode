@@ -48,6 +48,7 @@ export default function PricingPageClient() {
               <ul className="space-y-4 mb-10 flex-1">
                 {[
                   '원격 OpenClaw 설치 (Mac/Windows/Linux)',
+                  'V3 장기기억 시스템 구축 (pgvector)',
                   'AI 연산 최적화 세팅',
                   '기본 기능 활용 원격 가이드 (1시간)',
                   '텔레그램 1:1 기술 지원',
@@ -161,7 +162,7 @@ export default function PricingPageClient() {
                   ['비용', '시간 무제한', '30만원', '220만원 (평생)'],
                   ['하드웨어', '본인 조달', '본인 보유', 'M4 Mac Mini 포함'],
                   ['보안', '본인 책임', 'Zero Trust', 'Zero Trust + 눈앞 언박싱'],
-                  ['기억력 (V3)', '없음', '기본', 'DB 풀세팅'],
+                  ['기억력 (V3)', '없음', 'V3 DB 구축', 'V3 DB 풀세팅'],
                   ['교육', '유튜브 독학', '원격 가이드', '2시간 1:1 현장 과외'],
                   ['맞춤 봇', '없음', '없음', '1개 즉석 제작'],
                   ['지원', '없음', '30일 채널', '전용 채널'],
@@ -185,7 +186,7 @@ export default function PricingPageClient() {
               { feature: '비용', diy: '시간 무제한', basic: '30만원', premium: '220만원 (평생)' },
               { feature: '하드웨어', diy: '본인 조달', basic: '본인 보유', premium: 'M4 Mac Mini 포함' },
               { feature: '보안', diy: '본인 책임', basic: 'Zero Trust', premium: 'Zero Trust + 눈앞 언박싱' },
-              { feature: '기억력', diy: '없음', basic: '기본', premium: 'V3 DB 풀세팅' },
+              { feature: '기억력', diy: '없음', basic: 'V3 DB 구축', premium: 'V3 DB 풀세팅' },
               { feature: '교육', diy: '유튜브 독학', basic: '원격 가이드', premium: '2시간 1:1 과외' },
             ].map(item => (
               <div key={item.feature} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">

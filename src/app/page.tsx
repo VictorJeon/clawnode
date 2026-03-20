@@ -42,7 +42,7 @@ const structuredData = [
     offers: [
       {
         name: 'Basic Remote',
-        description: '기존 PC에 OpenClaw와 AI 자동화 환경을 원격 설치하는 서비스',
+        description: '기존 PC에 OpenClaw + V3 장기기억 시스템을 원격 설치하는 서비스',
         price: '300000',
       },
       {
