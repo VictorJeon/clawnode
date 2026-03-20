@@ -47,6 +47,7 @@ PLUGIN_ROOT="${EXTENSIONS_DIR}/memory-v3"
 WORKSPACE="${CONFIG_DIR}/workspace"
 SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 LOG_FILE="${CONFIG_DIR}/setup-v3-$(date +%Y%m%d-%H%M%S).log"
+CLAWNODE_VERSION_FILE="${CONFIG_DIR}/.clawnode-version"
 
 PG_DB="${PG_DB:-memory_v2}"
 PG_HOST="${PG_HOST:-/var/run/postgresql}"
@@ -55,6 +56,7 @@ PG_USER="${PG_USER:-$(whoami)}"
 MEMORY_PORT="${MEMORY_PORT:-18790}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
+INSTALLER_V3_URL="${INSTALLER_V3_URL:-${GIST_BASE_URL}/openclaw-setup-v3-wsl.sh}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 CORE_STEP_RESULT="pending"
 UPDATE_MODE=0
@@ -1065,6 +1067,7 @@ configure_memory_env() {
   replace_or_append_env "MEMORY_SESSION_OFFSET_FILE" "${SERVICE_ROOT}/state/session-offsets.json"
   replace_or_append_env "OPENCLAW_CONFIG_PATH" "${CONFIG_FILE}"
   replace_or_append_env "PYTHON_BIN" "${python_bin}"
+  replace_or_append_env "CLAWNODE_INSTALLER_V3_URL" "${INSTALLER_V3_URL}"
   configure_optional_google_api_key
 
   if [[ "${DRY_RUN}" != "1" ]]; then
@@ -1577,7 +1580,7 @@ write_file_if_changed() {
 
 write_wrapper_scripts() {
   info "memory-v3 wrapper 스크립트 생성"
-  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper snapshot_wrapper eviction_wrapper backfill_wrapper
+  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper snapshot_wrapper eviction_wrapper backfill_wrapper auto_update_wrapper distill_wrapper weekly_wrapper
   server_wrapper="${SERVICE_ROOT}/run-server.sh"
   atomize_wrapper="${SERVICE_ROOT}/run-atomize.sh"
   llm_wrapper="${SERVICE_ROOT}/run-llm-atomize.sh"
@@ -1585,6 +1588,9 @@ write_wrapper_scripts() {
   snapshot_wrapper="${SERVICE_ROOT}/run-snapshot.sh"
   eviction_wrapper="${SERVICE_ROOT}/run-eviction.sh"
   backfill_wrapper="${SERVICE_ROOT}/run-backfill-ko.sh"
+  auto_update_wrapper="${SERVICE_ROOT}/run-auto-update.sh"
+  distill_wrapper="${SERVICE_ROOT}/run-distill.sh"
+  weekly_wrapper="${SERVICE_ROOT}/run-weekly.sh"
 
   # shellcheck disable=SC2016
   write_file_if_changed "${server_wrapper}" '#!/bin/bash
@@ -1678,8 +1684,109 @@ cd "${WORKDIR}"
 exec /bin/bash "${WORKDIR}/backfill-ko-cron.sh"
 '
 
+  # shellcheck disable=SC2016
+  write_file_if_changed "${auto_update_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+STATE_DIR="${WORKDIR}/state"
+LOCK_DIR="${STATE_DIR}/auto-update.lock"
+mkdir -p "${STATE_DIR}"
+if ! mkdir "${LOCK_DIR}" 2>/dev/null; then
+  echo "auto-update already running"
+  exit 0
+fi
+trap '\''rmdir "${LOCK_DIR}" >/dev/null 2>&1 || true'\'' EXIT
+
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+
+resolve_openclaw_bin() {
+  local candidate
+  for candidate in \
+    openclaw \
+    "${HOME}/.local/share/pnpm/openclaw" \
+    "${HOME}/.npm-global/bin/openclaw" \
+    "${HOME}/.local/bin/openclaw" \
+    /usr/local/bin/openclaw \
+    /usr/bin/openclaw
+  do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      command -v "${candidate}"
+      return 0
+    fi
+    if [ -x "${candidate}" ]; then
+      printf "%s\n" "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+update_openclaw_core() {
+  local bin
+  bin="$(resolve_openclaw_bin || true)"
+  if command -v pnpm >/dev/null 2>&1; then
+    case "${bin}" in
+      *pnpm*|*/.local/share/pnpm/openclaw)
+        pnpm add -g openclaw@latest && return 0
+        ;;
+    esac
+  fi
+  if command -v npm >/dev/null 2>&1; then
+    npm install -g openclaw@latest && return 0
+    sudo -n npm install -g openclaw@latest && return 0
+  fi
+  if command -v pnpm >/dev/null 2>&1; then
+    pnpm add -g openclaw@latest && return 0
+  fi
+  return 1
+}
+
+INSTALLER_URL="${CLAWNODE_INSTALLER_V3_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup-v3-wsl.sh}"
+
+update_openclaw_core || echo "warning: openclaw core update skipped or failed"
+exec /bin/bash -lc "GOOGLE_API_KEY_MODE=skip SKIP_CORE_SETUP=1 AUTO_UPDATE_MODE=1 bash <(curl -fsSL \"${INSTALLER_URL}\")"
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${distill_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" daily_distill.py
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${weekly_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" weekly_pattern.py
+'
+
   if [[ "${DRY_RUN}" != "1" ]]; then
-    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}" "${snapshot_wrapper}" "${eviction_wrapper}" "${backfill_wrapper}"
+    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}" "${snapshot_wrapper}" "${eviction_wrapper}" "${backfill_wrapper}" "${auto_update_wrapper}" "${distill_wrapper}" "${weekly_wrapper}"
   fi
 }
 
@@ -1788,7 +1895,7 @@ configure_optional_google_api_key() {
 }
 
 write_systemd_units() {
-  local api_service atomize_service llm_service flush_service flush_timer snapshot_service snapshot_timer eviction_service eviction_timer backfill_service backfill_timer
+  local api_service atomize_service llm_service flush_service flush_timer snapshot_service snapshot_timer eviction_service eviction_timer backfill_service backfill_timer auto_update_service auto_update_timer distill_service distill_timer weekly_service weekly_timer
   api_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-api.service"
   atomize_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-atomize.service"
   llm_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-llm-atomize.service"
@@ -1800,6 +1907,12 @@ write_systemd_units() {
   eviction_timer="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-eviction.timer"
   backfill_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-backfill-ko.service"
   backfill_timer="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-backfill-ko.timer"
+  auto_update_service="${SYSTEMD_USER_DIR}/ai.openclaw.auto-update.service"
+  auto_update_timer="${SYSTEMD_USER_DIR}/ai.openclaw.auto-update.timer"
+  distill_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-distill.service"
+  distill_timer="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-distill.timer"
+  weekly_service="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-weekly.service"
+  weekly_timer="${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-weekly.timer"
 
   write_file_if_changed "${api_service}" "[Unit]
 Description=OpenClaw Memory V3 API
@@ -1899,6 +2012,72 @@ Unit=ai.openclaw.memory-v3-eviction.service
 WantedBy=timers.target
 "
 
+  write_file_if_changed "${auto_update_service}" "[Unit]
+Description=OpenClaw auto update
+
+[Service]
+Type=oneshot
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-auto-update.sh
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+"
+
+  write_file_if_changed "${auto_update_timer}" "[Unit]
+Description=Run OpenClaw auto update daily at 04:00
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=ai.openclaw.auto-update.service
+
+[Install]
+WantedBy=timers.target
+"
+
+  write_file_if_changed "${distill_service}" "[Unit]
+Description=OpenClaw Memory V3 daily distill
+
+[Service]
+Type=oneshot
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-distill.sh
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+"
+
+  write_file_if_changed "${distill_timer}" "[Unit]
+Description=Run OpenClaw Memory V3 daily distill at 23:50
+
+[Timer]
+OnCalendar=*-*-* 23:50:00
+Persistent=true
+Unit=ai.openclaw.memory-v3-distill.service
+
+[Install]
+WantedBy=timers.target
+"
+
+  write_file_if_changed "${weekly_service}" "[Unit]
+Description=OpenClaw Memory V3 weekly pattern
+
+[Service]
+Type=oneshot
+WorkingDirectory=${SERVICE_ROOT}
+ExecStart=/bin/bash ${SERVICE_ROOT}/run-weekly.sh
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+"
+
+  write_file_if_changed "${weekly_timer}" "[Unit]
+Description=Run OpenClaw Memory V3 weekly pattern on Sunday 23:50
+
+[Timer]
+OnCalendar=Sun *-*-* 23:50:00
+Persistent=true
+Unit=ai.openclaw.memory-v3-weekly.service
+
+[Install]
+WantedBy=timers.target
+"
+
   if has_google_api_key; then
     write_file_if_changed "${llm_service}" "[Unit]
 Description=OpenClaw Memory V3 LLM Atomize Worker
@@ -1993,6 +2172,9 @@ install_linux_services() {
     systemd_enable_user_unit "ai.openclaw.memory-v3-flush.timer"
     systemd_enable_user_unit "ai.openclaw.memory-v3-snapshot.timer"
     systemd_enable_user_unit "ai.openclaw.memory-v3-eviction.timer"
+    systemd_enable_user_unit "ai.openclaw.auto-update.timer"
+    systemd_enable_user_unit "ai.openclaw.memory-v3-distill.timer"
+    systemd_enable_user_unit "ai.openclaw.memory-v3-weekly.timer"
     if [[ -f "${SYSTEMD_USER_DIR}/ai.openclaw.memory-v3-llm-atomize.service" || "${DRY_RUN}" == "1" ]]; then
       systemd_enable_user_unit "ai.openclaw.memory-v3-llm-atomize.service"
     fi
@@ -2006,9 +2188,12 @@ install_linux_services() {
     if has_google_api_key; then
       start_manual_service "openclaw-memory-v3-llm-atomize" "cd '${SERVICE_ROOT}' && exec /bin/bash '${SERVICE_ROOT}/run-llm-atomize.sh'"
     fi
+    start_manual_loop_service "openclaw-auto-update-loop" 86400 "${SERVICE_ROOT}/run-auto-update.sh"
     start_manual_loop_service "openclaw-memory-v3-flush-loop" 300 "${SERVICE_ROOT}/run-flush.sh"
     start_manual_loop_service "openclaw-memory-v3-snapshot-loop" 1800 "${SERVICE_ROOT}/run-snapshot.sh"
     start_manual_loop_service "openclaw-memory-v3-eviction-loop" 86400 "${SERVICE_ROOT}/run-eviction.sh"
+    start_manual_loop_service "openclaw-memory-v3-distill-loop" 86400 "${SERVICE_ROOT}/run-distill.sh"
+    start_manual_loop_service "openclaw-memory-v3-weekly-loop" 604800 "${SERVICE_ROOT}/run-weekly.sh"
     if has_google_api_key; then
       start_manual_loop_service "openclaw-memory-v3-backfill-ko-loop" 900 "${SERVICE_ROOT}/run-backfill-ko.sh"
     fi
@@ -2142,6 +2327,24 @@ health_check_memory() {
   ok "gateway memory-v3 plugin 연결 확인"
 }
 
+write_clawnode_version_stamp() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] write ${CLAWNODE_VERSION_FILE}"
+    return 0
+  fi
+  cat > "${CLAWNODE_VERSION_FILE}" <<EOF
+CHANNEL=v3
+UPDATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+CORE_STEP_RESULT=${CORE_STEP_RESULT}
+UPDATE_MODE=${UPDATE_MODE}
+MEMORY_PORT=${MEMORY_PORT}
+OLLAMA_MODEL=${OLLAMA_MODEL}
+INSTALLER_URL=${INSTALLER_V3_URL}
+EOF
+  chmod 600 "${CLAWNODE_VERSION_FILE}"
+  ok "버전 스탬프 기록: ${CLAWNODE_VERSION_FILE}"
+}
+
 main() {
   if [[ "$(uname -s)" != "Linux" ]]; then
     err "이 스크립트는 Linux/WSL 전용입니다. macOS에서는 openclaw-setup-v3.sh를 사용하세요."
@@ -2186,6 +2389,7 @@ main() {
   install_linux_services
   restart_openclaw_gateway
   health_check_memory
+  write_clawnode_version_stamp
   render_final_summary
 
   ok "setup v3 memory bring-up 완료"
