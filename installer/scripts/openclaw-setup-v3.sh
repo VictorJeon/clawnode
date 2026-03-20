@@ -47,6 +47,7 @@ PLUGIN_ROOT="${EXTENSIONS_DIR}/memory-v3"
 WORKSPACE="${CONFIG_DIR}/workspace"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 LOG_FILE="${CONFIG_DIR}/setup-v3-$(date +%Y%m%d-%H%M%S).log"
+CLAWNODE_VERSION_FILE="${CONFIG_DIR}/.clawnode-version"
 
 PG_FORMULA="${PG_FORMULA:-postgresql@17}"
 PG_DB="${PG_DB:-memory_v2}"
@@ -55,6 +56,7 @@ PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
+INSTALLER_V3_URL="${INSTALLER_V3_URL:-${GIST_BASE_URL}/openclaw-setup-v3.sh}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 CORE_STEP_RESULT="pending"
 UPDATE_MODE=0
@@ -316,6 +318,7 @@ resolve_openclaw_bin() {
   for candidate in \
     openclaw \
     "${HOME}/.local/share/pnpm/openclaw" \
+    "${HOME}/Library/pnpm/openclaw" \
     "${HOME}/.npm-global/bin/openclaw" \
     "${HOME}/.local/bin/openclaw" \
     /usr/local/bin/openclaw \
@@ -1060,6 +1063,7 @@ configure_memory_env() {
   replace_or_append_env "MEMORY_SESSION_OFFSET_FILE" "${SERVICE_ROOT}/state/session-offsets.json"
   replace_or_append_env "OPENCLAW_CONFIG_PATH" "${CONFIG_FILE}"
   replace_or_append_env "PYTHON_BIN" "${python_bin}"
+  replace_or_append_env "CLAWNODE_INSTALLER_V3_URL" "${INSTALLER_V3_URL}"
   configure_optional_google_api_key
 
   if [[ "${DRY_RUN}" != "1" ]]; then
@@ -1565,7 +1569,7 @@ write_file_if_changed() {
 
 write_wrapper_scripts() {
   info "memory-v3 wrapper 스크립트 생성"
-  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper snapshot_wrapper eviction_wrapper backfill_wrapper
+  local server_wrapper atomize_wrapper llm_wrapper flush_wrapper snapshot_wrapper eviction_wrapper backfill_wrapper auto_update_wrapper distill_wrapper weekly_wrapper
   server_wrapper="${SERVICE_ROOT}/run-server.sh"
   atomize_wrapper="${SERVICE_ROOT}/run-atomize.sh"
   llm_wrapper="${SERVICE_ROOT}/run-llm-atomize.sh"
@@ -1573,6 +1577,9 @@ write_wrapper_scripts() {
   snapshot_wrapper="${SERVICE_ROOT}/run-snapshot.sh"
   eviction_wrapper="${SERVICE_ROOT}/run-eviction.sh"
   backfill_wrapper="${SERVICE_ROOT}/run-backfill-ko.sh"
+  auto_update_wrapper="${SERVICE_ROOT}/run-auto-update.sh"
+  distill_wrapper="${SERVICE_ROOT}/run-distill.sh"
+  weekly_wrapper="${SERVICE_ROOT}/run-weekly.sh"
 
   # shellcheck disable=SC2016
   write_file_if_changed "${server_wrapper}" '#!/bin/bash
@@ -1666,8 +1673,110 @@ cd "${WORKDIR}"
 exec /bin/bash "${WORKDIR}/backfill-ko-cron.sh"
 '
 
+  # shellcheck disable=SC2016
+  write_file_if_changed "${auto_update_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+STATE_DIR="${WORKDIR}/state"
+LOCK_DIR="${STATE_DIR}/auto-update.lock"
+mkdir -p "${STATE_DIR}"
+if ! mkdir "${LOCK_DIR}" 2>/dev/null; then
+  echo "auto-update already running"
+  exit 0
+fi
+trap '\''rmdir "${LOCK_DIR}" >/dev/null 2>&1 || true'\'' EXIT
+
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+
+resolve_openclaw_bin() {
+  local candidate
+  for candidate in \
+    openclaw \
+    "${HOME}/.local/share/pnpm/openclaw" \
+    "${HOME}/Library/pnpm/openclaw" \
+    "${HOME}/.npm-global/bin/openclaw" \
+    "${HOME}/.local/bin/openclaw" \
+    /usr/local/bin/openclaw \
+    /usr/bin/openclaw
+  do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      command -v "${candidate}"
+      return 0
+    fi
+    if [ -x "${candidate}" ]; then
+      printf "%s\n" "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+update_openclaw_core() {
+  local bin
+  bin="$(resolve_openclaw_bin || true)"
+  if command -v pnpm >/dev/null 2>&1; then
+    case "${bin}" in
+      *pnpm*|*/Library/pnpm/openclaw|*/.local/share/pnpm/openclaw)
+        pnpm add -g openclaw@latest && return 0
+        ;;
+    esac
+  fi
+  if command -v npm >/dev/null 2>&1; then
+    npm install -g openclaw@latest && return 0
+    sudo -n npm install -g openclaw@latest && return 0
+  fi
+  if command -v pnpm >/dev/null 2>&1; then
+    pnpm add -g openclaw@latest && return 0
+  fi
+  return 1
+}
+
+INSTALLER_URL="${CLAWNODE_INSTALLER_V3_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup-v3.sh}"
+
+update_openclaw_core || echo "warning: openclaw core update skipped or failed"
+exec /bin/bash -lc "GOOGLE_API_KEY_MODE=skip SKIP_CORE_SETUP=1 AUTO_UPDATE_MODE=1 bash <(curl -fsSL \"${INSTALLER_URL}\")"
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${distill_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" daily_distill.py
+'
+
+  # shellcheck disable=SC2016
+  write_file_if_changed "${weekly_wrapper}" '#!/bin/bash
+set -euo pipefail
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "${WORKDIR}/.env" ]; then
+  set -a
+  . "${WORKDIR}/.env"
+  set +a
+fi
+PYTHON_BIN="${PYTHON_BIN:-${WORKDIR}/.venv/bin/python}"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+cd "${WORKDIR}"
+exec "${PYTHON_BIN}" weekly_pattern.py
+'
+
   if [[ "${DRY_RUN}" != "1" ]]; then
-    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}" "${snapshot_wrapper}" "${eviction_wrapper}" "${backfill_wrapper}"
+    chmod 755 "${server_wrapper}" "${atomize_wrapper}" "${llm_wrapper}" "${flush_wrapper}" "${snapshot_wrapper}" "${eviction_wrapper}" "${backfill_wrapper}" "${auto_update_wrapper}" "${distill_wrapper}" "${weekly_wrapper}"
   fi
 }
 
@@ -1777,7 +1886,7 @@ configure_optional_google_api_key() {
 
 write_launchd_plists() {
   info "memory-v3 launchd plist 생성"
-  local path_env api_plist atomize_plist flush_plist snapshot_plist eviction_plist llm_plist backfill_plist
+  local path_env api_plist atomize_plist flush_plist snapshot_plist eviction_plist llm_plist backfill_plist auto_update_plist distill_plist weekly_plist
   path_env="$(get_pg_prefix 2>/dev/null || true)/bin:/opt/homebrew/bin:/usr/bin:/bin"
   api_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-api.plist"
   atomize_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-atomize.plist"
@@ -1786,6 +1895,9 @@ write_launchd_plists() {
   eviction_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist"
   llm_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist"
   backfill_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist"
+  auto_update_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.auto-update.plist"
+  distill_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-distill.plist"
+  weekly_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-weekly.plist"
 
   write_file_if_changed "${api_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -1927,6 +2039,115 @@ write_launchd_plists() {
 </plist>
 "
 
+  write_file_if_changed "${auto_update_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.auto-update</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-auto-update.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>3600</integer>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>4</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-auto-update.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-auto-update.log</string>
+</dict>
+</plist>
+"
+
+  write_file_if_changed "${distill_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-distill</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-distill.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>23</integer>
+    <key>Minute</key>
+    <integer>50</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-distill.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-distill.log</string>
+</dict>
+</plist>
+"
+
+  write_file_if_changed "${weekly_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>Label</key>
+  <string>ai.openclaw.memory-v3-weekly</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${SERVICE_ROOT}/run-weekly.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${SERVICE_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${path_env}</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>0</integer>
+    <key>Hour</key>
+    <integer>23</integer>
+    <key>Minute</key>
+    <integer>50</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/openclaw-memory-v3-weekly.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/openclaw-memory-v3-weekly.log</string>
+</dict>
+</plist>
+"
+
   if has_google_api_key; then
     write_file_if_changed "${llm_plist}" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -2023,11 +2244,37 @@ install_launchd_services() {
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-flush.plist" "ai.openclaw.memory-v3-flush" 0
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-snapshot.plist" "ai.openclaw.memory-v3-snapshot" 0
   bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-eviction.plist" "ai.openclaw.memory-v3-eviction" 0
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.auto-update.plist" "ai.openclaw.auto-update" 0
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-distill.plist" "ai.openclaw.memory-v3-distill" 0
+  bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-weekly.plist" "ai.openclaw.memory-v3-weekly" 0
   if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" || "${DRY_RUN}" == "1" ]]; then
     bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-llm-atomize.plist" "ai.openclaw.memory-v3-llm-atomize" 1
   fi
   if [[ -f "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" || "${DRY_RUN}" == "1" ]]; then
     bootstrap_launchd_service "${LAUNCH_AGENTS_DIR}/ai.openclaw.memory-v3-backfill-ko.plist" "ai.openclaw.memory-v3-backfill-ko" 0
+  fi
+}
+
+patch_gateway_throttle_interval() {
+  local gateway_plist throttle
+  gateway_plist="${LAUNCH_AGENTS_DIR}/ai.openclaw.gateway.plist"
+  if [[ ! -f "${gateway_plist}" ]]; then
+    return 0
+  fi
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ensure ${gateway_plist} ThrottleInterval >= 45"
+    return 0
+  fi
+
+  throttle="$(/usr/libexec/PlistBuddy -c 'Print :ThrottleInterval' "${gateway_plist}" 2>/dev/null || true)"
+  if [[ -z "${throttle}" ]]; then
+    /usr/libexec/PlistBuddy -c 'Add :ThrottleInterval integer 45' "${gateway_plist}" >/dev/null 2>&1 || true
+    ok "gateway ThrottleInterval 설정: 45"
+    return 0
+  fi
+  if [[ "${throttle}" =~ ^[0-9]+$ ]] && (( throttle < 45 )); then
+    /usr/libexec/PlistBuddy -c 'Set :ThrottleInterval 45' "${gateway_plist}" >/dev/null 2>&1 || true
+    ok "gateway ThrottleInterval 상향: ${throttle} -> 45"
   fi
 }
 
@@ -2158,6 +2405,24 @@ health_check_memory() {
   ok "gateway memory-v3 plugin 연결 확인"
 }
 
+write_clawnode_version_stamp() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] write ${CLAWNODE_VERSION_FILE}"
+    return 0
+  fi
+  cat > "${CLAWNODE_VERSION_FILE}" <<EOF
+CHANNEL=v3
+UPDATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+CORE_STEP_RESULT=${CORE_STEP_RESULT}
+UPDATE_MODE=${UPDATE_MODE}
+MEMORY_PORT=${MEMORY_PORT}
+OLLAMA_MODEL=${OLLAMA_MODEL}
+INSTALLER_URL=${INSTALLER_V3_URL}
+EOF
+  chmod 600 "${CLAWNODE_VERSION_FILE}"
+  ok "버전 스탬프 기록: ${CLAWNODE_VERSION_FILE}"
+}
+
 main() {
   ensure_homebrew_on_path || true
   prepare_installer_assets
@@ -2195,8 +2460,10 @@ main() {
   enable_bundled_hooks
   stage "Bring-up"
   install_launchd_services
+  patch_gateway_throttle_interval
   restart_openclaw_gateway
   health_check_memory
+  write_clawnode_version_stamp
   render_final_summary
 
   ok "setup v3 memory bring-up 완료"
