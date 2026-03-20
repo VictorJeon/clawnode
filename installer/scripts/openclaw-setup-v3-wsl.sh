@@ -30,6 +30,7 @@ CORE_SCRIPT_LOCAL="${SCRIPT_DIR}/openclaw-setup-wsl.sh"
 PAYLOAD_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/payload"
 EXTENSION_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/extension"
 BASE_SCHEMA_LOCAL="${REPO_ROOT}/installer/templates/memory-v3/001_base_schema.sql"
+BOOT_TEMPLATE_LOCAL="${REPO_ROOT}/installer/templates/BOOT-customer-linux.md"
 CORE_SCRIPT="${CORE_SCRIPT_LOCAL}"
 PAYLOAD_TEMPLATE_DIR="${PAYLOAD_TEMPLATE_LOCAL}"
 EXTENSION_TEMPLATE_DIR="${EXTENSION_TEMPLATE_LOCAL}"
@@ -56,6 +57,7 @@ OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 CORE_STEP_RESULT="pending"
+UPDATE_MODE=0
 USER_NAME="${USER_NAME:-}"
 CHAT_ID="${CHAT_ID:-}"
 
@@ -212,6 +214,8 @@ render_final_summary() {
 
   if [[ "${MEMORY_ONLY}" == "1" && "${MEMORY_ONLY_PATCH_AGENTS}" != "1" ]]; then
     workspace_protocol_state="untouched (MEMORY_ONLY=1)"
+  elif [[ "${UPDATE_MODE}" == "1" ]]; then
+    workspace_protocol_state="preserved (update mode)"
   else
     workspace_protocol_state="memory protocol applied"
   fi
@@ -496,11 +500,15 @@ run_core_setup() {
     if [[ "${MEMORY_ONLY_PATCH_AGENTS}" == "1" ]]; then
       warn "MEMORY_ONLY_PATCH_AGENTS=1 — AGENTS.md 에 memory 규칙만 추가합니다."
     fi
+    UPDATE_MODE=1
     CORE_STEP_RESULT="memory-only"
     return 0
   fi
   if [[ "${SKIP_CORE_SETUP}" == "1" ]]; then
     warn "SKIP_CORE_SETUP=1 — 기존 core setup 단계는 건너뜁니다."
+    if core_install_present; then
+      UPDATE_MODE=1
+    fi
     CORE_STEP_RESULT="skipped-env"
     return 0
   fi
@@ -508,6 +516,7 @@ run_core_setup() {
   if [[ "${FORCE_CORE_SETUP}" != "1" ]] && core_install_present; then
     warn "기존 OpenClaw core 설치 감지 — V3 memory 단계만 적용합니다."
     warn "core를 다시 설치하려면 FORCE_CORE_SETUP=1 로 실행하세요."
+    UPDATE_MODE=1
     CORE_STEP_RESULT="skipped-existing"
     return 0
   fi
@@ -1013,6 +1022,17 @@ run_memory_migrations() {
   local psql_bin
   info "memory-v3 migration 실행"
 
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ensure installer_schema_migrations table"
+    ok "[DRY] apply 001_base_schema.sql"
+    ok "[DRY] apply 003_memories.sql"
+    ok "[DRY] apply 004_memory_v3_phase2.sql"
+    ok "[DRY] apply 005_bilingual_facts.sql"
+    ok "[DRY] apply 006_eviction.sql"
+    ok "migration 완료"
+    return 0
+  fi
+
   psql_bin="$(get_psql_bin)"
   if [[ -z "${psql_bin}" ]]; then
     err "psql을 찾을 수 없습니다."
@@ -1070,6 +1090,15 @@ bootstrap_workspace_memory() {
     else
       ok "MEMORY_ONLY=1 — workspace 문서(AGENTS/SOUL/USER/MEMORY) 변경 없이 디렉터리만 준비"
     fi
+    return 0
+  fi
+  if [[ "${UPDATE_MODE}" == "1" ]]; then
+    if [[ "${DRY_RUN}" == "1" ]]; then
+      ok "[DRY] preserve existing workspace docs in update mode"
+      return 0
+    fi
+    mkdir -p "${WORKSPACE}/memory/logs" "${WORKSPACE}/memory/system"
+    ok "update mode — 기존 workspace 문서 보존"
     return 0
   fi
   if [[ "${DRY_RUN}" == "1" ]]; then
@@ -1376,6 +1405,163 @@ NODEEOF
   perl -0pi -e 's#__MEMORY_BASE_URL__#\Q'"$(memory_base_url)"'\E#g' "${CONFIG_FILE}"
   chmod 600 "${CONFIG_FILE}"
   ok "plugin patch 완료"
+}
+
+write_default_boot_template() {
+  cat <<'EOF'
+# OpenClaw Startup Checklist
+
+이 파일은 gateway가 시작될 때마다 읽는 운영 체크리스트다. 아래 순서대로 상태를 점검하고, 복구가 필요하면 최소 범위만 건드린다.
+
+## 1. 컨텍스트 복구
+
+- `PROJECT-STATE.md` 먼저 읽기
+- `MEMORY.md` 먼저 읽기
+- `memory/` 최신 일일 로그 읽기 (오늘 + 어제)
+- 진행 중이던 작업이 있으면 현재 상태를 먼저 파악
+
+## 2. 인프라 점검
+
+### Memory V3
+
+- 포트 계산:
+  - `MEMORY_PORT=$(awk -F= '/^MEMORY_PORT=/{gsub(/\047|\"/,"",$2); print $2; exit}' ~/.openclaw/services/memory-v2/.env 2>/dev/null)`
+  - `MEMORY_PORT=${MEMORY_PORT:-18790}`
+  - `MEMORY_URL="http://127.0.0.1:${MEMORY_PORT}"`
+- API 서버:
+  - `curl -sf "${MEMORY_URL}/health"` 확인
+  - systemd user가 있으면: `systemctl --user restart openclaw-memory-v3-api.service`
+  - 없으면: `pgrep -af "server.py" || nohup ~/.openclaw/services/memory-v2/.venv/bin/python ~/.openclaw/services/memory-v2/server.py >/tmp/openclaw-memory-v3-api.log 2>&1 &`
+- Atomize Worker:
+  - systemd user가 있으면: `systemctl --user status openclaw-memory-v3-atomize.service`
+  - 없으면: `pgrep -af "atomize_worker.py"`
+- LLM Atomize Worker:
+  - `GOOGLE_API_KEY`가 있을 때만 체크
+  - systemd user가 있으면: `systemctl --user status openclaw-memory-v3-llm-atomize.service`
+  - 없으면: `pgrep -af "llm_atomize_worker.py"`
+
+### Ollama
+
+- `curl -sf http://127.0.0.1:11434/api/tags` 확인
+- 실패 시:
+  - systemd system이 있으면: `sudo systemctl restart ollama`
+  - 없으면: `pgrep -af "ollama serve" || nohup ollama serve >/tmp/openclaw-ollama.log 2>&1 &`
+- 모델 누락 시: `ollama pull bge-m3:latest`
+
+### 필수 서비스
+
+아래 서비스는 running 상태여야 한다. 없으면 재시작한다.
+
+- `openclaw-memory-v3-api`
+- `openclaw-memory-v3-atomize`
+- `openclaw-memory-v3-flush.timer`
+- `openclaw-memory-v3-snapshot.timer`
+- `openclaw-memory-v3-eviction.timer`
+- `openclaw-memory-v3-llm-atomize` (있을 때만)
+- `openclaw-memory-v3-backfill-ko.timer` (있을 때만)
+
+## 3. 사용자 보고
+
+- 재시작 또는 복구가 있었으면 짧게 상태 보고
+- 포함 항목:
+  - 현재 시간
+  - Memory V3 / Ollama / Gateway 상태
+  - 진행 중이던 작업 요약
+- 사용자 메시지를 보냈다면 마지막 응답은 반드시 `NO_REPLY`
+
+## 4. 작업 재개
+
+- Memory V3 검색:
+  - `curl -s -X POST "${MEMORY_URL}/v1/memory/search" -H "Content-Type: application/json" -d '{"query":"진행 중 작업 현재 상태","maxResults":5}'`
+- 오늘/어제 일일 로그와 검색 결과 기준으로 미완료 작업이 있으면 이어서 진행
+- 없으면 상태만 보고하고 대기
+EOF
+}
+
+ensure_boot_md() {
+  local target_file="${WORKSPACE}/BOOT.md"
+  info "BOOT.md 점검"
+
+  if [[ -f "${target_file}" ]]; then
+    ok "BOOT.md 이미 존재 — 보존"
+    return 0
+  fi
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] create ${target_file}"
+    return 0
+  fi
+
+  mkdir -p "${WORKSPACE}"
+  if [[ -f "${BOOT_TEMPLATE_LOCAL}" ]]; then
+    cp "${BOOT_TEMPLATE_LOCAL}" "${target_file}"
+  else
+    write_default_boot_template > "${target_file}"
+  fi
+  ok "BOOT.md 생성: ${target_file}"
+}
+
+patch_hook_config_fallback() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] patch ${CONFIG_FILE} hooks.internal entries"
+    return 0
+  fi
+
+  mkdir -p "${CONFIG_DIR}"
+  [[ -f "${CONFIG_FILE}" ]] || printf '{}\n' > "${CONFIG_FILE}"
+
+  OC_PATH="${CONFIG_FILE}" node - <<'EOF'
+const fs = require("fs");
+const path = process.env.OC_PATH;
+const raw = fs.readFileSync(path, "utf8");
+const c = raw.trim() ? JSON.parse(raw) : {};
+
+c.hooks = c.hooks || {};
+if (c.hooks.enabled !== true) c.hooks.enabled = true;
+c.hooks.internal = c.hooks.internal || {};
+c.hooks.internal.enabled = true;
+c.hooks.internal.entries = c.hooks.internal.entries || {};
+
+for (const name of ["boot-md", "bootstrap-extra-files", "command-logger", "session-memory"]) {
+  const prev = c.hooks.internal.entries[name] || {};
+  c.hooks.internal.entries[name] = {
+    ...prev,
+    enabled: true,
+  };
+}
+
+fs.writeFileSync(path, JSON.stringify(c, null, 2));
+EOF
+  chmod 600 "${CONFIG_FILE}"
+}
+
+enable_bundled_hooks() {
+  local openclaw_bin hook
+  info "bundled hook 4개 활성화"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    for hook in boot-md bootstrap-extra-files command-logger session-memory; do
+      ok "[DRY] openclaw hooks enable ${hook}"
+    done
+    ok "[DRY] hook fallback patch"
+    return 0
+  fi
+
+  openclaw_bin="$(resolve_openclaw_bin 2>/dev/null || true)"
+  if [[ -n "${openclaw_bin}" ]]; then
+    for hook in boot-md bootstrap-extra-files command-logger session-memory; do
+      if "${openclaw_bin}" hooks enable "${hook}" >/dev/null 2>&1; then
+        ok "hook 활성화: ${hook}"
+      else
+        warn "hook CLI 활성화 실패 — fallback patch 진행: ${hook}"
+      fi
+    done
+  else
+    warn "openclaw CLI를 찾지 못해 hook fallback patch만 수행합니다."
+  fi
+
+  patch_hook_config_fallback
+  ok "hook 설정 동기화 완료"
 }
 
 write_file_if_changed() {
@@ -1993,14 +2179,16 @@ main() {
   run_memory_migrations
   configure_memory_env
   bootstrap_workspace_memory
+  ensure_boot_md
   patch_openclaw_plugin
+  enable_bundled_hooks
   stage "Bring-up"
   install_linux_services
   restart_openclaw_gateway
   health_check_memory
   render_final_summary
 
-  ok "setup v2 memory bring-up 완료"
+  ok "setup v3 memory bring-up 완료"
 }
 
 main "$@"
