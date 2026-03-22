@@ -1510,6 +1510,10 @@ const c = raw.trim() ? JSON.parse(raw) : {};
 
 c.hooks = c.hooks || {};
 if (c.hooks.enabled !== true) c.hooks.enabled = true;
+if (!c.hooks.token) {
+  const crypto = require("crypto");
+  c.hooks.token = crypto.randomBytes(24).toString("hex");
+}
 c.hooks.internal = c.hooks.internal || {};
 c.hooks.internal.enabled = true;
 c.hooks.internal.entries = c.hooks.internal.entries || {};
