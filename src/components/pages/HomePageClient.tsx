@@ -356,9 +356,9 @@ export default function HomePageClient() {
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 원격 오픈클로 설치 + 세팅</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> SOUL/AGENTS 페르소나 구성</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 텔레그램 봇 연동</li>
-                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 1주일 사후 지원</li>
-                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> 기기 미포함 (기존 PC 사용)</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 기본적인 온보딩 교육 진행</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템 구축</li>
+                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> 기기 미포함 (기존 PC 사용)</li>
                  </ul>
                  <Link href="/reserve" className="block w-full text-center py-4 rounded-xl border border-[#FF6B00]/30 hover:bg-[#FF6B00]/10 text-[#FF6B00] font-bold transition-colors">원격 설치 예약하기</Link>
                </div>

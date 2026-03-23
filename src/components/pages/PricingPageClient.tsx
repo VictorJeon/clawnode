@@ -51,7 +51,7 @@ export default function PricingPageClient() {
                   'V3 장기기억 시스템 구축 (pgvector)',
                   'AI 연산 최적화 세팅',
                   '기본 기능 활용 원격 가이드 (1시간)',
-                  '텔레그램 1:1 기술 지원',
+                  '기본적인 온보딩 교육 진행',
                 ].map(item => (
                   <li key={item} className="flex items-start gap-2 text-sm text-gray-300">
                     <span className="text-[#FF6B00] mt-0.5">✓</span> {item}
@@ -165,7 +165,7 @@ export default function PricingPageClient() {
                   ['기억력 (V3)', '없음', 'V3 DB 구축', 'V3 DB 풀세팅'],
                   ['교육', '유튜브 독학', '원격 가이드', '2시간 1:1 현장 과외'],
                   ['맞춤 봇', '없음', '없음', '1개 즉석 제작'],
-                  ['지원', '없음', '30일 채널', '전용 채널'],
+                  ['지원', '없음', '기본 온보딩', '전용 채널'],
                 ].map(([feature, ...values]) => (
                   <tr key={feature} className="border-b border-white/5">
                     <td className="py-4 px-4 font-bold text-white">{feature}</td>
