@@ -372,7 +372,7 @@ export default function HomePageClient() {
                  <div className="mb-6">
                    <h3 className="text-xl font-bold text-[#FF6B00]">All-in-One Premium</h3>
                    <div className="flex items-baseline gap-3 mt-4 mb-2">
-                     <div className="text-4xl font-bold text-white">220만 원</div>
+                     <div className="text-4xl font-bold text-white">250만 원</div>
                      <div className="text-xl text-gray-500 line-through">300만 원</div>
                    </div>
                    <p className="text-sm text-gray-400">VAT 포함 · 기기값 포함</p>
@@ -422,9 +422,9 @@ export default function HomePageClient() {
               <br />
               <span className="text-[#FF6B00]">오늘 고용하세요.</span>
             </h2>
-            <p className="text-gray-400 mb-8">선착순 한정. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 220만 원</span></p>
+            <p className="text-gray-400 mb-8">선착순 한정. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 250만 원</span></p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <CTAButton href="/reserve">지금 예약하기 (220만 원) →</CTAButton>
+              <CTAButton href="/reserve">지금 예약하기 (250만 원) →</CTAButton>
               <a
                 href="tel:010-6662-4995"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/20 hover:bg-white/5 text-white font-bold transition-colors"

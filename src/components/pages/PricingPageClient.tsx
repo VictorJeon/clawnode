@@ -77,7 +77,7 @@ export default function PricingPageClient() {
               </div>
               <div className="mb-8">
                 <div className="flex items-baseline gap-3">
-                  <div className="text-5xl font-bold text-white">220만원</div>
+                  <div className="text-5xl font-bold text-white">250만원</div>
                   <div className="text-xl text-gray-500 line-through">300만원</div>
                 </div>
                 <div className="text-sm text-gray-400 mt-1">VAT 포함 · 기기값 포함</div>
@@ -159,7 +159,7 @@ export default function PricingPageClient() {
               </thead>
               <tbody>
                 {[
-                  ['비용', '시간 무제한', '30만원', '220만원 (평생)'],
+                  ['비용', '시간 무제한', '30만원', '250만원 (평생)'],
                   ['하드웨어', '본인 조달', '본인 보유', 'M4 Mac Mini 포함'],
                   ['보안', '본인 책임', 'Zero Trust', 'Zero Trust + 눈앞 언박싱'],
                   ['기억력 (V3)', '없음', 'V3 DB 구축', 'V3 DB 풀세팅'],
@@ -183,7 +183,7 @@ export default function PricingPageClient() {
           {/* Mobile: Cards */}
           <div className="md:hidden space-y-4">
             {[
-              { feature: '비용', diy: '시간 무제한', basic: '30만원', premium: '220만원 (평생)' },
+              { feature: '비용', diy: '시간 무제한', basic: '30만원', premium: '250만원 (평생)' },
               { feature: '하드웨어', diy: '본인 조달', basic: '본인 보유', premium: 'M4 Mac Mini 포함' },
               { feature: '보안', diy: '본인 책임', basic: 'Zero Trust', premium: 'Zero Trust + 눈앞 언박싱' },
               { feature: '기억력', diy: '없음', basic: 'V3 DB 구축', premium: 'V3 DB 풀세팅' },
@@ -244,7 +244,7 @@ export default function PricingPageClient() {
             <br />
             <span className="text-[#FF6B00]">지금 고용하세요.</span>
           </h2>
-          <p className="text-gray-400 mb-8">베이직 30만 원부터. 올인원 220만 원.</p>
+          <p className="text-gray-400 mb-8">베이직 30만 원부터. 올인원 250만 원.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <CTAButton href="/reserve">지금 예약하기 →</CTAButton>
             <a

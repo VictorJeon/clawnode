@@ -48,7 +48,7 @@ const structuredData = [
       {
         name: 'All-in-One Premium',
         description: 'Mac Mini M4, V3 장기기억, 방문 설치와 교육이 포함된 올인원 패키지',
-        price: '2200000',
+        price: '2500000',
       },
     ],
   }),

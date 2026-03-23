@@ -122,7 +122,7 @@ export default function ReservePageClient() {
                     className="mt-1 accent-[#FF6B00]"
                   />
                   <div>
-                    <div className="font-bold text-sm">All-in-One — <span className="line-through text-gray-500">300만 원</span> <span className="text-[#FF6B00]">220만 원</span></div>
+                    <div className="font-bold text-sm">All-in-One — <span className="line-through text-gray-500">300만 원</span> <span className="text-[#FF6B00]">250만 원</span></div>
                     <div className="text-xs text-gray-500 mt-1">Mac Mini 포함 · 방문 설치 · 선착순 할인가</div>
                   </div>
                 </label>
