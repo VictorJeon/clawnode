@@ -245,7 +245,17 @@ export default function PricingPageClient() {
             <span className="text-[#FF6B00]">지금 고용하세요.</span>
           </h2>
           <p className="text-gray-400 mb-8">베이직 30만 원부터. 올인원 220만 원.</p>
-          <CTAButton href="/reserve">지금 예약하기 →</CTAButton>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <CTAButton href="/reserve">지금 예약하기 →</CTAButton>
+            <a
+              href="tel:010-6662-4995"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/20 hover:bg-white/5 text-white font-bold transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              전화 상담하기
+            </a>
+          </div>
+          <p className="text-gray-500 text-sm mt-4">궁금한 점이 있으시면 편하게 전화주세요 — 010-6662-4995</p>
         </div>
       </section>
     </main>
