@@ -26,10 +26,18 @@ body {
   100% { transform: translateX(0); }
 }
 .animate-marquee-left {
-  animation: marquee-left 40s linear infinite;
+  animation: marquee-left 25s linear infinite;
 }
 .animate-marquee-right {
-  animation: marquee-right 40s linear infinite;
+  animation: marquee-right 25s linear infinite;
+}
+@media (min-width: 768px) {
+  .animate-marquee-left {
+    animation-duration: 40s;
+  }
+  .animate-marquee-right {
+    animation-duration: 40s;
+  }
 }
 .animate-marquee-left:hover,
 .animate-marquee-right:hover {

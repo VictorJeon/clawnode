@@ -305,16 +305,16 @@ export default function HomePageClient() {
 
 
       {/* Reviews Marquee */}
-      <section className="py-24 px-4 md:px-6 bg-white/[0.02] overflow-hidden">
-        <div className="max-w-6xl mx-auto mb-12">
+      <section className="py-24 bg-white/[0.02] overflow-hidden relative">
+        <div className="max-w-6xl mx-auto mb-12 px-4 md:px-6">
           <FadeIn>
             <SectionHeading subtitle="실제 사용자 후기">고객 리뷰</SectionHeading>
           </FadeIn>
         </div>
         <div className="relative">
-          {/* Gradient masks */}
-          <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none" />
+          {/* Gradient masks — full width, edge to edge */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none" />
 
           {/* Row 1 — left scroll */}
           <div className="flex gap-6 mb-6 animate-marquee-left">
