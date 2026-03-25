@@ -121,36 +121,6 @@ export default function HomePageClient() {
         </div>
       </section>
 
-      {/* Use Cases Grid */}
-      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn>
-            <SectionHeading subtitle="프리미엄 오픈클로로 대체할 수 있는 직무들">당신의 AI 직원이 할 수 있는 일</SectionHeading>
-          </FadeIn>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            {[
-              { title: '회계/장부 자동화', desc: '은행/카드사 내역을 자동으로 긁어와 엑셀 장부를 정리합니다. 경리 직원의 4시간을 3초로 단축합니다.', tag: '경리 대체' },
-              { title: '쇼핑몰/웹사이트 운영', desc: '상품 등록, 상세페이지 초안 작성, CS 답변 초안 작성까지. 혼자서 쇼핑몰 3개를 운영할 수 있습니다.', tag: '운영팀 대체' },
-              { title: '뉴스/트렌드 리서치', desc: '매일 아침 업계 뉴스, 경쟁사 동향, 트위터 여론을 요약해서 텔레그램으로 보고합니다.', tag: '리서처 대체' },
-              { title: '크립토/주식 트레이딩', desc: '24시간 시세를 감시하고, 원하는 조건이 오면 즉시 알림을 보내거나 자동 매매합니다.', tag: '트레이더 대체' },
-              { title: '온체인 고래 추적', desc: '특정 지갑이 움직이면 1초 만에 알람. 남들보다 한 발 빠르게 움직일 수 있습니다.', tag: '알파 헌터' },
-              { title: '반복 업무 무한 자동화', desc: '이메일 발송, 데이터 입력, 문서 변환... 귀찮은 모든 일을 AI에게 가르쳐서 위임하세요.', tag: '인턴 대체' },
-            ].map((item, i) => (
-              <FadeIn key={item.title} delay={i * 0.1}>
-                <div className="h-full p-8 border border-white/10 bg-[#0A0A0A] rounded-2xl hover:border-[#FF6B00]/30 transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold">{item.title}</h3>
-                    <span className="px-3 py-1 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] text-xs font-bold shrink-0 ml-3">{item.tag}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Memory System — Core Differentiator */}
       <section className="py-32 px-4 md:px-6 overflow-hidden relative">
         {/* Background glow */}
