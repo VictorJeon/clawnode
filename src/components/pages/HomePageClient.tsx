@@ -334,6 +334,80 @@ export default function HomePageClient() {
 
 
 
+      {/* Reviews Marquee */}
+      <section className="py-24 px-4 md:px-6 bg-white/[0.02] overflow-hidden">
+        <div className="max-w-6xl mx-auto mb-12">
+          <FadeIn>
+            <SectionHeading subtitle="실제 사용자 후기">고객 리뷰</SectionHeading>
+          </FadeIn>
+        </div>
+        <div className="relative">
+          {/* Gradient masks */}
+          <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none" />
+
+          {/* Row 1 — left scroll */}
+          <div className="flex gap-6 mb-6 animate-marquee-left">
+            {[
+              { name: '김R***', role: '스타트업 대표', pkg: '올인원', text: '여태껏 써본 AI 프로그램 중에 제일 똑똑한 듯합니다. 알아서 수행하고 고치고, 신세계를 경험했어요.' },
+              { name: '이O호', role: '병원장', pkg: '올인원', text: '설치부터 운용까지 한번에 해결했습니다. 바쁜 와중에도 텔레그램으로 바로 지시하면 되니까 편해요.' },
+              { name: '이O욱', role: '교직원', pkg: '올인원', text: '오픈클로는 AI를 통한 직원을 하나 고용하는 거나 다름없었어요. 학습지를 만들어서 구글드라이브에 자동으로 올려줘요. 후회가 1도 없습니다.' },
+              { name: '윤O영', role: '스타트업 COO', pkg: '올인원', text: '기대 이상으로 만족스러웠습니다. 상담부터 설치까지 굉장히 친절하고 꼼꼼하게 진행해 주셨어요. 다음에 또 의뢰하고 싶어요.' },
+              { name: '박O준', role: '1인 쇼핑몰 운영', pkg: '베이직', text: '매일 아침 재고 알림이랑 CS 요약을 텔레그램으로 받고 있어요. 월 3만 원도 안 드는데 직원 한 명 뺀 효과예요.' },
+              // duplicate for seamless loop
+              { name: '김R***', role: '스타트업 대표', pkg: '올인원', text: '여태껏 써본 AI 프로그램 중에 제일 똑똑한 듯합니다. 알아서 수행하고 고치고, 신세계를 경험했어요.' },
+              { name: '이O호', role: '병원장', pkg: '올인원', text: '설치부터 운용까지 한번에 해결했습니다. 바쁜 와중에도 텔레그램으로 바로 지시하면 되니까 편해요.' },
+              { name: '이O욱', role: '교직원', pkg: '올인원', text: '오픈클로는 AI를 통한 직원을 하나 고용하는 거나 다름없었어요. 학습지를 만들어서 구글드라이브에 자동으로 올려줘요. 후회가 1도 없습니다.' },
+              { name: '윤O영', role: '스타트업 COO', pkg: '올인원', text: '기대 이상으로 만족스러웠습니다. 상담부터 설치까지 굉장히 친절하고 꼼꼼하게 진행해 주셨어요. 다음에 또 의뢰하고 싶어요.' },
+              { name: '박O준', role: '1인 쇼핑몰 운영', pkg: '베이직', text: '매일 아침 재고 알림이랑 CS 요약을 텔레그램으로 받고 있어요. 월 3만 원도 안 드는데 직원 한 명 뺀 효과예요.' },
+            ].map((r, i) => (
+              <div key={i} className="flex-shrink-0 w-[340px] p-6 rounded-2xl border border-white/10 bg-[#0A0A0A]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-[#FF6B00] font-bold text-sm">{r.name[0]}</div>
+                  <div>
+                    <div className="font-bold text-sm text-white">{r.name}</div>
+                    <div className="text-xs text-gray-500">{r.role}</div>
+                  </div>
+                  <div className="ml-auto text-xs text-[#FF6B00]/60">{r.pkg}</div>
+                </div>
+                <p className="text-sm text-gray-300 leading-relaxed">&quot;{r.text}&quot;</p>
+                <div className="flex mt-3 gap-0.5">{[...Array(5)].map((_, j) => <span key={j} className="text-[#FF6B00] text-xs">★</span>)}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Row 2 — right scroll */}
+          <div className="flex gap-6 animate-marquee-right">
+            {[
+              { name: '정O민', role: '프리랜서 디자이너', pkg: '베이직', text: '클라이언트한테 보낼 리포트를 매주 자동으로 만들어줘요. 새벽에 지시해놓으면 아침에 완성돼 있어요.' },
+              { name: '한O수', role: '부동산 중개사', pkg: '올인원', text: '매물 정보 정리하고 고객한테 자동 발송하는 게 제일 좋아요. 맥미니가 조용해서 사무실에 둬도 몰라요.' },
+              { name: '최O현', role: '유튜버 (구독자 5만)', pkg: '베이직', text: '영상 기획안이랑 썸네일 아이디어를 매일 아침 텔레그램으로 보내줘요. 채널 운영이 확 편해졌어요.' },
+              { name: '김O진', role: '회계사무소 대표', pkg: '올인원', text: '세무 관련 질문을 메신저로 하면 판례까지 찾아서 정리해줘요. 직원들 업무 효율이 눈에 띄게 올랐습니다.' },
+              { name: '서O아', role: '온라인 영어강사', pkg: '베이직', text: '수업 녹음 파일 보내면 학생별 피드백 문서를 자동으로 만들어줘요. 학부모 상담 자료로 바로 써요.' },
+              // duplicate for seamless loop
+              { name: '정O민', role: '프리랜서 디자이너', pkg: '베이직', text: '클라이언트한테 보낼 리포트를 매주 자동으로 만들어줘요. 새벽에 지시해놓으면 아침에 완성돼 있어요.' },
+              { name: '한O수', role: '부동산 중개사', pkg: '올인원', text: '매물 정보 정리하고 고객한테 자동 발송하는 게 제일 좋아요. 맥미니가 조용해서 사무실에 둬도 몰라요.' },
+              { name: '최O현', role: '유튜버 (구독자 5만)', pkg: '베이직', text: '영상 기획안이랑 썸네일 아이디어를 매일 아침 텔레그램으로 보내줘요. 채널 운영이 확 편해졌어요.' },
+              { name: '김O진', role: '회계사무소 대표', pkg: '올인원', text: '세무 관련 질문을 메신저로 하면 판례까지 찾아서 정리해줘요. 직원들 업무 효율이 눈에 띄게 올랐습니다.' },
+              { name: '서O아', role: '온라인 영어강사', pkg: '베이직', text: '수업 녹음 파일 보내면 학생별 피드백 문서를 자동으로 만들어줘요. 학부모 상담 자료로 바로 써요.' },
+            ].map((r, i) => (
+              <div key={i} className="flex-shrink-0 w-[340px] p-6 rounded-2xl border border-white/10 bg-[#0A0A0A]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#FF6B00]/20 flex items-center justify-center text-[#FF6B00] font-bold text-sm">{r.name[0]}</div>
+                  <div>
+                    <div className="font-bold text-sm text-white">{r.name}</div>
+                    <div className="text-xs text-gray-500">{r.role}</div>
+                  </div>
+                  <div className="ml-auto text-xs text-[#FF6B00]/60">{r.pkg}</div>
+                </div>
+                <p className="text-sm text-gray-300 leading-relaxed">&quot;{r.text}&quot;</p>
+                <div className="flex mt-3 gap-0.5">{[...Array(5)].map((_, j) => <span key={j} className="text-[#FF6B00] text-xs">★</span>)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Two-Tier */}
       <section className="py-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
