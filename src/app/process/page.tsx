@@ -12,7 +12,7 @@ import {
 
 const processTitle = '설치 과정'
 const processDescription =
-  '프리미엄 오픈클로(ClawNode) AI 에이전트 설치 과정을 안내합니다. 예약 → 상담 → 맥미니 세팅 → 교육까지, 비개발자도 하루 만에 AI 자동화 환경을 갖출 수 있습니다.'
+  '프리미엄 오픈클로(ClawNode) AI 에이전트 설치 과정을 안내합니다. 예약 → 환경 점검 → 현장 세팅 → 교육까지, 비개발자도 하루 만에 AI 자동화 환경을 갖출 수 있습니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: processTitle,
@@ -44,146 +44,137 @@ export default function ProcessPage() {
     <>
       <StructuredData data={structuredData} />
       <main>
-      {/* Hero */}
-      <section className="py-24 px-4 md:px-6 text-center">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">Installation Protocol</p>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            예약부터 가동까지
-            <br />
-            <span className="text-[#FF6B00]">단 2시간.</span>
-          </h1>
-          <p className="text-xl text-gray-400">
-            복잡한 건 저희가 다 합니다. 고객님은 커피만 준비해 주세요.
-          </p>
-        </div>
-      </section>
-
-      {/* Two Tracks */}
-      <section className="py-12 px-4 md:px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* On-site Track */}
-          <div className="border border-[#FF6B00]/30 bg-[#FF6B00]/5 rounded-2xl p-8">
-            <div className="text-[#FF6B00] font-bold text-sm mb-2">올인원 패키지</div>
-            <h3 className="text-xl font-bold mb-4">방문 설치</h3>
-            <p className="text-sm text-gray-400 leading-relaxed">
-              서울/경기 직접 방문. 고객님 눈앞에서 미개봉 Mac Mini를 뜯고, 2시간 만에 AI 노드를 완성합니다. 설치하는 동안 1:1 활용 강의까지.
-            </p>
+        <section className="py-24 px-4 md:px-6 text-center">
+          <div className="max-w-3xl mx-auto">
+            <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-sm mb-4">Installation Protocol</p>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+              예약부터 가동까지
+              <br />
+              <span className="text-[#FF6B00]">단 2시간.</span>
+            </h1>
+            <p className="text-xl text-gray-400">복잡한 건 저희가 다 합니다. 고객님은 장비와 목표만 준비해 주세요.</p>
           </div>
-          {/* Remote Track */}
-          <div className="border border-white/10 bg-white/[0.02] rounded-2xl p-8">
-            <div className="text-gray-400 font-bold text-sm mb-2">베이직 패키지 (30만 원)</div>
-            <h3 className="text-xl font-bold mb-4">원격 설치</h3>
-            <p className="text-sm text-gray-400 leading-relaxed">
-              기존에 보유하신 Mac/Windows/Linux PC에 화상 통화(Zoom)와 원격 접속으로 OpenClaw를 세팅해 드립니다. 30분~1시간이면 완료.
-            </p>
+        </section>
+
+        <section className="py-12 px-4 md:px-6">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="border border-[#FF6B00]/30 bg-[#FF6B00]/5 rounded-2xl p-8">
+              <div className="text-[#FF6B00] font-bold text-sm mb-2">올인원 패키지</div>
+              <h3 className="text-xl font-bold mb-4">방문 설치</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                서울/경기 직접 방문. 고객님이 이미 보유한 장비 또는 별도로 준비한 장비를 기준으로 OpenClaw와 V3 메모리,
+                원격 접속, 보안 설정까지 현장에서 마무리합니다. 설치와 동시에 1:1 활용 강의도 진행합니다.
+              </p>
+            </div>
+            <div className="border border-white/10 bg-white/[0.02] rounded-2xl p-8">
+              <div className="text-gray-400 font-bold text-sm mb-2">베이직 패키지 (30만 원)</div>
+              <h3 className="text-xl font-bold mb-4">원격 설치</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                기존에 보유하신 Mac/Windows/Linux PC에 화상 통화(Zoom)와 원격 접속으로 OpenClaw를 세팅해 드립니다. 30분~1시간이면 완료됩니다.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Unboxing Image */}
-      <section className="py-12 px-4 md:px-6">
-        <div className="max-w-4xl mx-auto relative aspect-[21/9] rounded-2xl overflow-hidden">
-          <Image src="/images/unboxing-v2.png" alt="Unboxing" fill className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
-          <div className="absolute bottom-8 left-8">
-            <p className="text-[#FF6B00] font-bold text-sm">STEP 1</p>
-            <p className="text-2xl font-bold">고객님 눈앞에서 미개봉 씰을 뜯습니다.</p>
+        <section className="py-12 px-4 md:px-6">
+          <div className="max-w-4xl mx-auto relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10">
+            <Image src="/images/hero-bg.png" alt="Installation overview" fill className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
+            <div className="absolute bottom-8 left-8 right-8">
+              <p className="text-[#FF6B00] font-bold text-sm">STEP 1</p>
+              <p className="text-2xl font-bold">고객 환경과 목표부터 확인합니다.</p>
+              <p className="text-sm text-gray-300 mt-2">장비, 계정, 보안, 원하는 자동화를 먼저 맞추고 그 위에 세팅합니다.</p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* On-site Timeline */}
-      <section className="py-24 px-4 md:px-6">
-        <div className="max-w-3xl mx-auto">
-          <SectionHeading subtitle="올인원 패키지 · 2시간 현장 설치 프로토콜">방문 설치 타임라인</SectionHeading>
+        <section className="py-24 px-4 md:px-6">
+          <div className="max-w-3xl mx-auto">
+            <SectionHeading subtitle="올인원 패키지 · 2시간 현장 설치 프로토콜">방문 설치 타임라인</SectionHeading>
 
-          <div className="relative">
-            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#FF6B00] to-white/10" />
+            <div className="relative">
+              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#FF6B00] to-white/10" />
 
-            {[
-              { time: '00:00', title: '언박싱 (Unboxing)', desc: '미개봉 Mac Mini를 고객님 앞에서 씰을 뜯습니다. 백도어 의심을 원천 차단합니다.', highlight: true },
-              { time: '00:05', title: 'OS 초기 설정', desc: '언어, Wi-Fi, Apple ID(고객님 계정)를 설정합니다.' },
-              { time: '00:15', title: '뇌 이식 (Installation)', desc: 'USB 스크립트 한 줄로 OpenClaw, Tailscale, V3 메모리 DB, 에이전트를 한 번에 설치합니다.' },
-              { time: '00:20', title: '현장 교육 시작', desc: '설치가 백그라운드에서 돌아가는 동안, AI에게 명령 내리는 법을 가르쳐 드립니다.', highlight: true },
-              { time: '01:00', title: '에이전트 라이브 시연', desc: '실제로 AI가 작업하는 모습을 보여드립니다. 텔레그램에 알림이 오는 것을 직접 확인합니다.' },
-              { time: '01:20', title: '맞춤 봇 제작', desc: '고객님이 가장 필요한 자동화 봇 하나를 그 자리에서 만들어 드립니다.' },
-              { time: '01:40', title: 'Tailscale 보안 마무리', desc: '고객님 계정으로 보안 터널을 설정합니다. A/S가 필요할 때 안전하게 원격 접속할 수 있습니다.' },
-              { time: '02:00', title: '핸드오버 (Handover)', desc: '"이제 이 노드는 고객님 겁니다." 전용 기술 지원 채널이 시작됩니다.', highlight: true },
-            ].map((step, i) => (
-              <div key={i} className="relative flex gap-4 md:gap-8 mb-10 md:mb-12 last:mb-0">
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 ${step.highlight ? 'bg-[#FF6B00] text-black' : 'bg-[#1a1a1a] border border-[#FF6B00] text-[#FF6B00]'}`}>
-                  {i + 1}
+              {[
+                { time: '00:00', title: '환경 점검', desc: '현재 장비, 계정, 네트워크, 사용 목적을 빠르게 점검합니다. 설치 범위와 우선순위를 현장에서 바로 정리합니다.', highlight: true },
+                { time: '00:10', title: 'OS / 권한 설정', desc: '필수 권한, 계정, 보안 저장소, 원격 접속 경로를 정리합니다.' },
+                { time: '00:25', title: '핵심 설치', desc: 'OpenClaw, Tailscale, V3 메모리 DB, 텔레그램 연동을 한 번에 세팅합니다.' },
+                { time: '00:40', title: '현장 교육 시작', desc: '설치가 돌아가는 동안 AI에게 명령 내리는 법과 운영 루틴을 가르쳐 드립니다.', highlight: true },
+                { time: '01:10', title: '에이전트 라이브 시연', desc: '실제로 AI가 작업하는 모습을 보여드리고 텔레그램 알림까지 확인합니다.' },
+                { time: '01:25', title: '맞춤 봇 제작', desc: '고객님이 가장 먼저 필요로 하는 자동화 봇 1개를 바로 만듭니다.' },
+                { time: '01:45', title: '보안 / 운영 마무리', desc: '원격 A/S를 위한 안전한 접속 경로와 기본 운영 수칙을 정리합니다.' },
+                { time: '02:00', title: '핸드오버', desc: '전용 지원 채널 안내와 다음 액션을 정리하고 운영을 시작합니다.', highlight: true },
+              ].map((step, i) => (
+                <div key={i} className="relative flex gap-4 md:gap-8 mb-10 md:mb-12 last:mb-0">
+                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 ${step.highlight ? 'bg-[#FF6B00] text-black' : 'bg-[#1a1a1a] border border-[#FF6B00] text-[#FF6B00]'}`}>
+                    {i + 1}
+                  </div>
+                  <div className="pt-1 min-w-0">
+                    <div className="text-xs text-[#FF6B00] font-mono mb-1">{step.time}</div>
+                    <h3 className="text-lg font-bold mb-1">{step.title}</h3>
+                    <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
+                  </div>
                 </div>
-                <div className="pt-1 min-w-0">
-                  <div className="text-xs text-[#FF6B00] font-mono mb-1">{step.time}</div>
-                  <h3 className="text-lg font-bold mb-1">{step.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
+          <div className="max-w-3xl mx-auto">
+            <SectionHeading subtitle="베이직 패키지 · 원격 설치 프로토콜">원격 설치 타임라인</SectionHeading>
+
+            <div className="relative">
+              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-500 to-white/10" />
+
+              {[
+                { time: '00:00', title: '화상 통화 연결', desc: 'Zoom 또는 Google Meet으로 연결합니다. 고객님의 화면을 공유받아 진행합니다.' },
+                { time: '00:05', title: '원격 접속 & 스크립트 실행', desc: 'AnyDesk 또는 Tailscale로 원격 접속 후 설치 스크립트를 실행합니다. Mac/Windows/Linux 모두 지원합니다.' },
+                { time: '00:15', title: '기본 활용법 가이드', desc: '설치가 진행되는 동안 OpenClaw 기본 사용법, 텔레그램 연동, 명령 내리는 법을 가르쳐 드립니다.' },
+                { time: '00:30~01:00', title: '완료 & 지원 채널 입장', desc: '설치 완료를 확인하고 전용 텔레그램 지원 채널에 초대합니다.' },
+              ].map((step, i) => (
+                <div key={i} className="relative flex gap-4 md:gap-8 mb-10 md:mb-12 last:mb-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 bg-[#1a1a1a] border border-gray-500 text-gray-400">
+                    {i + 1}
+                  </div>
+                  <div className="pt-1 min-w-0">
+                    <div className="text-xs text-gray-500 font-mono mb-1">{step.time}</div>
+                    <h3 className="text-lg font-bold mb-1">{step.title}</h3>
+                    <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
+                  </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 px-4 md:px-6">
+          <div className="max-w-3xl mx-auto">
+            <SectionHeading subtitle="설치 후에도 혼자가 아닙니다.">A/S & 지원</SectionHeading>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
+                <h4 className="font-bold mb-2">전용 지원 채널</h4>
+                <p className="text-sm text-gray-400">전용 텔레그램 채널에서 1:1로 기술 지원을 받으실 수 있습니다. 에이전트 커스텀, 에러 해결, 사용법 질문 모두 가능합니다.</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Remote Timeline */}
-      <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
-        <div className="max-w-3xl mx-auto">
-          <SectionHeading subtitle="베이직 패키지 · 원격 설치 프로토콜">원격 설치 타임라인</SectionHeading>
-
-          <div className="relative">
-            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-500 to-white/10" />
-
-            {[
-              { time: '00:00', title: '화상 통화 연결', desc: 'Zoom 또는 Google Meet으로 연결합니다. 고객님의 화면을 공유받아 진행합니다.' },
-              { time: '00:05', title: '원격 접속 & 스크립트 실행', desc: 'AnyDesk 또는 Tailscale로 원격 접속 후, 설치 스크립트를 실행합니다. Mac/Windows/Linux 모두 지원.' },
-              { time: '00:15', title: '기본 활용법 가이드', desc: '설치가 진행되는 동안 OpenClaw 기본 사용법, 텔레그램 연동, 명령 내리는 법을 가르쳐 드립니다.' },
-              { time: '00:30~01:00', title: '완료 & 지원 채널 입장', desc: '설치 완료를 확인하고, 전용 텔레그램 지원 채널에 초대합니다.' },
-            ].map((step, i) => (
-              <div key={i} className="relative flex gap-4 md:gap-8 mb-10 md:mb-12 last:mb-0">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10 bg-[#1a1a1a] border border-gray-500 text-gray-400">
-                  {i + 1}
-                </div>
-                <div className="pt-1 min-w-0">
-                  <div className="text-xs text-gray-500 font-mono mb-1">{step.time}</div>
-                  <h3 className="text-lg font-bold mb-1">{step.title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
-                </div>
+              <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
+                <h4 className="font-bold mb-2">원격 A/S</h4>
+                <p className="text-sm text-gray-400">문제 발생 시 Tailscale Node Sharing으로 일시적 접근 권한을 주시면, 원격으로 신속하게 해결해 드립니다.</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* After-Service */}
-      <section className="py-24 px-4 md:px-6">
-        <div className="max-w-3xl mx-auto">
-          <SectionHeading subtitle="설치 후에도 혼자가 아닙니다.">A/S & 지원</SectionHeading>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
-              <h4 className="font-bold mb-2">전용 지원 채널</h4>
-              <p className="text-sm text-gray-400">전용 텔레그램 채널에서 1:1로 기술 지원을 받으실 수 있습니다. 에이전트 커스텀, 에러 해결, 사용법 질문 모두 가능합니다.</p>
-            </div>
-            <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
-              <h4 className="font-bold mb-2">원격 A/S</h4>
-              <p className="text-sm text-gray-400">문제 발생 시 Tailscale Node Sharing으로 일시적 접근 권한을 주시면, 원격으로 신속하게 해결해 드립니다.</p>
-            </div>
-            <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
-              <h4 className="font-bold mb-2">하드웨어 보증</h4>
-              <p className="text-sm text-gray-400">애플 정품이므로 1년 무상보증이 적용됩니다. 하드웨어 고장 시 가까운 애플 서비스센터를 이용하시면 됩니다.</p>
-            </div>
-            <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
-              <h4 className="font-bold mb-2">유료 유지보수 (선택)</h4>
-              <p className="text-sm text-gray-400">무상 지원 기간 이후에도 지속적인 업데이트와 우선 지원이 필요하시면 월 유지보수 플랜을 선택하실 수 있습니다.</p>
+              <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
+                <h4 className="font-bold mb-2">장비 사전 점검</h4>
+                <p className="text-sm text-gray-400">장비가 아직 없거나 사양이 애매하면, 사용 목적에 맞는 권장 사양과 운영 구성을 먼저 잡아드립니다.</p>
+              </div>
+              <div className="p-6 bg-[#0A0A0A] border border-white/10 rounded-xl">
+                <h4 className="font-bold mb-2">유료 유지보수 (선택)</h4>
+                <p className="text-sm text-gray-400">무상 지원 이후에도 지속적인 업데이트와 우선 지원이 필요하시면 월 유지보수 플랜을 선택하실 수 있습니다.</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-        {/* CTA */}
         <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 직원이 출근합니다.</h2>
-          <p className="text-gray-400 mb-6">방문 설치 또는 원격 설치. 선택은 당신의 몫.</p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">2시간 후, 당신의 AI 운영 환경이 돌아가기 시작합니다.</h2>
+          <p className="text-gray-400 mb-6">방문 설치 또는 원격 설치. 선택은 당신의 몫입니다.</p>
           <CTAButton href="/reserve">지금 예약하기</CTAButton>
         </section>
       </main>

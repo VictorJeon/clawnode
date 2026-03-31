@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     const emailBody = `🔶 ClawNode 새 예약 신청
 
 ━━━━━━━━━━━━━━━━━━━━
-패키지: ${pkg === 'premium' ? 'All-in-One Premium (250만 원)' : 'Basic Remote (30만 원)'}
+패키지: ${pkg === 'premium' ? 'All-in-One Premium (160만 원)' : 'Basic Remote (30만 원)'}
 이름: ${name}
 연락처: ${phone}
 텔레그램: ${telegram || '미입력'}

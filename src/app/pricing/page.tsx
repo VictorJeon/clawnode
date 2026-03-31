@@ -12,7 +12,7 @@ import {
 
 const pricingTitle = '가격 및 FAQ'
 const pricingDescription =
-  'ClawNode 프리미엄 오픈클로 설치 서비스 가격 안내. 원격 설치(30만 원)부터 맥미니 AI 올인원 패키지(250만 원)까지, AI 자동화 서비스 비용을 투명하게 공개합니다.'
+  'ClawNode 프리미엄 오픈클로 설치 서비스 가격 안내. 원격 설치(30만 원)부터 올인원 현장 세팅 패키지(160만 원)까지, AI 자동화 서비스 비용을 투명하게 공개합니다.'
 
 export const metadata: Metadata = createPageMetadata({
   title: pricingTitle,
@@ -22,7 +22,7 @@ export const metadata: Metadata = createPageMetadata({
     'AI 설치 서비스 가격',
     '오픈클로 설치 비용',
     '로컬 AI 구축 비용',
-    '맥미니 AI 서비스',
+    '방문 AI 설치',
     'AI 자동화 서비스 비용',
   ],
 })
@@ -50,8 +50,8 @@ const structuredData = [
       },
       {
         name: 'All-in-One Premium',
-        description: 'Mac Mini M4, 방문 설치, 교육이 포함된 프리미엄 플랜',
-        price: '2500000',
+        description: '고객 장비 현장 세팅, 교육, 맞춤 봇 제작이 포함된 프리미엄 플랜',
+        price: '1600000',
       },
     ],
   }),

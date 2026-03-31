@@ -122,8 +122,8 @@ export default function ReservePageClient() {
                     className="mt-1 accent-[#FF6B00]"
                   />
                   <div>
-                    <div className="font-bold text-sm">All-in-One — <span className="line-through text-gray-500">300만 원</span> <span className="text-[#FF6B00]">250만 원</span></div>
-                    <div className="text-xs text-gray-500 mt-1">Mac Mini 포함 · 방문 설치 · 선착순 할인가</div>
+                    <div className="font-bold text-sm">All-in-One — <span className="text-[#FF6B00]">160만 원</span></div>
+                    <div className="text-xs text-gray-500 mt-1">기기 미포함 · 방문 설치 · 2시간 1:1 교육</div>
                   </div>
                 </label>
               </div>
@@ -165,7 +165,7 @@ export default function ReservePageClient() {
             {/* Message */}
             <div>
               <label htmlFor="message" className="block text-sm font-medium mb-2">추가 요청사항</label>
-              <textarea id="message" rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="특별히 관심 있는 자동화 기능, M4 Pro 업그레이드 희망 여부 등" className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B00]/50 transition-colors resize-none" />
+              <textarea id="message" rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="특별히 관심 있는 자동화 기능, 현재 사용 중인 장비, 원하는 워크플로우 등" className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B00]/50 transition-colors resize-none" />
             </div>
 
             {/* Submit */}

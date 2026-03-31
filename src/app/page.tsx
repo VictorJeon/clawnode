@@ -9,7 +9,7 @@ import {
 
 const homeTitle = 'ClawNode(클로노드) — 프리미엄 오픈클로 | V3 장기기억 AI 에이전트 설치 서비스'
 const homeDescription =
-  '클로노드(ClawNode)는 프리미엄 오픈클로(OpenClaw) 설치 서비스입니다. V3 장기기억 AI 에이전트를 맥미니에 구축해 드립니다. 업무 자동화, 텔레그램 연동, 전문 온보딩까지 한 번에.'
+  '클로노드(ClawNode)는 프리미엄 오픈클로(OpenClaw) 설치 서비스입니다. V3 장기기억 AI 에이전트를 고객님의 장비에 구축해 드립니다. 업무 자동화, 텔레그램 연동, 전문 온보딩까지 한 번에.'
 
 export const metadata: Metadata = createPageMetadata({
   title: homeTitle,
@@ -24,7 +24,7 @@ export const metadata: Metadata = createPageMetadata({
     'AI 자동화 도입',
     '사내 AI 에이전트',
     '오픈클로 설치 서비스',
-    '맥미니 AI 에이전트',
+    '방문 AI 설치',
   ],
 })
 
@@ -47,8 +47,8 @@ const structuredData = [
       },
       {
         name: 'All-in-One Premium',
-        description: 'Mac Mini M4, V3 장기기억, 방문 설치와 교육이 포함된 올인원 패키지',
-        price: '2500000',
+        description: '고객 장비 현장 세팅, 2시간 1:1 교육, 맞춤 자동화 봇 제작이 포함된 올인원 패키지',
+        price: '1600000',
       },
     ],
   }),

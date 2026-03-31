@@ -415,19 +415,16 @@ export default function HomePageClient() {
                  </div>
                  <div className="mb-6">
                    <h3 className="text-xl font-bold text-[#FF6B00]">All-in-One Premium</h3>
-                   <div className="flex items-baseline gap-3 mt-4 mb-2">
-                     <div className="text-4xl font-bold text-white">250만 원</div>
-                     <div className="text-xl text-gray-500 line-through">300만 원</div>
-                   </div>
-                   <p className="text-sm text-gray-400">VAT 포함 · 기기값 포함</p>
+                   <div className="text-4xl font-bold text-white mt-4 mb-2">160만 원</div>
+                   <p className="text-sm text-gray-400">VAT 포함 · 기기 미포함</p>
                  </div>
                  <ul className="space-y-4 mb-8 flex-1">
-                   <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> Apple Mac Mini M4 (신품) 포함</li>
-                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 서울/경기 방문 설치 (투명한 언박싱)</li>
+                   <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> 고객 장비 현장 방문 설치</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 장비 · 권한 · 보안 점검</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 1:1 현장 활용 강의 (2시간)</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 맞춤형 자동화 봇 1개 즉석 제작</li>
                    <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템 구축 (pgvector)</li>
-                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 무상 A/S 지원</li>
+                   <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 무상 소프트웨어 지원</li>
                  </ul>
                  <CTAButton href="/reserve">올인원 패키지 예약하기</CTAButton>
                </div>
@@ -436,21 +433,34 @@ export default function HomePageClient() {
         </div>
       </section>
 
-      {/* Hardware Teaser */}
+      {/* Setup Scope */}
       <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-500">
-             <Image src="/images/mac-mini-hero.png" alt="Mac Mini" fill className="object-cover" />
-           </div>
-           <div>
-             <h3 className="text-2xl font-bold mb-4">하드웨어는 거들 뿐.</h3>
-             <p className="text-gray-400 leading-relaxed mb-6">
-               Apple Mac Mini M4. 작지만 강력합니다.
-               팬리스 무소음 설계로 침실에 둬도 모릅니다.
-               전기세는 전구 하나 수준입니다.
-             </p>
-             <Link href="/product" className="text-[#FF6B00] hover:underline font-medium">하드웨어 스펙 자세히 보기 →</Link>
-           </div>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+          <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-8">
+            <h3 className="text-2xl font-bold mb-4">장비는 직접, 세팅은 우리가.</h3>
+            <p className="text-gray-400 leading-relaxed mb-6">
+              이제 ClawNode는 맥미니를 포함해 판매하지 않습니다.
+              대신 고객님이 이미 쓰는 장비 또는 별도로 준비한 장비를 기준으로
+              현장에서 바로 돌아가는 OpenClaw 환경을 완성합니다.
+            </p>
+            <Link href="/product" className="text-[#FF6B00] hover:underline font-medium">올인원 세팅 범위 자세히 보기 →</Link>
+          </div>
+          <div className="rounded-2xl border border-[#FF6B00]/20 bg-[#FF6B00]/5 p-8">
+            <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-xs mb-4">All-in-One Scope</p>
+            <div className="space-y-4">
+              {[
+                '고객 장비 점검 및 권장 사양 확인',
+                'OpenClaw + V3 메모리 DB 구축',
+                '보안/권한/원격 접속 경로 설정',
+                '2시간 1:1 교육 + 맞춤 자동화 봇 1개',
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3 text-sm text-gray-200">
+                  <span className="text-[#FF6B00]">✓</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -466,9 +476,9 @@ export default function HomePageClient() {
               <br />
               <span className="text-[#FF6B00]">오늘 고용하세요.</span>
             </h2>
-            <p className="text-gray-400 mb-8">선착순 한정. <span className="text-gray-300">정가 300만 원 →</span> <span className="text-[#FF6B00] font-bold">런칭 특가 250만 원</span></p>
+            <p className="text-gray-400 mb-8">베이직 30만 원부터. 올인원 160만 원.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <CTAButton href="/reserve">지금 예약하기 (250만 원) →</CTAButton>
+              <CTAButton href="/reserve">지금 예약하기 (160만 원) →</CTAButton>
               <a
                 href="tel:010-6662-4995"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/20 hover:bg-white/5 text-white font-bold transition-colors"

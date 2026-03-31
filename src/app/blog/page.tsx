@@ -7,12 +7,12 @@ import StructuredData from '@/components/StructuredData'
 export const metadata: Metadata = createPageMetadata({
   title: '블로그 — 프리미엄 오픈클로 가이드',
   description:
-    'AI 에이전트, 오픈클로 사용법, 업무 자동화 노하우를 담은 ClawNode 블로그입니다. 프리미엄 오픈클로 활용법부터 맥미니 AI 세팅, 실전 자동화 사례까지 다룹니다.',
+    'AI 에이전트, 오픈클로 사용법, 업무 자동화 노하우를 담은 ClawNode 블로그입니다. 프리미엄 오픈클로 활용법부터 로컬 AI 운영, 실전 자동화 사례까지 다룹니다.',
   path: '/blog',
   keywords: [
     '오픈클로 사용법',
     'AI 자동화 블로그',
-    '맥미니 AI 가이드',
+    '로컬 AI 가이드',
     '오픈클로 설치',
     'AI 에이전트 활용',
   ],

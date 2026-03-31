@@ -100,7 +100,8 @@ export default function SecurityPage() {
                 <li>✅ 100% 로컬 — 데이터가 밖으로 안 나감</li>
                 <li>✅ Tailscale 암호화 터널 (군사급)</li>
                 <li>✅ 로컬 서비스만 열고 외부 포트 최소화</li>
-                <li>✅ 눈앞에서 언박싱 (백도어 원천 차단)</li>
+                <li>✅ 고객 소유 장비에 직접 세팅 (권한·보안 즉시 점검)</li>
+
                 <li>✅ 전문가가 2시간 만에 설치 완료</li>
               </ul>
             </div>
@@ -184,7 +185,7 @@ export default function SecurityPage() {
         {/* CTA */}
         <section className="py-16 px-4 md:px-6 text-center border-t border-white/5">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">보안은 타협할 수 없습니다.</h2>
-          <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. 원격 설치부터 올인원까지.</p>
+          <p className="text-gray-400 mb-6">당신의 데이터를 당신 손에 두세요. 원격 설치부터 현장 세팅까지.</p>
           <CTAButton href="/reserve">지금 예약하기</CTAButton>
         </section>
       </main>
