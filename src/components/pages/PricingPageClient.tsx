@@ -72,7 +72,7 @@ export default function PricingPageClient() {
               </div>
               <div className="mb-8">
                 <div className="text-5xl font-bold text-white">160만원</div>
-                <div className="text-sm text-gray-400 mt-1">VAT 포함 · 기기 미포함</div>
+                <div className="text-sm text-gray-400 mt-1">VAT 포함 · 장비 가격 별도 (구매 연계 가능)</div>
               </div>
 
               <div className="bg-[#FF6B00]/10 border border-[#FF6B00]/20 rounded-xl p-4 mb-8">
@@ -97,7 +97,7 @@ export default function PricingPageClient() {
                   <h4 className="font-bold border-b border-white/10 pb-2 mb-4 text-sm">현장 세팅 범위</h4>
                   <ul className="space-y-3">
                     {[
-                      '고객 장비 점검 및 권장 사양 확인',
+                      '고객 장비 점검 또는 구매 연계 장비 사양 확정',
                       'OpenClaw + V3 메모리 DB 풀세팅',
                       '텔레그램/원격 접속 경로 연결',
                       '권한·보안·운영 안정화 설정',
@@ -128,7 +128,7 @@ export default function PricingPageClient() {
               </div>
 
               <CTAButton href="/reserve">올인원 패키지 예약하기</CTAButton>
-              <p className="text-xs text-gray-500 mt-4 text-center">* 설치 대상 장비는 별도 준비가 필요합니다.</p>
+              <p className="text-xs text-gray-500 mt-4 text-center">* 장비는 고객 보유 장비 기준 또는 ClawNode 구매 연계 방식으로 진행됩니다.</p>
             </div>
           </FadeIn>
         </div>
@@ -151,7 +151,7 @@ export default function PricingPageClient() {
                 {[
                   ['비용', '시간 무제한', '30만원', '160만원 (평생)'],
                   ['설치 방식', '직접 설정', '원격 설치', '현장 방문 설치'],
-                  ['장비', '본인 조달', '본인 보유', '고객 보유 / 별도 준비'],
+                  ['장비', '본인 조달', '본인 보유', '고객 보유 / 구매 연계 가능'],
                   ['보안', '본인 책임', 'Zero Trust', 'Zero Trust + 현장 보안 점검'],
                   ['기억력 (V3)', '없음', 'V3 DB 구축', 'V3 DB 풀세팅'],
                   ['교육', '유튜브 독학', '원격 가이드', '2시간 1:1 현장 과외'],
@@ -175,7 +175,7 @@ export default function PricingPageClient() {
             {[
               { feature: '비용', diy: '시간 무제한', basic: '30만원', premium: '160만원 (평생)' },
               { feature: '설치 방식', diy: '직접 설정', basic: '원격 설치', premium: '현장 방문 설치' },
-              { feature: '장비', diy: '본인 조달', basic: '본인 보유', premium: '고객 보유 / 별도 준비' },
+              { feature: '장비', diy: '본인 조달', basic: '본인 보유', premium: '고객 보유 / 구매 연계 가능' },
               { feature: '보안', diy: '본인 책임', basic: 'Zero Trust', premium: 'Zero Trust + 현장 점검' },
               { feature: '교육', diy: '유튜브 독학', basic: '원격 가이드', premium: '2시간 1:1 과외' },
             ].map((item) => (

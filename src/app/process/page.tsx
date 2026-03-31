@@ -62,8 +62,7 @@ export default function ProcessPage() {
               <div className="text-[#FF6B00] font-bold text-sm mb-2">올인원 패키지</div>
               <h3 className="text-xl font-bold mb-4">방문 설치</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
-                서울/경기 직접 방문. 고객님이 이미 보유한 장비 또는 별도로 준비한 장비를 기준으로 OpenClaw와 V3 메모리,
-                원격 접속, 보안 설정까지 현장에서 마무리합니다. 설치와 동시에 1:1 활용 강의도 진행합니다.
+                서울/경기 직접 방문. 고객님이 이미 보유한 장비 기준으로도 가능하고, 장비가 없으면 ClawNode를 통한 구매 연계 후 현장 세팅도 가능합니다. OpenClaw와 V3 메모리, 원격 접속, 보안 설정까지 현장에서 마무리합니다.
               </p>
             </div>
             <div className="border border-white/10 bg-white/[0.02] rounded-2xl p-8">

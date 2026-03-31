@@ -123,7 +123,7 @@ export default function ReservePageClient() {
                   />
                   <div>
                     <div className="font-bold text-sm">All-in-One — <span className="text-[#FF6B00]">160만 원</span></div>
-                    <div className="text-xs text-gray-500 mt-1">기기 미포함 · 방문 설치 · 2시간 1:1 교육</div>
+                    <div className="text-xs text-gray-500 mt-1">장비 가격 별도 · 방문 설치 · 2시간 1:1 교육</div>
                   </div>
                 </label>
               </div>

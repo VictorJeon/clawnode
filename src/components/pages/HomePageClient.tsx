@@ -402,7 +402,7 @@ export default function HomePageClient() {
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 텔레그램 봇 연동</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> 기본적인 온보딩 교육 진행</li>
                    <li className="flex gap-3 text-sm text-white"><span className="text-[#FF6B00]">✓</span> V3 장기기억 시스템 구축</li>
-                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> 기기 미포함 (기존 PC 사용)</li>
+                   <li className="flex gap-3 text-sm text-gray-500"><span className="text-gray-600">–</span> 기존 장비 기준 설치</li>
                  </ul>
                  <Link href="/reserve" className="block w-full text-center py-4 rounded-xl border border-[#FF6B00]/30 hover:bg-[#FF6B00]/10 text-[#FF6B00] font-bold transition-colors">원격 설치 예약하기</Link>
                </div>
@@ -416,7 +416,7 @@ export default function HomePageClient() {
                  <div className="mb-6">
                    <h3 className="text-xl font-bold text-[#FF6B00]">All-in-One Premium</h3>
                    <div className="text-4xl font-bold text-white mt-4 mb-2">160만 원</div>
-                   <p className="text-sm text-gray-400">VAT 포함 · 기기 미포함</p>
+                   <p className="text-sm text-gray-400">VAT 포함 · 장비 가격 별도 (구매 연계 가능)</p>
                  </div>
                  <ul className="space-y-4 mb-8 flex-1">
                    <li className="flex gap-3 text-sm text-white font-bold"><span className="text-[#FF6B00]">✓</span> 고객 장비 현장 방문 설치</li>
@@ -437,11 +437,11 @@ export default function HomePageClient() {
       <section className="py-24 px-4 md:px-6 bg-white/[0.02]">
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
           <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-8">
-            <h3 className="text-2xl font-bold mb-4">장비는 직접, 세팅은 우리가.</h3>
+            <h3 className="text-2xl font-bold mb-4">장비가 없어도 시작할 수 있습니다.</h3>
             <p className="text-gray-400 leading-relaxed mb-6">
-              이제 ClawNode는 맥미니를 포함해 판매하지 않습니다.
-              대신 고객님이 이미 쓰는 장비 또는 별도로 준비한 장비를 기준으로
-              현장에서 바로 돌아가는 OpenClaw 환경을 완성합니다.
+              기본은 고객 장비 기준 설치입니다. 다만 장비가 아직 없으면
+              용도에 맞는 모델 추천과 구매 연계도 함께 도와드립니다.
+              현장에서는 바로 돌아가는 OpenClaw 환경까지 완성합니다.
             </p>
             <Link href="/product" className="text-[#FF6B00] hover:underline font-medium">올인원 세팅 범위 자세히 보기 →</Link>
           </div>
@@ -449,7 +449,7 @@ export default function HomePageClient() {
             <p className="text-[#FF6B00] font-bold tracking-wider uppercase text-xs mb-4">All-in-One Scope</p>
             <div className="space-y-4">
               {[
-                '고객 장비 점검 및 권장 사양 확인',
+                '고객 장비 점검 또는 구매 연계 장비 사양 확정',
                 'OpenClaw + V3 메모리 DB 구축',
                 '보안/권한/원격 접속 경로 설정',
                 '2시간 1:1 교육 + 맞춤 자동화 봇 1개',
