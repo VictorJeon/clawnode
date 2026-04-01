@@ -402,6 +402,9 @@ case "$AUTH_MODE" in
     fi
 
     if [[ "$AUTH_MODE" == "setup-token" ]]; then
+      # auth_dir: local 키워드 금지 — case 블록은 함수 밖이므로 set -u와 함께 crash 유발
+      auth_dir="${HOME}/.openclaw/agents/main/agent"
+
       if [[ -n "${API_KEY:-}" ]]; then
         info "저장된 Claude setup-token 감지 — gateway bootstrap 후 auth-profiles에 직접 등록"
         dry openclaw onboard --non-interactive \
@@ -411,7 +414,6 @@ case "$AUTH_MODE" in
           --skip-channels \
           --accept-risk
 
-        local auth_dir="${HOME}/.openclaw/agents/main/agent"
         mkdir -p "$auth_dir"
         python3 -c "
 import json, os
@@ -431,7 +433,7 @@ os.chmod(auth_file, 0o600)
 " 2>/dev/null
         ok "Claude setup-token 등록 완료"
       else
-      # setup-token 발급 안내
+        # setup-token 발급 안내 — 빈 토큰은 허용하지 않음: API Key fallback 또는 재입력 강제
         echo ""
         echo "  ┌─────────────────────────────────────────────┐"
         echo "  │  setup-token 발급 방법:                      │"
@@ -440,21 +442,44 @@ os.chmod(auth_file, 0o600)
         echo "  │  2. claude setup-token 입력                  │"
         echo "  │  3. 나온 토큰을 복사해서 아래에 붙여넣기      │"
         echo "  └─────────────────────────────────────────────┘"
-        read -rp "  setup-token 붙여넣기: " SETUP_TOKEN
-        echo ""
-        if [[ -z "$SETUP_TOKEN" ]]; then
-          warn "토큰이 입력되지 않았습니다."
-        fi
 
-        dry openclaw onboard --non-interactive \
-          --auth-choice skip \
-          --gateway-port 18789 --gateway-bind loopback \
-          --install-daemon --daemon-runtime node \
-          --skip-channels \
-          --accept-risk
+        SETUP_TOKEN=""
+        while [[ -z "$SETUP_TOKEN" ]]; do
+          read -rp "  setup-token 붙여넣기 (빈 값 불가 — API Key 방식으로 전환하려면 'skip' 입력): " SETUP_TOKEN
+          echo ""
+          if [[ "$SETUP_TOKEN" == "skip" ]]; then
+            SETUP_TOKEN=""
+            read -rsp "  Anthropic API Key 입력: " API_KEY
+            echo ""
+            if [[ -n "$API_KEY" ]]; then
+              AUTH_MODE="anthropic-key"
+              break
+            else
+              err "API Key도 입력되지 않았습니다. 설치를 중단합니다."
+              exit 1
+            fi
+          elif [[ -z "$SETUP_TOKEN" ]]; then
+            warn "토큰을 입력해야 합니다. 'skip'을 입력하면 API Key 방식으로 전환합니다."
+          fi
+        done
 
-        if [[ -n "$SETUP_TOKEN" ]]; then
-          local auth_dir="${HOME}/.openclaw/agents/main/agent"
+        if [[ "$AUTH_MODE" == "anthropic-key" ]]; then
+          # API Key 방식으로 전환됨 — 아래 case 브랜치가 처리하므로 여기서 onboard만 호출
+          dry openclaw onboard --non-interactive \
+            --auth-choice apiKey \
+            --anthropic-api-key "$API_KEY" \
+            --gateway-port 18789 --gateway-bind loopback \
+            --install-daemon --daemon-runtime node \
+            --skip-channels \
+            --accept-risk
+        else
+          dry openclaw onboard --non-interactive \
+            --auth-choice skip \
+            --gateway-port 18789 --gateway-bind loopback \
+            --install-daemon --daemon-runtime node \
+            --skip-channels \
+            --accept-risk
+
           mkdir -p "$auth_dir"
           python3 -c "
 import json, os
@@ -472,7 +497,22 @@ with open(auth_file, 'w') as f:
     json.dump(d, f, indent=2)
 os.chmod(auth_file, 0o600)
 " 2>/dev/null
-          ok "Claude setup-token 등록 완료"
+
+          # auth-profiles.json 실제 기록 여부 검증
+          if ! python3 -c "
+import json, os, sys
+f = '${auth_dir}/auth-profiles.json'
+try:
+    d = json.load(open(f))
+    tok = d.get('profiles', {}).get('anthropic:default', {}).get('token', '')
+    sys.exit(0 if len(tok) >= 20 else 1)
+except:
+    sys.exit(1)
+" 2>/dev/null; then
+            fail "setup-token이 auth-profiles.json에 기록되지 않았습니다. 토큰을 확인하세요."
+          else
+            ok "Claude setup-token 등록 완료"
+          fi
         fi
       fi
     fi
