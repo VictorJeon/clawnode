@@ -18,10 +18,10 @@ echo "  최신 설치 스크립트를 다운로드합니다..."
 echo ""
 
 # --- 스크립트 다운로드 & 실행 ---
-GIST_URL="https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup.sh"
+GIST_URL="https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup-v4.sh"
 
 TMPDIR_SETUP=$(mktemp -d)
-SCRIPT_PATH="$TMPDIR_SETUP/openclaw-setup.sh"
+SCRIPT_PATH="$TMPDIR_SETUP/openclaw-setup-v4.sh"
 
 if ! curl -fsSL "$GIST_URL" -o "$SCRIPT_PATH" 2>/dev/null; then
   echo ""

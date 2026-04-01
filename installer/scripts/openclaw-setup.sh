@@ -166,7 +166,10 @@ echo ""
 # 이전 입력값 로드
 if [[ -f "$SETUP_ENV" ]]; then
   d64() { echo "$1" | base64 -d 2>/dev/null || echo "$1"; }
-  while IFS='=' read -r key value; do
+  while IFS= read -r line; do
+    [[ "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
     case "$key" in
       USER_NAME)     USER_NAME="$(d64 "$value")" ;;
       TG_BOT_TOKEN)  TG_BOT_TOKEN="$(d64 "$value")" ;;
@@ -288,7 +291,7 @@ fi
 # 설정 저장
 mkdir -p "$CONFIG_DIR"
 # base64 인코딩으로 특수문자/한글 안전 저장
-b64() { printf '%s' "$1" | base64; }
+b64() { printf '%s' "$1" | base64 | tr -d '\n'; }
 {
   echo "USER_NAME=$(b64 "$USER_NAME")"
   echo "TG_BOT_TOKEN=$(b64 "$TG_BOT_TOKEN")"
@@ -399,21 +402,79 @@ case "$AUTH_MODE" in
     fi
 
     if [[ "$AUTH_MODE" == "setup-token" ]]; then
+      if [[ -n "${API_KEY:-}" ]]; then
+        info "저장된 Claude setup-token 감지 — gateway bootstrap 후 auth-profiles에 직접 등록"
+        dry openclaw onboard --non-interactive \
+          --auth-choice skip \
+          --gateway-port 18789 --gateway-bind loopback \
+          --install-daemon --daemon-runtime node \
+          --skip-channels \
+          --accept-risk
+
+        local auth_dir="${HOME}/.openclaw/agents/main/agent"
+        mkdir -p "$auth_dir"
+        python3 -c "
+import json, os
+auth_file = '${auth_dir}/auth-profiles.json'
+try:
+    d = json.load(open(auth_file))
+except:
+    d = {'version': 1, 'profiles': {}}
+d['profiles']['anthropic:default'] = {
+    'type': 'token',
+    'provider': 'anthropic',
+    'token': '${API_KEY}'
+}
+with open(auth_file, 'w') as f:
+    json.dump(d, f, indent=2)
+os.chmod(auth_file, 0o600)
+" 2>/dev/null
+        ok "Claude setup-token 등록 완료"
+      else
       # setup-token 발급 안내
-      echo ""
-      echo "  ┌─────────────────────────────────────────────┐"
-      echo "  │  setup-token 발급 방법:                      │"
-      echo "  │                                              │"
-      echo "  │  1. 새 터미널 창을 엽니다 (Cmd+T)            │"
-      echo "  │  2. claude setup-token 입력                  │"
-      echo "  │  3. 나온 토큰을 복사해서 아래에 붙여넣기      │"
-      echo "  └─────────────────────────────────────────────┘"
-      echo ""
-      dry openclaw onboard --auth-choice setup-token \
-        --gateway-port 18789 --gateway-bind loopback \
-        --install-daemon --daemon-runtime node \
-        --skip-channels \
-        --accept-risk
+        echo ""
+        echo "  ┌─────────────────────────────────────────────┐"
+        echo "  │  setup-token 발급 방법:                      │"
+        echo "  │                                              │"
+        echo "  │  1. 새 터미널 창을 엽니다 (Cmd+T)            │"
+        echo "  │  2. claude setup-token 입력                  │"
+        echo "  │  3. 나온 토큰을 복사해서 아래에 붙여넣기      │"
+        echo "  └─────────────────────────────────────────────┘"
+        read -rp "  setup-token 붙여넣기: " SETUP_TOKEN
+        echo ""
+        if [[ -z "$SETUP_TOKEN" ]]; then
+          warn "토큰이 입력되지 않았습니다."
+        fi
+
+        dry openclaw onboard --non-interactive \
+          --auth-choice skip \
+          --gateway-port 18789 --gateway-bind loopback \
+          --install-daemon --daemon-runtime node \
+          --skip-channels \
+          --accept-risk
+
+        if [[ -n "$SETUP_TOKEN" ]]; then
+          local auth_dir="${HOME}/.openclaw/agents/main/agent"
+          mkdir -p "$auth_dir"
+          python3 -c "
+import json, os
+auth_file = '${auth_dir}/auth-profiles.json'
+try:
+    d = json.load(open(auth_file))
+except:
+    d = {'version': 1, 'profiles': {}}
+d['profiles']['anthropic:default'] = {
+    'type': 'token',
+    'provider': 'anthropic',
+    'token': '${SETUP_TOKEN}'
+}
+with open(auth_file, 'w') as f:
+    json.dump(d, f, indent=2)
+os.chmod(auth_file, 0o600)
+" 2>/dev/null
+          ok "Claude setup-token 등록 완료"
+        fi
+      fi
     fi
     ;;
   "anthropic-key")
@@ -1014,4 +1075,8 @@ if [[ "$DRY_RUN" != "1" && "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
 fi
 if [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
+fi
+
+if [[ $FAILED -ne 0 ]]; then
+  exit 1
 fi
