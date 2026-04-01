@@ -385,12 +385,14 @@ core_auth_present() {
     return 1
   fi
 
-  # Step 1: structural check — known provider + token length >= 20
-  local provider_and_token
-  provider_and_token="$(AUTH_FILE="${auth_file}" python3 - <<'PYEOF' 2>/dev/null
+  # Step 1: structural check — detect provider + auth type + usable secret field.
+  # We intentionally support token/access/accessToken/key/apiKey because profile shapes differ by provider.
+  local auth_tuple provider auth_type secret_field secret
+  auth_tuple="$(AUTH_FILE="${auth_file}" python3 - <<'PYEOF' 2>/dev/null
 import json, os, sys
 
 KNOWN_PROVIDERS = {"anthropic", "openai", "google", "gemini", "openai-codex"}
+SECRET_FIELDS = ("token", "accessToken", "access", "key", "apiKey")
 try:
     d = json.load(open(os.environ['AUTH_FILE']))
     profiles = d.get('profiles', {})
@@ -400,31 +402,36 @@ try:
         provider = (v.get('provider') or '').lower().strip()
         if provider not in KNOWN_PROVIDERS:
             continue
-        tok = v.get('token', '') or v.get('accessToken', '') or ''
-        if len(tok) >= 20:
-            # print "provider:token" for the live-validation step
-            print(f"{provider}:{tok}")
-            sys.exit(0)
+        auth_type = (v.get('type') or v.get('mode') or '').lower().strip()
+        for field in SECRET_FIELDS:
+            value = v.get(field) or ''
+            if isinstance(value, str) and len(value) >= 20:
+                print(provider, auth_type or 'unknown', field, value, sep='\t')
+                sys.exit(0)
 except Exception:
     pass
 sys.exit(1)
 PYEOF
 )"
-  if [[ -z "${provider_and_token}" ]]; then
+  if [[ -z "${auth_tuple}" ]]; then
     return 1
   fi
 
-  # Step 2: live API ping — verify the token is actually accepted by the provider.
-  # Failure (network error, 401, etc.) falls through to return 1 → re-run onboarding.
-  local provider token
-  provider="${provider_and_token%%:*}"
-  token="${provider_and_token#*:}"
+  IFS=$'\t' read -r provider auth_type secret_field secret <<< "${auth_tuple}"
+  if [[ -z "${provider}" || -z "${secret}" ]]; then
+    return 1
+  fi
 
+  # Step 2: provider-aware validation.
+  # Anthropic setup-tokens (`type: token`, often sk-ant-oat01...) are NOT reliable to validate via direct x-api-key pings.
+  # For those, structural presence is the validation; otherwise V4 would false-negative and unnecessarily re-run onboard.
   case "${provider}" in
     anthropic)
-      # Anthropic: HEAD or minimal models list — 401 means stale/invalid token
+      if [[ "${auth_type}" == "token" || "${secret}" == sk-ant-oat* ]]; then
+        return 0
+      fi
       if curl -fsS --max-time 8 \
-          -H "x-api-key: ${token}" \
+          -H "x-api-key: ${secret}" \
           -H "anthropic-version: 2023-06-01" \
           "https://api.anthropic.com/v1/models" \
           -o /dev/null 2>/dev/null; then
@@ -433,7 +440,7 @@ PYEOF
       ;;
     openai|openai-codex)
       if curl -fsS --max-time 8 \
-          -H "Authorization: Bearer ${token}" \
+          -H "Authorization: Bearer ${secret}" \
           "https://api.openai.com/v1/models" \
           -o /dev/null 2>/dev/null; then
         return 0
@@ -441,18 +448,17 @@ PYEOF
       ;;
     google|gemini)
       if curl -fsS --max-time 8 \
-          "https://generativelanguage.googleapis.com/v1beta/models?key=${token}" \
+          "https://generativelanguage.googleapis.com/v1beta/models?key=${secret}" \
           -o /dev/null 2>/dev/null; then
         return 0
       fi
       ;;
     *)
-      # Unknown provider that passed structural check — conservatively reject
       return 1
       ;;
   esac
 
-  warn "기존 auth token이 provider(${provider}) API 검증에 실패했습니다. onboarding을 다시 실행합니다."
+  warn "기존 auth credential이 provider(${provider}, type=${auth_type:-unknown}) 검증에 실패했습니다. onboarding을 다시 실행합니다."
   return 1
 }
 
@@ -2581,15 +2587,22 @@ post_wizard_verify() {
     local has_valid_token
     has_valid_token=$(AUTH_FILE="$auth_file" python3 <<'PYEOF' 2>/dev/null
 import json, os, sys
+KNOWN_PROVIDERS = {"anthropic", "openai", "google", "gemini", "openai-codex"}
+SECRET_FIELDS = ("token", "accessToken", "access", "key", "apiKey")
 try:
     d = json.load(open(os.environ['AUTH_FILE']))
     profiles = d.get('profiles', {})
-    # 어떤 provider든 유효한 토큰이 있으면 OK (Claude, OpenAI, Gemini 등)
-    for k, v in profiles.items():
-        tok = v.get('token', '') or v.get('accessToken', '') or ''
-        if len(tok) >= 20:
-            print('valid')
-            sys.exit(0)
+    for _k, v in profiles.items():
+        if not isinstance(v, dict):
+            continue
+        provider = (v.get('provider') or '').lower().strip()
+        if provider not in KNOWN_PROVIDERS:
+            continue
+        for field in SECRET_FIELDS:
+            value = v.get(field) or ''
+            if isinstance(value, str) and len(value) >= 20:
+                print('valid')
+                sys.exit(0)
     print('invalid')
 except:
     print('missing')

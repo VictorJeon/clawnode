@@ -417,7 +417,7 @@ case "$AUTH_MODE" in
         ONBOARD_EXIT=$?
         if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
           fail "openclaw onboard (bootstrap) 실패 (exit $ONBOARD_EXIT) — setup-token 경로 중단"
-          return
+          exit 1
         fi
 
         mkdir -p "$auth_dir"
