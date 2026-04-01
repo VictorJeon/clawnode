@@ -407,12 +407,18 @@ case "$AUTH_MODE" in
 
       if [[ -n "${API_KEY:-}" ]]; then
         info "저장된 Claude setup-token 감지 — gateway bootstrap 후 auth-profiles에 직접 등록"
+        # Capture onboard exit code immediately; do not continue on failure.
         dry openclaw onboard --non-interactive \
           --auth-choice skip \
           --gateway-port 18789 --gateway-bind loopback \
           --install-daemon --daemon-runtime node \
           --skip-channels \
           --accept-risk
+        ONBOARD_EXIT=$?
+        if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
+          fail "openclaw onboard (bootstrap) 실패 (exit $ONBOARD_EXIT) — setup-token 경로 중단"
+          return
+        fi
 
         mkdir -p "$auth_dir"
         python3 -c "
@@ -464,7 +470,7 @@ os.chmod(auth_file, 0o600)
         done
 
         if [[ "$AUTH_MODE" == "anthropic-key" ]]; then
-          # API Key 방식으로 전환됨 — 아래 case 브랜치가 처리하므로 여기서 onboard만 호출
+          # API Key 방식으로 전환됨 — onboard 직접 호출 후 exit code 확인
           dry openclaw onboard --non-interactive \
             --auth-choice apiKey \
             --anthropic-api-key "$API_KEY" \
@@ -472,16 +478,24 @@ os.chmod(auth_file, 0o600)
             --install-daemon --daemon-runtime node \
             --skip-channels \
             --accept-risk
+          ONBOARD_EXIT=$?
+          if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
+            fail "openclaw onboard (apiKey) 실패 (exit $ONBOARD_EXIT)"
+          fi
         else
+          # Capture onboard exit code immediately; do not write auth-profiles on failure.
           dry openclaw onboard --non-interactive \
             --auth-choice skip \
             --gateway-port 18789 --gateway-bind loopback \
             --install-daemon --daemon-runtime node \
             --skip-channels \
             --accept-risk
-
-          mkdir -p "$auth_dir"
-          python3 -c "
+          ONBOARD_EXIT=$?
+          if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
+            fail "openclaw onboard (bootstrap) 실패 (exit $ONBOARD_EXIT) — setup-token 경로 중단"
+          else
+            mkdir -p "$auth_dir"
+            python3 -c "
 import json, os
 auth_file = '${auth_dir}/auth-profiles.json'
 try:
@@ -498,8 +512,8 @@ with open(auth_file, 'w') as f:
 os.chmod(auth_file, 0o600)
 " 2>/dev/null
 
-          # auth-profiles.json 실제 기록 여부 검증
-          if ! python3 -c "
+            # auth-profiles.json 실제 기록 여부 검증
+            if ! python3 -c "
 import json, os, sys
 f = '${auth_dir}/auth-profiles.json'
 try:
@@ -509,9 +523,10 @@ try:
 except:
     sys.exit(1)
 " 2>/dev/null; then
-            fail "setup-token이 auth-profiles.json에 기록되지 않았습니다. 토큰을 확인하세요."
-          else
-            ok "Claude setup-token 등록 완료"
+              fail "setup-token이 auth-profiles.json에 기록되지 않았습니다. 토큰을 확인하세요."
+            else
+              ok "Claude setup-token 등록 완료"
+            fi
           fi
         fi
       fi
