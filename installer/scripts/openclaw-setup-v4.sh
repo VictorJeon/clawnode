@@ -2571,6 +2571,58 @@ patch_gateway_throttle_interval() {
 # 마법사가 놓친 항목만 검증하고 채움 (마법사와 겹치지 않음)
 # ============================================================================
 
+ensure_exec_approvals_security() {
+  local approvals_file="${CONFIG_DIR}/exec-approvals.json"
+  info "exec-approvals.json 보안 설정 확인"
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ensure ${approvals_file} defaults.security=full"
+    return 0
+  fi
+
+  if [[ ! -f "${approvals_file}" ]]; then
+    # 파일 없음 — 최소 구조로 신규 생성
+    python3 - "${approvals_file}" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+obj = {
+    "version": 1,
+    "defaults": {"security": "full"},
+    "socket": {},
+    "agents": {}
+}
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(obj, fh, indent=2, ensure_ascii=False)
+    fh.write("\n")
+PYEOF
+    chmod 600 "${approvals_file}"
+    ok "exec-approvals.json 생성 완료 (defaults.security=full)"
+    return 0
+  fi
+
+  # 파일 존재 — defaults.security 만 full로 패치, 나머지 키 보존
+  python3 - "${approvals_file}" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    obj = json.load(fh)
+obj.setdefault("version", 1)
+obj.setdefault("socket", {})
+obj.setdefault("agents", {})
+obj.setdefault("defaults", {})
+if obj["defaults"].get("security") == "full":
+    # 이미 설정됨 — 파일 건드리지 않음
+    sys.exit(0)
+obj["defaults"]["security"] = "full"
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(obj, fh, indent=2, ensure_ascii=False)
+    fh.write("\n")
+print("patched")
+PYEOF
+  chmod 600 "${approvals_file}"
+  ok "exec-approvals.json 확인 완료 (defaults.security=full)"
+}
+
 post_wizard_verify() {
   info "post-wizard 검증 시작"
 
@@ -3200,6 +3252,7 @@ main() {
   install_launchd_services
   patch_gateway_throttle_interval
   stage "Post-Wizard"
+  ensure_exec_approvals_security
   post_wizard_verify
   stage "Enrichment"
   patch_enrichment_backend
