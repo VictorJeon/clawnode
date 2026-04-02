@@ -26,6 +26,7 @@ warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 err()   { echo -e "${RED}[ERR ]${NC} $*"; }
 
 MODE="${1:---soft}"
+KEEP_REMOTE_LOGIN="${KEEP_REMOTE_LOGIN:-0}"
 
 echo ""
 echo "============================================"
@@ -72,7 +73,9 @@ pkill -f "localhost.run" 2>/dev/null && ok "localhost.run 터널 종료됨" || t
 # 3. SSH 비활성화
 # ============================================================================
 if [[ "$(uname)" == "Darwin" ]]; then
-  if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+  if [[ "${KEEP_REMOTE_LOGIN}" == "1" ]]; then
+    warn "KEEP_REMOTE_LOGIN=1 — SSH(원격 로그인) 유지"
+  elif systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
     info "SSH(원격 로그인) 비활성화 중..."
     sudo systemsetup -setremotelogin off 2>/dev/null && ok "SSH 비활성화됨" || warn "SSH 비활성화 실패 (sudo 필요)"
   else
@@ -295,23 +298,37 @@ echo "  ✅ Cleanup 완료"
 echo "============================================"
 echo ""
 
+if [[ "${KEEP_REMOTE_LOGIN}" == "1" ]]; then
+  SSH_SUMMARY="SSH는 유지됨."
+else
+  SSH_SUMMARY="SSH는 비활성화됨."
+fi
+
+if [[ "$MODE" == "--hard" || "$MODE" == "--full" ]]; then
+  TAILSCALE_SUMMARY="Tailscale은 로그아웃/제거됨."
+else
+  TAILSCALE_SUMMARY="Tailscale은 유지됨."
+fi
+
 case "$MODE" in
   --soft)
     echo "  제거됨: OpenClaw, Gateway, LaunchAgent, SSH터널"
     echo "  유지됨: brew, node, git, Tailscale, PostgreSQL"
     echo ""
-    echo "  SSH는 비활성화됨. Tailscale은 로그아웃됨."
+    echo "  ${SSH_SUMMARY} ${TAILSCALE_SUMMARY}"
     echo "  재설치: bash <(curl -fsSL <GIST_URL>)"
     ;;
   --hard)
     echo "  제거됨: OpenClaw + Memory V2/V3 + PostgreSQL + Ollama + brew 패키지 + Tailscale + SSH"
     echo "  유지됨: Homebrew 자체"
     echo ""
+    echo "  ${SSH_SUMMARY} ${TAILSCALE_SUMMARY}"
     echo "  재설치하면 brew install부터 다시 진행합니다."
     ;;
   --full)
     echo "  완전 초기화됐습니다. 깡통 상태입니다."
     echo ""
+    echo "  ${SSH_SUMMARY} ${TAILSCALE_SUMMARY}"
     echo "  재설치하면 Homebrew부터 다시 시작합니다."
     ;;
 esac

@@ -401,7 +401,10 @@ load_existing_identity() {
   if [[ -z "${USER_NAME}" || -z "${CHAT_ID}" ]]; then
     if [[ -f "${SETUP_ENV}" ]]; then
       d64() { echo "$1" | base64 -d 2>/dev/null || echo "$1"; }
-      while IFS='=' read -r key value; do
+      while IFS= read -r line; do
+        [[ "${line}" == *=* ]] || continue
+        key="${line%%=*}"
+        value="${line#*=}"
         case "$key" in
           USER_NAME) [[ -z "${USER_NAME}" ]] && USER_NAME="$(d64 "$value")" ;;
           CHAT_ID) [[ -z "${CHAT_ID}" ]] && CHAT_ID="$(d64 "$value")" ;;

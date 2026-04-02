@@ -54,6 +54,7 @@ PG_DB="${PG_DB:-memory_v2}"
 PG_HOST="${PG_HOST:-127.0.0.1}"
 PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-$(whoami)}"
+MEMORY_PORT="${MEMORY_PORT:-18790}"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-bge-m3:latest}"
 INSTALLER_V3_URL="${INSTALLER_V3_URL:-${GIST_BASE_URL}/openclaw-setup-v3.sh}"
@@ -369,7 +370,10 @@ load_existing_identity() {
   if [[ -z "${USER_NAME}" || -z "${CHAT_ID}" ]]; then
     if [[ -f "${SETUP_ENV}" ]]; then
       d64() { echo "$1" | base64 -d 2>/dev/null || echo "$1"; }
-      while IFS='=' read -r key value; do
+      while IFS= read -r line; do
+        [[ "${line}" == *=* ]] || continue
+        key="${line%%=*}"
+        value="${line#*=}"
         case "$key" in
           USER_NAME) [[ -z "${USER_NAME}" ]] && USER_NAME="$(d64 "$value")" ;;
           CHAT_ID) [[ -z "${CHAT_ID}" ]] && CHAT_ID="$(d64 "$value")" ;;
@@ -1056,7 +1060,7 @@ configure_memory_env() {
   replace_or_append_env "DATABASE_URL" "${db_dsn}"
   replace_or_append_env "OLLAMA_URL" "${OLLAMA_URL}"
   replace_or_append_env "MEMORY_HOST" "127.0.0.1"
-  replace_or_append_env "MEMORY_PORT" "18790"
+  replace_or_append_env "MEMORY_PORT" "${MEMORY_PORT}"
   replace_or_append_env "MEMORY_WORKSPACE_GLOBAL" "${WORKSPACE}"
   replace_or_append_env "MEMORY_SESSION_DIR_AGENT_NOVA" "${HOME}/.openclaw/agents/nova/sessions"
   replace_or_append_env "MEMORY_STATE_DIR" "${SERVICE_ROOT}/state"

@@ -191,7 +191,10 @@ run_openclaw_onboard() {
 # 이전 입력값 로드
 if [[ -f "$SETUP_ENV" ]]; then
   d64() { echo "$1" | base64 -d 2>/dev/null || echo "$1"; }
-  while IFS='=' read -r key value; do
+  while IFS= read -r line; do
+    [[ "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
     case "$key" in
       USER_NAME)     USER_NAME="$(d64 "$value")" ;;
       TG_BOT_TOKEN)  TG_BOT_TOKEN="$(d64 "$value")" ;;
@@ -299,7 +302,7 @@ fi
 
 # 설정 저장
 mkdir -p "$CONFIG_DIR"
-b64() { printf '%s' "$1" | base64; }
+b64() { printf '%s' "$1" | base64 | tr -d '\n'; }
 {
   echo "USER_NAME=$(b64 "$USER_NAME")"
   echo "TG_BOT_TOKEN=$(b64 "$TG_BOT_TOKEN")"
@@ -1034,4 +1037,8 @@ if [[ "$DRY_RUN" != "1" && "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
 fi
 if [[ "$SUPPRESS_FINAL_REPORT" != "1" ]]; then
   echo "  설치가 끝났습니다. 창을 닫아도 됩니다."
+fi
+
+if [[ $FAILED -ne 0 ]]; then
+  exit 1
 fi
