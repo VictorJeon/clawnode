@@ -2576,51 +2576,70 @@ ensure_exec_approvals_security() {
   info "exec-approvals.json 보안 설정 확인"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] ensure ${approvals_file} defaults.security=full"
+    ok "[DRY] ensure ${approvals_file} defaults.security=full, ask=off, askFallback=full, socket.path/token"
     return 0
   fi
 
-  if [[ ! -f "${approvals_file}" ]]; then
-    # 파일 없음 — 최소 구조로 신규 생성
-    python3 - "${approvals_file}" <<'PYEOF'
-import json, sys
-path = sys.argv[1]
-obj = {
-    "version": 1,
-    "defaults": {"security": "full"},
-    "socket": {},
-    "agents": {}
-}
-with open(path, "w", encoding="utf-8") as fh:
-    json.dump(obj, fh, indent=2, ensure_ascii=False)
-    fh.write("\n")
-PYEOF
-    chmod 600 "${approvals_file}"
-    ok "exec-approvals.json 생성 완료 (defaults.security=full)"
-    return 0
-  fi
-
-  # 파일 존재 — defaults.security 만 full로 패치, 나머지 키 보존
+  # Single Python script handles both create and patch.
+  # - Creates if missing, patches if exists.
+  # - Generates random socket.token when absent/empty.
+  # - Preserves existing socket.path, socket.token, agents, and other top-level keys.
+  # - Ensures defaults.security=full, defaults.ask=off, defaults.askFallback=full.
   python3 - "${approvals_file}" <<'PYEOF'
-import json, sys
+import json, os, secrets, sys
+
 path = sys.argv[1]
-with open(path, "r", encoding="utf-8") as fh:
-    obj = json.load(fh)
-obj.setdefault("version", 1)
-obj.setdefault("socket", {})
-obj.setdefault("agents", {})
-obj.setdefault("defaults", {})
-if obj["defaults"].get("security") == "full":
-    # 이미 설정됨 — 파일 건드리지 않음
+home = os.environ.get("HOME", os.path.expanduser("~"))
+default_socket_path = os.path.join(home, ".openclaw", "exec-approvals.sock")
+
+# Load or start fresh
+if os.path.isfile(path):
+    with open(path, "r", encoding="utf-8") as fh:
+        try:
+            obj = json.load(fh)
+        except (json.JSONDecodeError, ValueError):
+            obj = {}
+else:
+    obj = {}
+
+changed = False
+
+# version
+if obj.get("version") != 1:
+    obj["version"] = 1
+    changed = True
+
+# socket — preserve existing, fill missing
+socket = obj.setdefault("socket", {})
+if not socket.get("path"):
+    socket["path"] = default_socket_path
+    changed = True
+if not socket.get("token"):
+    socket["token"] = secrets.token_hex(24)
+    changed = True
+
+# defaults
+defaults = obj.setdefault("defaults", {})
+for key, want in (("security", "full"), ("ask", "off"), ("askFallback", "full")):
+    if defaults.get(key) != want:
+        defaults[key] = want
+        changed = True
+
+# agents — ensure key exists
+if "agents" not in obj:
+    obj["agents"] = {}
+    changed = True
+
+if not changed:
     sys.exit(0)
-obj["defaults"]["security"] = "full"
+
 with open(path, "w", encoding="utf-8") as fh:
     json.dump(obj, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
 print("patched")
 PYEOF
   chmod 600 "${approvals_file}"
-  ok "exec-approvals.json 확인 완료 (defaults.security=full)"
+  ok "exec-approvals.json 확인 완료 (security=full, ask=off, askFallback=full, socket 보장)"
 }
 
 post_wizard_verify() {
