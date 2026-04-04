@@ -365,6 +365,34 @@ resolve_openclaw_bin() {
   return 1
 }
 
+gateway_health_ok() {
+  curl -fsS "http://127.0.0.1:18789/health" >/dev/null 2>&1
+}
+
+wait_for_gateway_health() {
+  local timeout_secs="${1:-15}"
+  local i=0
+  while [[ "${i}" -lt "${timeout_secs}" ]]; do
+    if gateway_health_ok; then
+      return 0
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  return 1
+}
+
+start_gateway_manual_fallback() {
+  local oc_bin="$1"
+  local manual_log="${CONFIG_DIR}/logs/gateway.manual.log"
+  mkdir -p "${CONFIG_DIR}/logs"
+
+  pkill -f "[o]penclaw-gateway" >/dev/null 2>&1 || true
+  pkill -f "[d]ist/index.js gateway --port 18789" >/dev/null 2>&1 || true
+
+  nohup "${oc_bin}" gateway --port 18789 > "${manual_log}" 2>&1 < /dev/null &
+}
+
 core_install_present() {
   if [[ -z "$(resolve_openclaw_bin 2>/dev/null || true)" ]]; then
     return 1
@@ -3081,8 +3109,9 @@ PYEOF
 
 restart_openclaw_gateway() {
   info "OpenClaw gateway 재시작"
-  local oc_bin
+  local oc_bin gateway_action
   oc_bin="$(resolve_openclaw_bin 2>/dev/null || true)"
+  gateway_action="start"
   if [[ "${DRY_RUN}" == "1" ]]; then
     ok "[DRY] openclaw gateway restart"
     return 0
@@ -3093,10 +3122,26 @@ restart_openclaw_gateway() {
   fi
 
   if "${oc_bin}" gateway status 2>/dev/null | grep -q "running"; then
+    gateway_action="restart"
     "${oc_bin}" gateway restart >/dev/null 2>&1 || "${oc_bin}" gateway start >/dev/null 2>&1 || true
   else
     "${oc_bin}" gateway start >/dev/null 2>&1 || true
   fi
+
+  if wait_for_gateway_health 12; then
+    ok "OpenClaw gateway ${gateway_action} 완료"
+    return 0
+  fi
+
+  warn "launchd gateway 기동 실패/불가 — 수동 fallback 시도"
+  start_gateway_manual_fallback "${oc_bin}"
+  if wait_for_gateway_health 15; then
+    warn "OpenClaw gateway 수동 fallback으로 기동됨 (현재 세션에서는 launchd unavailable)"
+    return 0
+  fi
+
+  err "OpenClaw gateway 기동 실패 — 로컬 macOS 세션에서 'openclaw gateway install --force && openclaw gateway start' 필요"
+  return 1
 }
 
 run_initial_memory_flush() {
