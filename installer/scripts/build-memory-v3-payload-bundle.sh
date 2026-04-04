@@ -11,6 +11,19 @@ TMPDIR_BUNDLE="$(mktemp -d)"
 trap 'rm -rf "${TMPDIR_BUNDLE}"' EXIT
 
 cp "${SOURCE_DIR}/001_base_schema.sql" "${TMPDIR_BUNDLE}/001_base_schema.sql"
+
+required_payload_files=(
+  "llm_atomizer.py"
+  "llm_atomize_worker.py"
+  "ollama_helper.py"
+)
+for rel in "${required_payload_files[@]}"; do
+  if [[ ! -f "${SOURCE_DIR}/payload/${rel}" ]]; then
+    echo "missing required payload file: ${SOURCE_DIR}/payload/${rel}" >&2
+    exit 1
+  fi
+done
+
 rsync -a \
   --exclude='__pycache__' \
   --exclude='.pytest_cache' \
