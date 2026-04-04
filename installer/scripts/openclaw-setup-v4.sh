@@ -3028,6 +3028,12 @@ content = atomizer_file.read_text()
 if '_call_selected_backend(chunks)' in content and 'from enrichment_helper import call_enrichment_json' in content:
     print('llm_atomizer.py already patched — skipping')
     sys.exit(0)
+# Canonical 2026-04-04+ payload already routes Tier 2 through ollama_helper.py,
+# which is OpenRouter-backed despite the historic helper name. In that case the
+# enrichment backend patch is unnecessary and should be treated as success.
+if 'from ollama_helper import call_ollama_json, is_ollama_available' in content and 'OpenRouter backend unavailable' in content:
+    print('llm_atomizer.py already on helper-based OpenRouter path — skipping')
+    sys.exit(0)
 if 'from enrichment_helper import call_enrichment_json' not in content:
     content = content.replace('import requests\n', 'import requests\nfrom enrichment_helper import call_enrichment_json\n')
 pattern = r'def _call_(?:ollama|gemini)\(chunks: list\[dict\]\) -> list\[dict\]:.*?\n# ── Deduplication '
