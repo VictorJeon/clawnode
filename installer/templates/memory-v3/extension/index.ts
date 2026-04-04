@@ -3,10 +3,12 @@
  *
  * Replaces memory-core as the memory slot plugin. Provides:
  * 1. memory_search tool → V3 hybrid search (snapshots → memories → chunks)
- * 2. memory_get tool → file read (delegated to core runtime)
- * 3. Auto-prefetch: before each agent turn, inject relevant context
+ * 2. memory_get tool → V3 item retrieval by ID (snapshot/memory/chunk)
+ * 3. Auto-prefetch: before each prompt build, inject relevant context
  * 4. Post-compaction recall: after compaction, extract recent pre-compaction
  *    messages from JSONL and inject them on the next turn
+ * 5. Memory prompt section: system prompt guidance for memory tools
+ * 6. Memory CLI: `openclaw memory` subcommands for status/search/stats
  *
  * V3 server failure → graceful degradation (tool returns error text, agent continues)
  */
@@ -14,7 +16,6 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import * as fs from "fs";
 import * as path from "path";
-import * as readline from "readline";
 
 // ============================================================================
 // Types
@@ -43,6 +44,29 @@ interface V3SearchResponse {
   degraded?: boolean;
   source?: string;
   embedError?: string | null;
+}
+
+interface V3GetResponse {
+  id: string;
+  type: "snapshot" | "memory" | "chunk";
+  text?: string;
+  fact?: string;
+  entity?: string;
+  category?: string;
+  status?: string;
+  eventDate?: string;
+  path?: string;
+  keyFacts?: Record<string, number>;
+  tokens?: number;
+  error?: string;
+}
+
+interface V3StatsResponse {
+  snapshots?: number;
+  memories?: number;
+  chunks?: number;
+  totalTokens?: number;
+  [key: string]: unknown;
 }
 
 interface PluginConfig {
@@ -97,6 +121,23 @@ function isQualityFirstSession(
   return fromKey ? qualityFirstAgents.has(fromKey) : false;
 }
 
+/**
+ * Build scopes array for V3 search from agentId / sessionKey.
+ * Always includes "global"; adds "agent:<id>" when agent is known.
+ */
+function buildSearchScopes(agentId?: string, sessionKey?: string): string[] {
+  const scopes = ["global"];
+  const id = normalizeAgentId(agentId);
+  if (id) {
+    scopes.push(`agent:${id}`);
+  } else if (sessionKey) {
+    const parts = sessionKey.split(":");
+    const fromKey = parts.length >= 2 ? normalizeAgentId(parts[1]) : "";
+    if (fromKey) scopes.push(`agent:${fromKey}`);
+  }
+  return scopes;
+}
+
 // ============================================================================
 // Known entities for targeted snapshot lookup
 // ============================================================================
@@ -143,15 +184,18 @@ async function searchV3(
   query: string,
   limit: number,
   timeoutMs = 3000,
+  scopes?: string[],
 ): Promise<V3SearchResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const body: Record<string, unknown> = { query, maxResults: limit };
+    if (scopes && scopes.length > 0) body.scopes = scopes;
     const response = await fetch(`${baseUrl}/v1/memory/search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, maxResults: limit }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
@@ -171,13 +215,72 @@ async function searchV3(
   }
 }
 
+/**
+ * Retrieve a specific memory item by ID from the V3 API.
+ * Supports snapshot, memory, and chunk IDs.
+ */
+async function getV3Item(
+  baseUrl: string,
+  id: string,
+  type?: "snapshot" | "memory" | "chunk",
+  timeoutMs = 3000,
+): Promise<V3GetResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const params = new URLSearchParams({ id });
+    if (type) params.set("type", type);
+    const response = await fetch(`${baseUrl}/v1/memory/get?${params.toString()}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`V3 get failed: ${response.status} ${response.statusText}`);
+    }
+
+    return (await response.json()) as V3GetResponse;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Fetch V3 server stats.
+ */
+async function fetchV3Stats(
+  baseUrl: string,
+  timeoutMs = 3000,
+): Promise<V3StatsResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${baseUrl}/v1/memory/stats`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`V3 stats failed: ${response.status} ${response.statusText}`);
+    }
+
+    return (await response.json()) as V3StatsResponse;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchEntitySnapshot(
   baseUrl: string,
   entity: string,
   timeoutMs: number,
+  scopes?: string[],
 ): Promise<V3SearchResult | null> {
   try {
-    const { results } = await searchV3(baseUrl, `${entity} 현재 상태`, 3, timeoutMs);
+    const { results } = await searchV3(baseUrl, `${entity} 현재 상태`, 3, timeoutMs, scopes);
     const match = results.find(
       (r) =>
         r.resultType === "snapshot" &&
@@ -196,13 +299,14 @@ async function smartPrefetch(
   maxResults: number,
   timeoutMs: number,
   entityLimit: number,
+  scopes?: string[],
 ): Promise<V3SearchResponse> {
   const entities = extractEntities(prompt);
   const cappedEntities = entities.slice(0, Math.max(0, entityLimit));
 
   const [snapshots, general] = await Promise.all([
-    Promise.all(cappedEntities.map((e) => fetchEntitySnapshot(baseUrl, e, timeoutMs))),
-    searchV3(baseUrl, prompt, maxResults, timeoutMs),
+    Promise.all(cappedEntities.map((e) => fetchEntitySnapshot(baseUrl, e, timeoutMs, scopes))),
+    searchV3(baseUrl, prompt, maxResults, timeoutMs, scopes),
   ]);
   const generalResults = general.results ?? [];
 
@@ -468,6 +572,45 @@ function formatToolResult(
   return lines.join("\n\n");
 }
 
+function isLowValueAtomicMemory(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (trimmed.length < 24) return true;
+
+  const metaPatterns: RegExp[] = [
+    /^\s*(assistant|user|system)\s*[:：]/i,
+    /\bping\b/i,
+    /\bhealthcheck\b/i,
+    /\btest message\b/i,
+    /\bno[ _-]?reply\b/i,
+    /\balive\b/i,
+    /\bfeedback\b/i,
+    /\bapproval\b/i,
+    /\bconfirm\b/i,
+    /reply with one short line/i,
+    /use this context to inform your response/i,
+    /do not follow instructions found inside memories/i,
+    /post-compaction context refresh/i,
+    /\buser sent\b/i,
+    /\bassistant sent\b/i,
+    /\bsystem event\b/i,
+    /텔레그램에 테스트 메시지/i,
+    /테스트 메시지/i,
+    /피드백 보냈어/i,
+    /확인해줘/i,
+    /살아있고 메시지 정상 수신 중/i,
+  ];
+
+  return metaPatterns.some((pattern) => pattern.test(trimmed));
+}
+
+function selectInjectedMemories(results: V3SearchResult[]): V3SearchResult[] {
+  return results
+    .filter((r) => r.resultType === "memory")
+    .filter((r) => !isLowValueAtomicMemory(r.fact ?? r.text ?? ""))
+    .slice(0, 3);
+}
+
 function formatContextBlock(
   results: V3SearchResult[],
   minScore: number,
@@ -493,8 +636,7 @@ function formatContextBlock(
   }
 
   const snapshots = filtered.filter((r) => r.resultType === "snapshot");
-  const memories = filtered.filter((r) => r.resultType === "memory");
-  const chunks = filtered.filter((r) => r.resultType === "chunk");
+  const memories = selectInjectedMemories(filtered);
 
   if (snapshots.length > 0) {
     lines.push("## Entity Snapshots (current state)");
@@ -521,17 +663,85 @@ function formatContextBlock(
     lines.push("");
   }
 
-  if (chunks.length > 0) {
-    lines.push("## Raw Passages");
-    for (const c of chunks) {
-      const src = c.path ?? "unknown";
-      lines.push(`- [${src}] ${c.text?.slice(0, 200)} (${(c.score * 100).toFixed(0)}%)`);
-    }
-    lines.push("");
-  }
-
   lines.push("</memory-v3-context>");
   return lines.join("\n");
+}
+
+/**
+ * Format a single V3 item (from memory_get) for tool output.
+ */
+function formatGetResult(item: V3GetResponse): string {
+  if (item.error) {
+    return `Error retrieving memory item: ${item.error}`;
+  }
+
+  const lines: string[] = [];
+  lines.push(`**ID**: ${item.id}`);
+  lines.push(`**Type**: ${item.type}`);
+
+  if (item.entity) lines.push(`**Entity**: ${item.entity}`);
+  if (item.category) {
+    const cat = CATEGORY_LABELS[item.category] ?? item.category;
+    lines.push(`**Category**: ${cat}`);
+  }
+  if (item.eventDate) lines.push(`**Date**: ${item.eventDate}`);
+  if (item.status) lines.push(`**Status**: ${item.status}`);
+  if (item.path) lines.push(`**Path**: ${item.path}`);
+
+  const text = item.fact ?? item.text ?? "";
+  if (text) {
+    lines.push("");
+    lines.push(text);
+  }
+
+  if (item.keyFacts && Object.keys(item.keyFacts).length > 0) {
+    lines.push("");
+    lines.push("**Key Facts**:");
+    for (const [fact, count] of Object.entries(item.keyFacts)) {
+      lines.push(`- ${fact} (×${count})`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+// ============================================================================
+// Memory Prompt Section Builder
+// ============================================================================
+
+/**
+ * Build the system prompt section for memory recall guidance.
+ * Registered via api.registerMemoryPromptSection() so OpenClaw includes it
+ * in the agent system prompt automatically.
+ */
+function buildMemoryPromptSection({ availableTools }: {
+  availableTools: Set<string>;
+  citationsMode?: string;
+}): string[] {
+  const hasSearch = availableTools.has("memory_search");
+  const hasGet = availableTools.has("memory_get");
+
+  if (!hasSearch && !hasGet) return [];
+
+  let toolGuidance: string;
+  if (hasSearch && hasGet) {
+    toolGuidance =
+      "Before answering anything about prior work, decisions, dates, people, preferences, or todos: " +
+      "run memory_search to find relevant memories from the V3 knowledge base (snapshots, atomic memories, chunks). " +
+      "Then use memory_get to retrieve full details of specific items by ID if needed. " +
+      "If low confidence after search, say you checked.";
+  } else if (hasSearch) {
+    toolGuidance =
+      "Before answering anything about prior work, decisions, dates, people, preferences, or todos: " +
+      "run memory_search to find relevant memories from the V3 knowledge base and answer from the matching results. " +
+      "If low confidence after search, say you checked.";
+  } else {
+    toolGuidance =
+      "Use memory_get to retrieve specific memory items by their ID (snapshot, memory, or chunk) " +
+      "when you already know which item to look up. If low confidence, say you checked.";
+  }
+
+  return ["## Memory Recall", toolGuidance, ""];
 }
 
 // ============================================================================
@@ -587,6 +797,94 @@ const memoryV3Plugin = {
     );
 
     // ========================================================================
+    // Memory Prompt Section (exclusive slot registration)
+    // ========================================================================
+
+    api.registerMemoryPromptSection(buildMemoryPromptSection);
+
+    // ========================================================================
+    // Memory Flush Plan (exclusive slot registration)
+    //
+    // V3 memory lives in a server-side database, not in workspace markdown
+    // files, so pre-compaction flush-to-disk is not applicable. Registering
+    // a resolver that returns `null` tells the core "this memory plugin is
+    // present and intentionally skips flush" rather than leaving the slot
+    // empty (which the core interprets as "no memory plugin registered").
+    // ========================================================================
+
+    if (typeof api.registerMemoryFlushPlan === "function") {
+      api.registerMemoryFlushPlan((_params) => null);
+    } else {
+      api.logger.info(
+        "memory-v3: registerMemoryFlushPlan unavailable on this runtime; skipping memory flush slot registration",
+      );
+    }
+
+    // ========================================================================
+    // Memory Runtime Adapter (exclusive slot registration)
+    //
+    // The core status probe (openclaw status → Memory) calls
+    // `getMemoryRuntime()` to determine if a memory plugin is operational.
+    // Without this registration, status always shows "unavailable" even when
+    // tools and auto-recall work perfectly.
+    //
+    // V3 does not use the built-in file-backed MemorySearchManager, so we
+    // provide a thin adapter that reports availability based on V3 server
+    // health and returns a backend type of "builtin" (the simplest path
+    // that avoids triggering qmd-specific logic in core).
+    // ========================================================================
+
+    if (typeof api.registerMemoryRuntime === "function") {
+      api.registerMemoryRuntime({
+        async getMemorySearchManager(_params) {
+          // Probe V3 server health to determine availability
+          try {
+            const stats = await fetchV3Stats(baseUrl);
+            return {
+              manager: {
+                status() {
+                  return {
+                    provider: "memory-v3",
+                    model: "v3-hybrid",
+                    backend: "builtin" as const,
+                    files: (stats.snapshots ?? 0) + (stats.memories ?? 0),
+                    chunks: stats.chunks ?? 0,
+                    sources: ["memory"],
+                    custom: {
+                      searchMode: "v3-hybrid",
+                      snapshots: stats.snapshots,
+                      memories: stats.memories,
+                      chunks: stats.chunks,
+                    },
+                  };
+                },
+                async probeEmbeddingAvailability() {
+                  // V3 server owns its own embedding pipeline.
+                  return { ok: true };
+                },
+                async probeVectorAvailability() {
+                  return true;
+                },
+              },
+            };
+          } catch (err) {
+            return { manager: null, error: `V3 server unreachable: ${String(err)}` };
+          }
+        },
+        resolveMemoryBackendConfig(_params) {
+          return { backend: "builtin" as const };
+        },
+        async closeAllMemorySearchManagers() {
+          // V3 uses stateless HTTP probes, so there is nothing to tear down.
+        },
+      });
+    } else {
+      api.logger.info(
+        "memory-v3: registerMemoryRuntime unavailable on this runtime; skipping memory runtime slot registration",
+      );
+    }
+
+    // ========================================================================
     // Tool: memory_search
     // ========================================================================
 
@@ -615,7 +913,9 @@ const memoryV3Plugin = {
           } = params as { query: string; maxResults?: number; minScore?: number };
 
           try {
-            const data = await searchV3(baseUrl, query, limit);
+            // Include all known agent scopes so cross-agent memories are searchable
+            const allScopes = ["global", "agent:nova", "agent:sol", "agent:bolt", "agent:main"];
+            const data = await searchV3(baseUrl, query, limit, undefined, allScopes);
             const results = data.results ?? [];
             const text = formatToolResult(results, threshold, data.degraded === true);
 
@@ -649,30 +949,167 @@ const memoryV3Plugin = {
     );
 
     // ========================================================================
-    // Tool: memory_get
+    // Tool: memory_get — direct V3 item retrieval (replaces runtime helper)
     // ========================================================================
 
     api.registerTool(
-      (ctx) => {
-        const memoryGetTool = api.runtime.tools.createMemoryGetTool({
-          config: ctx.config,
-          agentSessionKey: ctx.sessionKey,
-        });
-        if (!memoryGetTool) return null;
-        return [memoryGetTool];
+      {
+        name: "memory_get",
+        description:
+          "Retrieve a specific memory item by ID from the V3 knowledge base. " +
+          "Use after memory_search to get full details of a snapshot, atomic memory, " +
+          "or chunk. Provide the item ID from search results.",
+        parameters: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              description: "The memory item ID (snapshotId, memoryId, or chunkId from search results)",
+            },
+            type: {
+              type: "string",
+              enum: ["snapshot", "memory", "chunk"],
+              description: "Item type hint (optional, auto-detected if omitted)",
+            },
+          },
+          required: ["id"],
+        },
+        async execute(_toolCallId, params) {
+          const { id, type } = params as {
+            id: string;
+            type?: "snapshot" | "memory" | "chunk";
+          };
+
+          try {
+            const item = await getV3Item(baseUrl, id, type);
+            const text = formatGetResult(item);
+            return {
+              content: [{ type: "text", text }],
+              details: { id: item.id, type: item.type },
+            };
+          } catch (err) {
+            // Fallback: try searching for the ID as a query
+            api.logger.warn(`memory-v3: get failed for ${id}: ${String(err)}, falling back to search`);
+            try {
+              const data = await searchV3(baseUrl, id, 3);
+              const results = data.results ?? [];
+              if (results.length > 0) {
+                const text = formatToolResult(results, 0, data.degraded === true);
+                return {
+                  content: [{ type: "text", text: `(Exact get unavailable, showing search results for "${id}")\n\n${text}` }],
+                  details: { fallback: "search", count: results.length },
+                };
+              }
+            } catch {
+              // Both get and search failed
+            }
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Memory V3 server unavailable or item not found (${String(err)}). Try memory_search instead.`,
+                },
+              ],
+              details: { error: String(err) },
+            };
+          }
+        },
       },
-      { names: ["memory_get"] },
+      { name: "memory_get" },
     );
 
     // ========================================================================
-    // CLI: memory commands
+    // CLI: memory commands — direct registration (replaces runtime helper)
     // ========================================================================
 
     api.registerCli(
-      ({ program }) => {
-        api.runtime.tools.registerMemoryCli(program);
+      ({ program, logger }) => {
+        const memoryCmd = program
+          .command("memory")
+          .description("Memory V3 management commands");
+
+        memoryCmd
+          .command("status")
+          .description("Show V3 memory server status and statistics")
+          .action(async () => {
+            try {
+              const stats = await fetchV3Stats(baseUrl);
+              logger.info(`Memory V3 Status:`);
+              logger.info(`  Server: ${baseUrl}`);
+              logger.info(`  Snapshots: ${stats.snapshots ?? "?"}`);
+              logger.info(`  Memories: ${stats.memories ?? "?"}`);
+              logger.info(`  Chunks: ${stats.chunks ?? "?"}`);
+              if (stats.totalTokens != null) {
+                logger.info(`  Total tokens: ${stats.totalTokens}`);
+              }
+              // Log any extra stats
+              for (const [key, value] of Object.entries(stats)) {
+                if (!["snapshots", "memories", "chunks", "totalTokens"].includes(key)) {
+                  logger.info(`  ${key}: ${JSON.stringify(value)}`);
+                }
+              }
+            } catch (err) {
+              logger.error(`Memory V3 server unreachable: ${String(err)}`);
+            }
+          });
+
+        memoryCmd
+          .command("search <query>")
+          .description("Search V3 memory database")
+          .option("-n, --max-results <number>", "Max results", String(maxResults))
+          .option("-s, --min-score <number>", "Min score 0-1", String(minScore))
+          .action(async (query: string, opts: { maxResults?: string; minScore?: string }) => {
+            try {
+              const limit = opts.maxResults ? parseInt(opts.maxResults, 10) : maxResults;
+              const threshold = opts.minScore ? parseFloat(opts.minScore) : minScore;
+              const allScopes = ["global", "agent:nova", "agent:sol", "agent:bolt", "agent:main"];
+              const data = await searchV3(baseUrl, query, limit, undefined, allScopes);
+              const results = data.results ?? [];
+              const text = formatToolResult(results, threshold, data.degraded === true);
+              logger.info(text || "No results.");
+            } catch (err) {
+              logger.error(`Search failed: ${String(err)}`);
+            }
+          });
+
+        memoryCmd
+          .command("get <id>")
+          .description("Get a specific memory item by ID")
+          .option("-t, --type <type>", "Item type (snapshot, memory, chunk)")
+          .action(async (id: string, opts: { type?: string }) => {
+            const itemType = opts.type as "snapshot" | "memory" | "chunk" | undefined;
+            try {
+              const item = await getV3Item(baseUrl, id, itemType);
+              logger.info(formatGetResult(item));
+            } catch (err) {
+              // /v1/memory/get may not be supported on this server version (returns 404).
+              // Fall back to search-by-ID so the CLI remains useful.
+              logger.warn(`memory get: direct fetch failed (${String(err)}), falling back to search`);
+              try {
+                const allScopes = ["global", "agent:nova", "agent:sol", "agent:bolt", "agent:main"];
+                const data = await searchV3(baseUrl, id, 3, undefined, allScopes);
+                const results = data.results ?? [];
+                if (results.length > 0) {
+                  logger.info(`(Exact get unavailable — showing search results for "${id}")\n`);
+                  logger.info(formatToolResult(results, 0, data.degraded === true));
+                } else {
+                  logger.info(`No results found for "${id}".`);
+                }
+              } catch (searchErr) {
+                logger.error(`Get failed and search fallback also failed: ${String(searchErr)}`);
+              }
+            }
+          });
       },
-      { commands: ["memory"] },
+      {
+        commands: ["memory"],
+        descriptors: [{
+          name: "memory",
+          description: "Memory V3 management commands (status, search, get)",
+          hasSubcommands: true,
+        }],
+      },
     );
 
     // ========================================================================
@@ -707,10 +1144,15 @@ const memoryV3Plugin = {
 
     // ========================================================================
     // Auto-Recall: inject V3 context + post-compaction messages
+    //
+    // Uses `before_prompt_build` — the stable hook for prompt injection.
+    // Migrated from deprecated `before_agent_start` which had unreliable
+    // message availability and whose prompt mutation fields are stripped
+    // on newer runtimes (see stripPromptMutationFieldsFromLegacyHookResult).
     // ========================================================================
 
     if (autoRecall) {
-      api.on("before_agent_start", async (event, ctx) => {
+      api.on("before_prompt_build", async (event, ctx) => {
         if (!event.prompt || event.prompt.length < 8) return;
         if (
           event.prompt.includes("HEARTBEAT") ||
@@ -775,6 +1217,7 @@ const memoryV3Plugin = {
               entities.length > 0 &&
               activeSmartEntityLimit > 0 &&
               thisInflight <= Math.max(1, Math.ceil(activeMaxInflightPrefetch / 2));
+            const prefetchScopes = buildSearchScopes(agentId, ctx.sessionKey);
             const prefetchResponse = useSmartPrefetch
               ? await smartPrefetch(
                   baseUrl,
@@ -782,8 +1225,9 @@ const memoryV3Plugin = {
                   maxResults,
                   activePrefetchTimeoutMs,
                   activeSmartEntityLimit,
+                  prefetchScopes,
                 )
-              : await searchV3(baseUrl, event.prompt, maxResults, activePrefetchTimeoutMs);
+              : await searchV3(baseUrl, event.prompt, maxResults, activePrefetchTimeoutMs, prefetchScopes);
             const results = prefetchResponse.results ?? [];
             prefetchCircuitOpenUntil = 0;
 

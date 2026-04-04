@@ -1,6 +1,6 @@
 """Memory V3 - Tier 2 LLM Atomizer.
 
-Uses Gemini 2.5 Flash to extract structured facts from conversation chunks
+Uses OpenRouter Qwen to extract structured facts from conversation chunks
 that rule-based atomization handles poorly (session logs, complex context).
 
 Design:
@@ -14,20 +14,17 @@ import hashlib
 import logging
 import re
 from datetime import date
-from typing import Optional
 
-import requests
-
-from config import DEDUP_TEMPORAL_GAP_DAYS, ENTITY_ALIASES, load_google_api_key
-from atomizer import _validate_fact_ko
+from config import ENTITY_ALIASES, DEDUP_TEMPORAL_GAP_DAYS
+from atomizer import _validate_fact_ko, is_low_value_fact
+from ollama_helper import call_ollama_json, is_ollama_available
 
 log = logging.getLogger("memory-v3.llm-atomizer")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-GOOGLE_API_KEY = load_google_api_key()
-MODEL = "gemini-2.5-flash"
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+class LLMAtomizerBackendError(RuntimeError):
+    """Tier 2 LLM backend was unavailable or returned invalid output."""
 
 MAX_CHUNKS_PER_BATCH = 15
 MAX_RETRIES = 2
@@ -78,19 +75,14 @@ CRITICAL for fact_ko:
 
 # ── LLM Call ──────────────────────────────────────────────────────────────────
 
-def _call_gemini(chunks: list[dict]) -> list[dict]:
-    """Call Gemini API with batched chunks. Returns extracted facts."""
-    if not GOOGLE_API_KEY:
-        log.error("GOOGLE_API_KEY not set, cannot run LLM atomizer")
-        return []
 
-    # Format chunks for the prompt
+def _call_llm(chunks: list[dict]) -> list[dict]:
+    """Call OpenRouter-backed LLM helper with batched chunks. Returns extracted facts."""
     chunk_texts = []
     for i, chunk in enumerate(chunks):
         source_date = chunk.get("source_date", "unknown")
         source_path = chunk.get("source_path", "unknown")
         content = chunk.get("content", "")
-        # Truncate very long chunks
         if len(content) > 3000:
             content = content[:2500] + "\n...[truncated]...\n" + content[-500:]
         chunk_texts.append(
@@ -100,99 +92,18 @@ def _call_gemini(chunks: list[dict]) -> list[dict]:
     user_prompt = (
         "Extract all memorable facts from these conversation chunks:\n\n"
         + "\n\n".join(chunk_texts)
-        + "\n\nReturn ONLY a JSON array of fact objects. No markdown fencing."
+        + "\n\nReturn ONLY a JSON array of fact objects. No markdown fencing. "
     )
 
-    payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": user_prompt}]}
-        ],
-        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 16384,
-            "responseMimeType": "application/json",
-        },
-    }
+    if not is_ollama_available():
+        raise LLMAtomizerBackendError("OpenRouter backend unavailable")
 
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            resp = requests.post(
-                f"{API_URL}?key={GOOGLE_API_KEY}",
-                json=payload,
-                timeout=60,
-            )
-            if resp.status_code == 429:
-                log.warning("Rate limited, attempt %d/%d", attempt + 1, MAX_RETRIES)
-                import time
-                time.sleep(5 * (attempt + 1))
-                continue
-            resp.raise_for_status()
-
-            data = resp.json()
-            text = data["candidates"][0]["content"]["parts"][0]["text"]
-
-            # Parse JSON - handle markdown fencing + malformed tail recovery
-            text = text.strip()
-            if text.startswith("```"):
-                text = re.sub(r'^```\w*\n?', '', text)
-                text = re.sub(r'\n?```$', '', text)
-
-            def _parse_json_relaxed(raw: str):
-                # normalize smart quotes
-                raw = raw.replace("\u201c", '"').replace("\u201d", '"').replace("\u2019", "'")
-                # remove trailing commas before ] / }
-                raw = re.sub(r',\s*([\]}])', r'\1', raw)
-
-                # 1) strict parse
-                try:
-                    return json.loads(raw)
-                except Exception:
-                    pass
-
-                # 2) extract bracketed array region
-                start = raw.find("[")
-                if start == -1:
-                    raise ValueError("No JSON array found in output")
-
-                end = raw.rfind("]")
-                if end != -1 and end > start:
-                    candidate = raw[start:end+1]
-                    try:
-                        return json.loads(candidate)
-                    except Exception:
-                        pass
-
-                # 3) truncated JSON recovery — find last complete object
-                partial = raw[start:]
-                # Find all complete {...} objects
-                last_close = partial.rfind("}")
-                if last_close > 0:
-                    candidate = partial[:last_close+1] + "]"
-                    candidate = re.sub(r',\s*\]', ']', candidate)
-                    try:
-                        return json.loads(candidate)
-                    except Exception:
-                        pass
-
-                # 4) debug: log what we got
-                log.warning("JSON parse failed. First 200 chars: %s", raw[:200])
-                log.warning("Last 200 chars: %s", raw[-200:])
-                raise ValueError("Failed to parse LLM JSON output")
-
-            facts = _parse_json_relaxed(text)
-            if not isinstance(facts, list):
-                facts = [facts]
-
-            log.info("Gemini extracted %d facts from %d chunks", len(facts), len(chunks))
-            return facts
-
-        except Exception as e:
-            log.error("Gemini call failed (attempt %d): %s", attempt + 1, e)
-            if attempt == MAX_RETRIES:
-                return []
-
-    return []
+    facts = call_ollama_json(user_prompt, SYSTEM_PROMPT, max_retries=MAX_RETRIES)
+    if facts is None:
+        raise LLMAtomizerBackendError("OpenRouter returned empty/invalid JSON")
+    if not isinstance(facts, list):
+        raise LLMAtomizerBackendError("OpenRouter returned non-list JSON")
+    return facts
 
 
 # ── Deduplication ─────────────────────────────────────────────────────────────
@@ -248,7 +159,7 @@ def llm_atomize_batch(
         return []
 
     # Call LLM
-    raw_facts = _call_gemini(chunks)
+    raw_facts = _call_llm(chunks)
     if not raw_facts:
         return []
 
@@ -265,6 +176,10 @@ def llm_atomize_batch(
     for raw in raw_facts:
         fact_text = raw.get("fact", "").strip()
         if not fact_text or len(fact_text) < 10:
+            continue
+
+        # Low-value fact suppression (shared with Tier 1)
+        if is_low_value_fact(fact_text):
             continue
 
         # Parse date early so we can use it in dedup

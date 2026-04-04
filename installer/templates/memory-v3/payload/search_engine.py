@@ -138,6 +138,10 @@ SOURCE_GATE_CURRENT_NO_CONV = {
 
 MIN_SCORE_CURRENT = 0.60
 MIN_SCORE_POSTMORTEM = 0.54
+MIN_SCORE_DEGRADED = 0.72        # stricter when lexical-only (no embeddings)
+
+# V3 merge: penalize raw chunk results so they don't outrank memories/snapshots
+CHUNK_SCORE_PENALTY = 0.82       # multiplicative; snapshots & memories stay at 1.0
 
 
 def _detect_intent(query: str) -> str:
@@ -325,12 +329,20 @@ def hybrid_search(
         base = W_SIM * s + W_BM25 * b + W_RECENCY * r + W_STATUS * st
         final_scores[cid] = base * source_gate
 
-    threshold = MIN_SCORE_POSTMORTEM if detected_intent == "postmortem" else MIN_SCORE_CURRENT
+    # Threshold: stricter when degraded (lexical-only) to suppress weak matches
+    degraded = embedding is None
+    if degraded:
+        threshold = MIN_SCORE_DEGRADED
+    elif detected_intent == "postmortem":
+        threshold = MIN_SCORE_POSTMORTEM
+    else:
+        threshold = MIN_SCORE_CURRENT
     filtered = [(cid, sc) for cid, sc in final_scores.items() if sc >= threshold]
 
     ranked = sorted(filtered, key=lambda x: x[1], reverse=True)[:max_results]
-    if not ranked:
-        # Graceful fallback if threshold is too strict for a query
+    if not ranked and not degraded:
+        # Graceful fallback if threshold is too strict — but ONLY when embeddings
+        # are available. When degraded, returning junk is worse than returning nothing.
         ranked = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)[:max_results]
 
     total_ms = int((time.time() - t0) * 1000)
@@ -587,9 +599,74 @@ def search_memories(query: str, embedding: list[float], scopes: list[str],
     return results
 
 
-def _search_snapshots(embedding: list[float], scopes: list[str],
+# ── Snapshot relevance gate ────────────────────────────────────────────────
+# Generic status words that inflate cosine similarity for snapshots.
+# If a snapshot *only* matches on these and the query doesn't name the
+# entity, it's almost certainly irrelevant.
+_SNAPSHOT_GENERIC_WORDS = frozenset({
+    "current", "status", "progress", "active", "recent", "decision",
+    "qa", "state", "update", "plan", "roadmap", "migration",
+    "improvement", "fix", "bug", "deploy", "deployment", "test",
+    "config", "setting", "feature", "implementation", "change",
+    "monitoring", "alert", "infra", "pipeline", "cron",
+    # Korean equivalents
+    "현재", "상태", "진행", "활성", "최근", "결정", "업데이트",
+    "계획", "로드맵", "개선", "수정", "배포", "테스트", "설정",
+})
+
+SNAPSHOT_COSINE_THRESHOLD = 0.58     # higher than old 0.5 — require stronger match
+SNAPSHOT_ENTITY_MISS_PENALTY = 0.70  # multiplicative penalty when query doesn't name entity
+
+
+def _query_mentions_entity(query: str, entity: str) -> bool:
+    """Check if the query plausibly references the snapshot's entity.
+    Checks: exact substring, aliases, and known canonical names.
+    """
+    q_lower = query.lower()
+    e_lower = entity.lower()
+
+    # Direct mention (substring)
+    if e_lower in q_lower:
+        return True
+
+    # Check both directions of ENTITY_ALIASES
+    for alias, canonical in ENTITY_ALIASES.items():
+        if canonical.lower() == e_lower and alias in q_lower:
+            return True
+        if alias == e_lower and canonical.lower() in q_lower:
+            return True
+
+    # Hyphen / space / underscore normalization
+    e_variants = {e_lower, e_lower.replace("-", " "), e_lower.replace("_", " "),
+                  e_lower.replace("-", ""), e_lower.replace("_", "")}
+    for v in e_variants:
+        if v in q_lower:
+            return True
+
+    return False
+
+
+def _snapshot_has_strong_overlap(query: str, summary: str) -> bool:
+    """Return True if query and snapshot share at least one non-generic
+    content word (length ≥ 3), indicating topical relevance beyond
+    generic status vocabulary."""
+    q_words = set(re.findall(r'\w{3,}', query.lower()))
+    s_words = set(re.findall(r'\w{3,}', summary.lower()))
+    overlap = q_words & s_words - _SNAPSHOT_GENERIC_WORDS
+    return len(overlap) >= 1
+
+
+def _search_snapshots(query: str, embedding: list[float], scopes: list[str],
                       limit: int = 2) -> list[dict]:
-    """Search project_snapshots by vector similarity. Returns V2-compatible result dicts."""
+    """Search project_snapshots by vector similarity with entity relevance gate.
+
+    Applies:
+      1. Higher cosine threshold (0.58) than the old 0.5
+      2. Entity-mention gate: penalizes snapshots when the query doesn't name
+         the entity AND there's no strong lexical overlap beyond generic words
+      3. Per-entity dedup: only the best snapshot per entity survives
+    Returns V2-compatible result dicts.
+    """
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -600,20 +677,45 @@ def _search_snapshots(embedding: list[float], scopes: list[str],
                 WHERE namespace = ANY(%s)
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
-            """, (str(embedding), scopes, str(embedding), limit))
+            """, (str(embedding), scopes, str(embedding), limit * 3))
             rows = cur.fetchall()
     finally:
         put_conn(conn)
 
     results = []
+    seen_entities: set[str] = set()  # per-entity dedup
+
     for row in rows:
         snap_id, project, snap_date, summary, key_facts, score = row
         score = float(score)
-        if score < 0.5:  # basic threshold
+        if score < SNAPSHOT_COSINE_THRESHOLD:
             continue
+
+        entity_lower = (project or "").lower()
+
+        # Per-entity dedup: keep only the highest-scoring snapshot per entity
+        if entity_lower in seen_entities:
+            continue
+
+        # Entity relevance gate:
+        # If the query doesn't mention this entity AND there's no strong
+        # lexical overlap beyond generic words → apply penalty.
+        mentions_entity = _query_mentions_entity(query, project or "")
+        strong_overlap = _snapshot_has_strong_overlap(query, summary or "")
+
+        effective_score = score
+        if not mentions_entity and not strong_overlap:
+            effective_score *= SNAPSHOT_ENTITY_MISS_PENALTY
+
+        # After penalty, re-check threshold
+        if effective_score < SNAPSHOT_COSINE_THRESHOLD:
+            continue
+
+        seen_entities.add(entity_lower)
+
         results.append({
             "chunkId": None,
-            "score": round(score, 4),
+            "score": round(effective_score, 4),
             "cosine": round(score, 4),
             "bm25": None,
             "recency": 1.0,  # snapshots are always "current"
@@ -636,7 +738,10 @@ def _search_snapshots(embedding: list[float], scopes: list[str],
             "snapshotId": str(snap_id),
             "keyFacts": key_facts,
         })
-    return results
+
+    # Re-sort by effective score and cap at limit
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:limit]
 
 
 def hybrid_search_v3(query: str, scopes: list[str] = None,
@@ -677,7 +782,7 @@ def hybrid_search_v3(query: str, scopes: list[str] = None,
     snapshot_results = []
     if embedding is not None and detected_intent == "current":
         try:
-            snapshot_results = _search_snapshots(embedding, scopes, limit=2)
+            snapshot_results = _search_snapshots(query, embedding, scopes, limit=2)
         except Exception:
             pass  # snapshots table may not exist or be empty
 
@@ -700,17 +805,23 @@ def hybrid_search_v3(query: str, scopes: list[str] = None,
     chunk_results: list[dict] = []
 
     if needs_fallback:
+        # Reduce chunk quota: only fill remaining slots, not the full max_results.
+        # This prevents low-quality chunks from flooding results when some
+        # memories/snapshots already exist.
+        existing_count = len(memory_results) + len(snapshot_results)
+        chunk_quota = max(max_results - existing_count, 2)
+
         # Run V2 chunk search. If embedding failed above, reuse that state so we
         # do not trigger a second embedding attempt.
         chunk_response = hybrid_search(
             query,
             scopes,
-            max_results,
+            chunk_quota,
             intent=detected_intent,
             embedding=embedding,
             embed_error=embed_error,
         )
-        # Annotate chunk results with V3 fields
+        # Annotate chunk results with V3 fields + apply score penalty
         for r in chunk_response.get("results", []):
             if "resultType" not in r:
                 r["resultType"] = "chunk"
@@ -721,19 +832,44 @@ def hybrid_search_v3(query: str, scopes: list[str] = None,
                 r["eventDate"] = None
                 r["supersedes"] = None
                 r["sourceChunkId"] = r.get("chunkId")
+                r["score"] = round(r["score"] * CHUNK_SCORE_PENALTY, 4)
         chunk_results = chunk_response.get("results", [])
 
     # Merge all results, then sort by score (highest first)
+    # Entity diversity cap: limit snapshots + memories per entity so one
+    # project doesn't monopolize results on generic queries.
+    ENTITY_CAP = 3  # max results per entity (snapshots + memories combined)
     seen_chunk_ids: set[str] = set()
+    entity_counts: dict[str, int] = {}
     all_candidates: list[dict] = []
 
+    def _accept_entity(r: dict) -> bool:
+        """Return True if this result's entity hasn't exceeded the cap."""
+        ent = (r.get("entity") or "").lower()
+        if not ent:
+            return True  # no entity → always accept
+        return entity_counts.get(ent, 0) < ENTITY_CAP
+
+    def _track_entity(r: dict):
+        ent = (r.get("entity") or "").lower()
+        if ent:
+            entity_counts[ent] = entity_counts.get(ent, 0) + 1
+
+    # Pre-sort each source by score so entity cap keeps highest-scoring ones
+    snapshot_results.sort(key=lambda x: x.get("score", 0), reverse=True)
+    memory_results.sort(key=lambda x: x.get("score", 0), reverse=True)
+
     for r in snapshot_results:
-        all_candidates.append(r)
+        if _accept_entity(r):
+            all_candidates.append(r)
+            _track_entity(r)
 
     for r in memory_results:
-        all_candidates.append(r)
-        if r.get("chunkId"):
-            seen_chunk_ids.add(r["chunkId"])
+        if _accept_entity(r):
+            all_candidates.append(r)
+            _track_entity(r)
+            if r.get("chunkId"):
+                seen_chunk_ids.add(r["chunkId"])
 
     for r in chunk_results:
         cid = r.get("chunkId")

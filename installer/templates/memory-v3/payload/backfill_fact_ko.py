@@ -15,16 +15,19 @@ Options:
     --failures-file F  Path for failure report (default: backfill_failures.json)
 """
 import argparse
+import json
 import logging
 import os
 import re
 import sys
 import time
+from pathlib import Path
 
 import requests
+from ollama_helper import call_ollama, is_ollama_available
 
 from atomizer import _validate_fact_ko
-from config import EMBEDDING_MODEL, OLLAMA_URL, load_google_api_key
+from config import OLLAMA_URL, EMBEDDING_MODEL
 from db import get_conn, put_conn
 
 logging.basicConfig(
@@ -35,7 +38,7 @@ log = logging.getLogger("backfill-ko")
 
 # ── Gemini config ─────────────────────────────────────────────────────────────
 
-BACKFILL_MODEL = "gemini-2.5-flash"
+BACKFILL_MODEL = "qwen3:8b"
 MAX_RETRIES = 3
 
 # Retry/lease controls for faster, non-thrashing backfill
@@ -44,33 +47,112 @@ RETRY_BASE_SECONDS = 1800              # 30m base backoff for failed rows
 RETRY_MAX_SECONDS = 24 * 3600          # cap retry delay at 24h
 
 
-GOOGLE_API_KEY = load_google_api_key()
-API_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{BACKFILL_MODEL}:generateContent"
-)
+
+
 
 TRANSLATE_SYSTEM = """You are a Korean translation assistant for a memory system.
 Translate each English fact to Korean accurately:
-- Preserve all numbers, dates, and entity names exactly
-- Use natural Korean phrasing
-- Do not add or remove information
-- If unsure about translation quality, output null for that fact
+- Placeholders like ⟦P0⟧, ⟦P1⟧ etc. represent masked tokens. Keep them EXACTLY as-is in your output.
+- Do NOT translate, modify, reorder, or remove any ⟦Pn⟧ placeholder.
+- Use natural Korean phrasing around the placeholders.
+- Do not add or remove information.
+- If unsure about translation quality, output null for that fact.
 
 Return a JSON array with one element per input fact:
 [{"id": "<id>", "fact_ko": "<korean translation or null>"}, ...]"""
 
 
+# ── Token masking ─────────────────────────────────────────────────────────────
+#
+# Deterministic pre-translation masking for numeric/currency/unit/date/comparison
+# tokens.  Replaces them with ⟦P0⟧ .. ⟦Pn⟧ so the LLM cannot localize them.
+# After translation the placeholders are restored to the original tokens.
+
+# Order matters: longer/more-specific patterns first to avoid partial matches.
+_TOKEN_PATTERN = re.compile(
+    r"""
+    (?:                            # ── compound numeric expressions ──
+      [+\-~≈≥≤><≡]?               # optional leading operator/approx
+      [$€£¥₩₹#]?                  # optional leading currency sign
+      \d[\d,]*(?:\.\d+)?          # number with optional commas/decimals
+      (?:\.\d+)?                   # extra decimal part (for 1,234.56)
+      %?                           # optional trailing percent
+      (?:                          # optional scale/unit suffix
+        \s*(?:
+          million|billion|trillion|thousand|hundred|
+          만|억|조|천|백|
+          [kKMBT](?:RW|rw|USD|usd|EUR|eur)?|
+          (?:s(?!\w))|             # plural 's' like $100s (not word-internal)
+          °[CF]?|                  # temperature
+          (?:kg|km|cm|mm|mg|ml|lb|oz|ft|mi|hr|hrs|mins|secs|GB|MB|KB|TB)(?!\w)
+        )
+      )?
+    )
+    |
+    (?:                            # ── bare currency/comparison operators ──
+      [+\-~≈≥≤><≡]
+      [$€£¥₩₹]
+    )
+    |
+    (?:                            # ── month abbreviation + 2-digit year/day ──
+      (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
+      \s+\d{2,4}
+    )
+    |
+    (?:                            # ── standalone year-like 4-digit ──
+      (?<!\d)(?:19|20)\d{2}(?!\d)
+    )
+    """,
+    re.VERBOSE,
+)
+
+
+def _mask_tokens(text: str) -> tuple[str, dict[str, str]]:
+    """Replace numeric/currency/unit tokens with ⟦Pn⟧ placeholders.
+
+    Returns (masked_text, {placeholder: original_token}).
+    """
+    placeholders: dict[str, str] = {}
+    counter = 0
+
+    def _replacer(m: re.Match) -> str:
+        nonlocal counter
+        token = m.group(0).strip()
+        if not token or not re.search(r'\d', token):
+            # Skip matches that have no digit (pure operator matches)
+            return m.group(0)
+        key = f"⟦P{counter}⟧"
+        placeholders[key] = m.group(0)  # preserve original (with any whitespace)
+        counter += 1
+        return key
+
+    masked = _TOKEN_PATTERN.sub(_replacer, text)
+    return masked, placeholders
+
+
+def _unmask_tokens(text: str, placeholders: dict[str, str]) -> str:
+    """Restore ⟦Pn⟧ placeholders to original tokens."""
+    for key, original in placeholders.items():
+        text = text.replace(key, original)
+    return text
+
+
 # ── Translation ───────────────────────────────────────────────────────────────
 
 def _translate_batch(rows: list[dict]) -> dict[str, str | None]:
-    """Translate a batch of facts to Korean. Returns {id: fact_ko or None}."""
-    if not GOOGLE_API_KEY:
-        log.error("GOOGLE_API_KEY not set, cannot translate")
-        return {str(r["id"]): None for r in rows}
+    """Translate a batch of facts to Korean. Returns {id: fact_ko or None}.
 
-    # Build input list
-    items = [{"id": str(r["id"]), "fact": r["fact"]} for r in rows]
+    Applies deterministic token-masking before translation and restores
+    placeholders after, so the LLM cannot localize numeric tokens.
+    """
+    # Mask tokens per row; keep a lookup for unmasking after translation.
+    mask_map: dict[str, dict[str, str]] = {}  # id -> {placeholder: original}
+    items = []
+    for r in rows:
+        masked_fact, placeholders = _mask_tokens(r["fact"])
+        mask_map[str(r["id"])] = placeholders
+        items.append({"id": str(r["id"]), "fact": masked_fact})
+
     user_prompt = (
         "Translate each fact to Korean:\n\n"
         + json.dumps(items, ensure_ascii=False)
@@ -87,61 +169,68 @@ def _translate_batch(rows: list[dict]) -> dict[str, str | None]:
         },
     }
 
-    for attempt in range(MAX_RETRIES):
+    # OpenRouter batch translation first.
+    if is_ollama_available():
+        from ollama_helper import call_ollama
         try:
-            resp = requests.post(
-                f"{API_URL}?key={GOOGLE_API_KEY}",
-                json=payload,
-                timeout=90,
+            raw = call_ollama(user_prompt, TRANSLATE_SYSTEM, max_retries=2, timeout=120)
+            if raw and len(raw) > 20:
+                translated = json.loads(raw)
+                if isinstance(translated, list):
+                    result = {str(r["id"]): None for r in rows}
+                    for item in translated:
+                        mid = str(item.get("id", ""))
+                        if mid in result:
+                            ko = item.get("fact_ko") or None
+                            if ko and mid in mask_map:
+                                ko = _unmask_tokens(ko, mask_map[mid])
+                            result[mid] = ko
+                    success = sum(1 for v in result.values() if v)
+                    if success > 0:
+                        log.info("Batch translated %d/%d rows via OpenRouter", success, len(items))
+                        return result
+                    log.warning("Batch translation returned 0/%d rows, falling back to single-row mode", len(items))
+        except (json.JSONDecodeError, Exception) as e:
+            log.warning("Batch translation failed: %s", e)
+
+    # Fallback: translate row-by-row when batch mode returns [] / invalid JSON.
+    if is_ollama_available():
+        from ollama_helper import call_ollama
+        result = {str(r["id"]): None for r in rows}
+        success = 0
+        for r in rows:
+            rid = str(r["id"])
+            masked_fact = items[0]["fact"]  # re-use already masked version
+            for it in items:
+                if it["id"] == rid:
+                    masked_fact = it["fact"]
+                    break
+            single_prompt = (
+                "Translate this English fact to Korean. Return ONLY a JSON object.\n\n"
+                + json.dumps({"id": rid, "fact": masked_fact}, ensure_ascii=False)
+                + "\n\nReturn format: {\"id\":\"<id>\",\"fact_ko\":\"<translation or null>\"}"
             )
-            if resp.status_code == 429:
-                wait = 2 ** (attempt + 2)
-                log.warning("Rate limited, waiting %ds (attempt %d/%d)", wait, attempt + 1, MAX_RETRIES)
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-
-            data = resp.json()
-            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if text.startswith("```"):
-                text = re.sub(r'^```\w*\n?', '', text)
-                text = re.sub(r'\n?```$', '', text)
-
             try:
-                translated = json.loads(text)
-            except json.JSONDecodeError:
-                # Truncated JSON recovery: try fixing common truncation patterns
-                fixed = text.rstrip()
-                # Close any open string
-                if fixed.count('"') % 2 == 1:
-                    fixed += '"}'
-                # Try closing with ]
-                if not fixed.endswith(']'):
-                    # Find last complete object
-                    last_brace = fixed.rfind('}')
-                    if last_brace > 0:
-                        fixed = fixed[:last_brace + 1] + ']'
-                try:
-                    translated = json.loads(fixed)
-                    log.warning("Recovered truncated JSON (%d chars → %d items)", len(text), len(translated) if isinstance(translated, list) else 0)
-                except json.JSONDecodeError:
-                    raise ValueError(f"Unrecoverable JSON parse error, text length={len(text)}")
-            if not isinstance(translated, list):
-                raise ValueError("Expected JSON array")
-
-            result = {str(r["id"]): None for r in rows}
-            for item in translated:
+                raw = call_ollama(single_prompt, TRANSLATE_SYSTEM, max_retries=1, timeout=60)
+                if not raw:
+                    continue
+                item = json.loads(raw)
                 mid = str(item.get("id", ""))
-                if mid in result:
-                    result[mid] = item.get("fact_ko") or None
+                if mid == rid:
+                    ko = item.get("fact_ko") or None
+                    if ko and mid in mask_map:
+                        ko = _unmask_tokens(ko, mask_map[mid])
+                    result[mid] = ko
+                    if result[mid]:
+                        success += 1
+            except (json.JSONDecodeError, Exception) as e:
+                log.debug("Single-row translation failed for %s: %s", r["id"], e)
+        if success > 0:
+            log.info("Single-row fallback translated %d/%d rows via OpenRouter", success, len(items))
             return result
 
-        except Exception as e:
-            log.error("Translation failed (attempt %d/%d): %s", attempt + 1, MAX_RETRIES, e)
-            if attempt == MAX_RETRIES - 1:
-                return {str(r["id"]): None for r in rows}
-            time.sleep(2 ** (attempt + 1))
-
+    # All LLM paths failed — skip (will retry next cron)
+    log.warning("OpenRouter/Ollama batch translation failed, skipping")
     return {str(r["id"]): None for r in rows}
 
 
@@ -305,10 +394,6 @@ def run_backfill(batch_size: int = 100, sleep_sec: float = 0.0,
 
     Returns summary stats dict.
     """
-    if not GOOGLE_API_KEY:
-        log.error("GOOGLE_API_KEY is required. Set env var or OPENCLAW_CONFIG_PATH")
-        sys.exit(1)
-
     conn = get_conn()
     _ensure_backfill_meta_table(conn)
     total_remaining = _count_remaining(conn)

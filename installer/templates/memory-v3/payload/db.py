@@ -294,6 +294,54 @@ def vector_search_memories(conn, embedding: list[float], scopes: list[str],
     return results[:limit]
 
 
+def get_snapshot_by_id(conn, snapshot_id: str) -> dict | None:
+    """Fetch a single project_snapshot by UUID. Returns dict or None."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT id, project_name, snapshot_date, summary, key_facts,
+                   namespace, created_at
+            FROM project_snapshots WHERE id = %s::uuid
+        """, (snapshot_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+
+def get_memory_by_id(conn, memory_id: str) -> dict | None:
+    """Fetch a single memory by UUID. Returns dict or None."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT id, fact, context, source_path, event_date, category,
+                   entity, status, source_chunk_id, namespace, created_at
+            FROM memories WHERE id = %s::uuid
+        """, (memory_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+
+def get_chunk_by_id(conn, chunk_id: str) -> dict | None:
+    """Fetch a single chunk by UUID, joined with its document for path/namespace."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT c.id, c.content, c.token_count, c.source_date,
+                   c.status, c.created_at,
+                   d.source_path, d.namespace
+            FROM memory_chunks c
+            JOIN memory_documents d ON c.document_id = d.id
+            WHERE c.id = %s::uuid
+        """, (chunk_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+
 def get_memories_by_entity(conn, entity: str, namespace: str,
                            status: str = "active") -> list[dict]:
     """Fetch all memories for a given entity."""

@@ -10,7 +10,8 @@ import psycopg2
 from config import HOST, PORT, WORKSPACES
 from search_engine import hybrid_search, hybrid_search_v3, start_hit_flush_thread, _flush_hit_buffer
 from ingest import ingest_all, ingest_workspace
-from db import get_conn, put_conn, get_stats, get_queue_status
+from db import (get_conn, put_conn, get_stats, get_queue_status,
+                get_snapshot_by_id, get_memory_by_id, get_chunk_by_id)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("memory-v2")
@@ -116,6 +117,105 @@ def stats():
         return get_stats(conn)
     finally:
         put_conn(conn)
+
+
+@app.get("/v1/memory/get")
+def memory_get(id: str, type: str | None = None):
+    """Exact lookup by UUID.  Optional type hint narrows search to one table."""
+    # Validate id looks like a UUID (fast-fail before hitting DB)
+    try:
+        uuid.UUID(id)
+    except ValueError:
+        raise HTTPException(400, f"invalid UUID: {id}")
+
+    if type and type not in ("snapshot", "memory", "chunk"):
+        raise HTTPException(400, f"invalid type hint: {type} (expected snapshot|memory|chunk)")
+
+    conn = get_conn()
+    try:
+        result = _resolve_item(conn, id, type)
+    except Exception as e:
+        log.error("memory_get failed: %s", e, exc_info=True)
+        raise HTTPException(500, f"lookup error: {e}")
+    finally:
+        put_conn(conn)
+
+    if result is None:
+        raise HTTPException(404, f"item {id} not found")
+    return result
+
+
+def _resolve_item(conn, item_id: str, type_hint: str | None) -> dict | None:
+    """Try tables in order (or just one if type_hint given). Return normalized dict."""
+    lookups = {
+        "snapshot": (_lookup_snapshot, get_snapshot_by_id),
+        "memory":   (_lookup_memory,   get_memory_by_id),
+        "chunk":    (_lookup_chunk,    get_chunk_by_id),
+    }
+    if type_hint:
+        normalize, fetch = lookups[type_hint]
+        row = fetch(conn, item_id)
+        return normalize(row) if row else None
+
+    # No hint — try all three in likely priority order
+    for normalize, fetch in lookups.values():
+        row = fetch(conn, item_id)
+        if row:
+            return normalize(row)
+    return None
+
+
+def _iso(val):
+    """Convert date/datetime to ISO string if needed."""
+    return val.isoformat() if hasattr(val, 'isoformat') else val
+
+
+def _lookup_snapshot(row: dict) -> dict:
+    return {
+        "id":        str(row["id"]),
+        "type":      "snapshot",
+        "text":      row.get("summary"),
+        "fact":      None,
+        "entity":    row.get("project_name"),
+        "category":  "state",
+        "status":    "active",
+        "eventDate": _iso(row.get("snapshot_date")),
+        "path":      None,
+        "keyFacts":  row.get("key_facts"),
+        "tokens":    None,
+    }
+
+
+def _lookup_memory(row: dict) -> dict:
+    return {
+        "id":        str(row["id"]),
+        "type":      "memory",
+        "text":      row.get("fact"),
+        "fact":      row.get("fact"),
+        "entity":    row.get("entity"),
+        "category":  row.get("category"),
+        "status":    row.get("status"),
+        "eventDate": _iso(row.get("event_date")),
+        "path":      row.get("source_path"),
+        "keyFacts":  None,
+        "tokens":    None,
+    }
+
+
+def _lookup_chunk(row: dict) -> dict:
+    return {
+        "id":        str(row["id"]),
+        "type":      "chunk",
+        "text":      row.get("content"),
+        "fact":      None,
+        "entity":    None,
+        "category":  None,
+        "status":    row.get("status"),
+        "eventDate": _iso(row.get("source_date")),
+        "path":      row.get("source_path"),
+        "keyFacts":  None,
+        "tokens":    row.get("token_count"),
+    }
 
 
 @app.get("/v1/memory/queue/status")

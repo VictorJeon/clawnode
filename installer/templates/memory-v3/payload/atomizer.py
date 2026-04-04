@@ -210,6 +210,73 @@ _SENT_SPLIT = re.compile(
 )
 
 
+# ── Low-value fact suppression ────────────────────────────────────────────────
+# Conservative heuristic: reject obvious conversational/meta residue before
+# it reaches embedding + insert.  Keep the patterns narrow to avoid nuking
+# genuine state snapshots or meaningful factual records.
+
+_JUNK_EXACT: set[str] = {
+    # healthcheck / protocol noise
+    "ping", "pong", "alive", "no_reply", "NO_REPLY", "ack", "ok", "nop",
+    "test", "테스트", "확인", "완료",
+}
+
+_JUNK_PATTERNS: list[re.Pattern] = [
+    # ping / healthcheck / alive probes
+    re.compile(r'^(ping|pong|alive|health\s*check|heartbeat|NO_REPLY)\s*[.!?]?$', re.IGNORECASE),
+    # test message chatter
+    re.compile(r'^(test\s*message|테스트\s*메시지|this is (a )?test)\b', re.IGNORECASE),
+    # feedback / approval / check-request meta chatter
+    re.compile(
+        r'^(피드백\s*(보냈어?|줬어?|전달했?어?|완료)|확인해\s*줘|확인\s*부탁|리뷰\s*(해줘|부탁)|'
+        r'한번\s*봐\s*줘|체크\s*(해줘|부탁)|LGTM|looks good|ship it)\s*[.!?]?$',
+        re.IGNORECASE,
+    ),
+    # system/event wrapper text (bare markers)
+    re.compile(
+        r'^(session\s*(started|ended|closed)|connection\s*(opened|closed)|'
+        r'event:\s*\w+|webhook\s*(received|sent))\s*[.!?]?$',
+        re.IGNORECASE,
+    ),
+    # ultra-short conversational residue (Korean 1-2 word enders)
+    re.compile(
+        r'^(네|응|ㅇㅇ|ㅋㅋ+|ㅎㅎ+|감사|고마워|알겠|그래|좋아|오키|'
+        r'왔을?\s*거예요|보냈어|했어|됐어|할게|가자|보자|하자)\s*[.!?]?$',
+    ),
+    # bare acknowledgement in English
+    re.compile(
+        r'^(ok|okay|sure|yes|no|yep|nope|got it|roger|copy|noted|done|'
+        r'thanks|thank you|ty|thx)\s*[.!?]?$',
+        re.IGNORECASE,
+    ),
+    # assistant meta-responses
+    re.compile(
+        r'^(understood|will do|on it|working on it|let me check|'
+        r'checking now|one moment)\s*[.!?]?$',
+        re.IGNORECASE,
+    ),
+]
+
+
+def is_low_value_fact(text: str) -> bool:
+    """Return True if *text* is obvious conversational/meta junk.
+
+    Designed to be called from both Tier 1 (validate_memories) and
+    Tier 2 (llm_atomize_batch) before embedding + insert.
+    Conservative: only rejects clear-cut patterns.
+    """
+    stripped = text.strip()
+    # Exact-match short tokens (after stripping trailing punct)
+    canon = re.sub(r'[.!?,;:…]+$', '', stripped).strip()
+    if canon.lower() in _JUNK_EXACT or canon in _JUNK_EXACT:
+        return True
+    # Pattern-match
+    for pat in _JUNK_PATTERNS:
+        if pat.match(stripped):
+            return True
+    return False
+
+
 def _split_sentences(text: str) -> list[str]:
     """Split text into candidate sentences."""
     parts = _SENT_SPLIT.split(text)
@@ -359,6 +426,10 @@ def validate_memories(facts: list[dict], source_date: Optional[str]) -> list[dic
 
         # Length
         if len(text) < FACT_MIN_CHARS or len(text) > FACT_MAX_CHARS:
+            continue
+
+        # Low-value fact suppression (conversational/meta junk)
+        if is_low_value_fact(text):
             continue
 
         # Date sanity
