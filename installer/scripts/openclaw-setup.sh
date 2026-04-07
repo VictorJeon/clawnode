@@ -20,6 +20,8 @@ SUPPRESS_FINAL_REPORT="${SUPPRESS_FINAL_REPORT:-0}"
 OPENCLAW_PARENT_LOG="${OPENCLAW_PARENT_LOG:-0}"
 OPENCLAW_LOG_FILE="${OPENCLAW_LOG_FILE:-}"
 TAILSCALE_SHARE_MODE="${TAILSCALE_SHARE_MODE:-ask}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.2}"
+OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 
 # curl | bash 차단 방지 (DRY_RUN에서는 스킵)
 if [[ "$DRY_RUN" != "1" ]]; then
@@ -456,9 +458,15 @@ echo ""
 info "Step 2/6: OpenClaw 설치"
 
 if ! command -v openclaw &>/dev/null; then
-  dry npm install -g openclaw || fail "OpenClaw 설치 실패"
+  dry npm install -g "${OPENCLAW_PKG}" || fail "OpenClaw 설치 실패"
 else
-  ok "OpenClaw $(openclaw --version) 확인됨"
+  CURRENT_OPENCLAW_VERSION="$(openclaw --version 2>/dev/null || true)"
+  if [[ "${CURRENT_OPENCLAW_VERSION}" == *"${OPENCLAW_VERSION}"* ]]; then
+    ok "OpenClaw ${CURRENT_OPENCLAW_VERSION} 확인됨"
+  else
+    warn "OpenClaw 버전이 pin(${OPENCLAW_VERSION})과 다름: ${CURRENT_OPENCLAW_VERSION:-unknown} → ${OPENCLAW_PKG}로 맞춤"
+    dry npm install -g "${OPENCLAW_PKG}" || fail "OpenClaw 버전 고정 설치 실패"
+  fi
 fi
 
 # ============================================================================

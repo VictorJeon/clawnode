@@ -67,6 +67,8 @@ ENRICHMENT_BACKEND="${ENRICHMENT_BACKEND:-ask}"
 OPENROUTER_URL="${OPENROUTER_URL:-https://openrouter.ai/api/v1/chat/completions}"
 OPENROUTER_MODEL="${OPENROUTER_MODEL:-qwen/qwen3-235b-a22b-2507}"
 INSTALLER_V3_URL="${INSTALLER_V3_URL:-${GIST_BASE_URL}/openclaw-setup-v4.sh}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.2}"
+OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 # Set to 1 when the user explicitly skips the optional Gemini key during
 # configure_optional_google_api_key(); post_wizard_verify() reads this to
@@ -634,7 +636,7 @@ run_core_setup() {
     ok "[DRY] SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 bash ${CORE_SCRIPT}"
     return 0
   fi
-  SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 OPENCLAW_LOG_FILE="${LOG_FILE}" bash "${CORE_SCRIPT}"
+  SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 OPENCLAW_LOG_FILE="${LOG_FILE}" OPENCLAW_VERSION="${OPENCLAW_VERSION}" bash "${CORE_SCRIPT}"
 }
 
 replace_or_append_env() {
@@ -1915,16 +1917,16 @@ update_openclaw_core() {
   if command -v pnpm >/dev/null 2>&1; then
     case "${bin}" in
       *pnpm*|*/Library/pnpm/openclaw|*/.local/share/pnpm/openclaw)
-        pnpm add -g openclaw@latest && return 0
+        pnpm add -g "${OPENCLAW_PKG}" && return 0
         ;;
     esac
   fi
   if command -v npm >/dev/null 2>&1; then
-    npm install -g openclaw@latest && return 0
-    sudo -n npm install -g openclaw@latest && return 0
+    npm install -g "${OPENCLAW_PKG}" && return 0
+    sudo -n npm install -g "${OPENCLAW_PKG}" && return 0
   fi
   if command -v pnpm >/dev/null 2>&1; then
-    pnpm add -g openclaw@latest && return 0
+    pnpm add -g "${OPENCLAW_PKG}" && return 0
   fi
   return 1
 }
@@ -1932,7 +1934,7 @@ update_openclaw_core() {
 INSTALLER_URL="${CLAWNODE_INSTALLER_V3_URL:-https://gist.githubusercontent.com/VictorJeon/5276afd04d974985537a1ceb7e100e9f/raw/openclaw-setup-v4.sh}"
 
 update_openclaw_core || echo "warning: openclaw core update skipped or failed"
-exec /bin/bash -lc "GOOGLE_API_KEY_MODE=skip SKIP_CORE_SETUP=1 AUTO_UPDATE_MODE=1 bash <(curl -fsSL \"${INSTALLER_URL}\")"
+exec /bin/bash -lc "GOOGLE_API_KEY_MODE=skip SKIP_CORE_SETUP=1 AUTO_UPDATE_MODE=1 OPENCLAW_VERSION=\"${OPENCLAW_VERSION}\" bash <(curl -fsSL \"${INSTALLER_URL}\")"
 '
 
   # shellcheck disable=SC2016
