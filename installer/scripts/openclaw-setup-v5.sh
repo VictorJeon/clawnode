@@ -743,6 +743,41 @@ JSEOF
   ok "config patched: memory-core + QMD + dreaming + wiki"
 }
 
+# ============================================================================
+# Hooks Token (prevents gateway crash-loop when hooks.enabled=true)
+# ============================================================================
+
+ensure_hooks_token() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] ensure hooks.token"
+    return 0
+  fi
+  [[ -f "${CONFIG_FILE}" ]] || return 0
+
+  # Check if hooks.token already exists
+  local has_token
+  has_token="$(OC_PATH="${CONFIG_FILE}" node -e '
+    const c = JSON.parse(require("fs").readFileSync(process.env.OC_PATH, "utf8"));
+    process.exit(c.hooks && c.hooks.token ? 0 : 1);
+  ' 2>/dev/null && echo yes || echo no)"
+
+  if [[ "${has_token}" == "yes" ]]; then
+    ok "hooks.token already set"
+    return 0
+  fi
+
+  OC_PATH="${CONFIG_FILE}" node - <<'JSEOF'
+const fs = require("fs");
+const crypto = require("crypto");
+const path = process.env.OC_PATH;
+const c = JSON.parse(fs.readFileSync(path, "utf8"));
+c.hooks = c.hooks || {};
+c.hooks.token = crypto.randomBytes(24).toString("hex");
+fs.writeFileSync(path, JSON.stringify(c, null, 2));
+JSEOF
+  ok "hooks.token generated (prevents gateway crash-loop)"
+}
+
 enable_bundled_hooks() {
   info "bundled hooks check"
   if [[ "${DRY_RUN}" == "1" ]]; then
@@ -1103,6 +1138,7 @@ main() {
   ensure_boot_md
   patch_openclaw_config
   enable_bundled_hooks
+  ensure_hooks_token
 
   stage "Wiki"
   init_wiki_vault
