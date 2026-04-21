@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRT 매크로 - 텔레그램 목업</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0e1621;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    min-height: 100vh;
+    gap: 20px;
+  }
+  .telegram-window {
+    width: 520px;
+    background: #17212b;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .chat-header {
+    background: #1c2937;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #0e1621;
+  }
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+  }
+  .avatar-bot { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+  .header-info { flex: 1; }
+  .header-name { color: #fff; font-size: 15px; font-weight: 600; }
+  .header-status { color: #6d7f8e; font-size: 13px; }
+  .chat-body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .message {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .message-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+    text-align: right;
+  }
+  .msg-user {
+    align-self: flex-end;
+    background: #2b5278;
+    color: #fff;
+    border-radius: 12px 12px 4px 12px;
+  }
+  .msg-bot {
+    align-self: flex-start;
+    background: #1e2c3a;
+    color: #e4e6eb;
+    border-radius: 12px 12px 12px 4px;
+  }
+  .msg-bot .bot-name {
+    color: #6c5ce7;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .date-divider {
+    text-align: center;
+    color: #6d7f8e;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+  .success-box {
+    background: #1a3a2a;
+    border: 1px solid #2d6b45;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 6px;
+  }
+  .success-box .title {
+    color: #4cd964;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .code-block {
+    background: #0d1520;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: #a8b4c0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  b { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- 화면 1: 매크로 제작 대화 -->
+<div class="telegram-window">
+  <div class="chat-header">
+    <div class="avatar avatar-bot">✨</div>
+    <div class="header-info">
+      <div class="header-name">Nova ✨</div>
+      <div class="header-status">online</div>
+    </div>
+  </div>
+  <div class="chat-body">
+    <div class="date-divider">March 15, 2026</div>
+    
+    <div class="message msg-user">
+      나 수서에서 대구에 오긴 했는데 올라갈 기차가 없어 ㅠㅠ
+      <div class="message-time">14:22</div>
+    </div>
+
+    <div class="message msg-bot">
+      <div class="bot-name">Nova ✨</div>
+      SRT 매진이면 매크로를 만들어서 빈 자리 나오는 즉시 예약할 수 있어요. 만들어 드릴까요?
+      <div class="message-time">14:22</div>
+    </div>
+
+    <div class="message msg-user">
+      오 그래 만들어줘
+      <div class="message-time">14:23</div>
+    </div>
+
+    <div class="message msg-bot">
+      <div class="bot-name">Nova ✨</div>
+      SRT 예매 매크로 제작 시작합니다.<br><br>
+      📋 <b>구현 내용:</b><br>
+      • SRT 모바일 API 로그인 자동화<br>
+      • 지정 구간/시간대 반복 조회 (5초 간격)<br>
+      • 빈 좌석 발견 시 즉시 예약 + 텔레그램 알림<br>
+      • 매진 시 예약대기 자동 신청<br><br>
+      잠시만 기다려주세요.
+      <div class="message-time">14:23</div>
+    </div>
+
+    <div class="message msg-bot">
+      <div class="bot-name">Nova ✨</div>
+      ✅ <b>SRT 매크로 완성.</b><br><br>
+      테스트까지 완료했어요. "대구→수서 예약해줘" 하시면 바로 감시 시작합니다.
+      <div class="message-time">14:41</div>
+    </div>
+  </div>
+</div>
+
+<!-- 화면 2: 실제 예약 -->
+<div class="telegram-window">
+  <div class="chat-header">
+    <div class="avatar avatar-bot">✨</div>
+    <div class="header-info">
+      <div class="header-name">Nova ✨</div>
+      <div class="header-status">online</div>
+    </div>
+  </div>
+  <div class="chat-body">
+    <div class="date-divider">March 15, 2026</div>
+
+    <div class="message msg-user">
+      오후 7시~9시 사이에 대구에서 수서로 가는 SRT 예약해줘
+      <div class="message-time">15:30</div>
+    </div>
+
+    <div class="message msg-bot">
+      <div class="bot-name">Nova ✨</div>
+      🔍 감시 시작합니다.<br><br>
+      <b>구간:</b> 동대구 → 수서<br>
+      <b>시간:</b> 19:00~21:00<br>
+      <b>날짜:</b> 2026-03-15 (토)<br><br>
+      빈 좌석 나오는 즉시 예약할게요.
+      <div class="message-time">15:30</div>
+    </div>
+
+    <div class="message msg-bot">
+      <div class="bot-name">Nova ✨</div>
+      <div class="success-box">
+        <div class="title">🎉 예약 완료!</div>
+        <b>열차:</b> SRT 372<br>
+        <b>출발:</b> 동대구 19:40<br>
+        <b>도착:</b> 수서 21:26<br>
+        <b>좌석:</b> 5호차 12A (일반실)<br>
+        <b>요금:</b> 43,500원<br><br>
+        ⏰ 구매기한: 15:55까지 SRT 앱에서 결제
+      </div>
+      <div class="message-time">15:47</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: 'Pretendard', sans-serif;
+    background: #000;
+    display: flex; justify-content: center; align-items: center; min-height: 100vh;
+  }
+  .slide {
+    width: 960px; height: 540px;
+    background: url('slide-bg-clawnode.png') center/cover no-repeat;
+    position: relative;
+    overflow: hidden;
+  }
+  /* ClawNode logo bottom-right */
+  .logo {
+    position: absolute;
+    bottom: 16px; right: 24px;
+    height: 28px;
+    opacity: 0.7;
+  }
+  /* Content */
+  .title-label {
+    position: absolute;
+    top: 32px; left: 48px;
+    font-size: 11px; color: #FF6B00; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  
+  /* Two columns */
+  .col-left, .col-right {
+    position: absolute;
+    top: 72px; width: 400px; height: 380px;
+    border-radius: 12px;
+    padding: 28px 24px;
+  }
+  .col-left {
+    left: 36px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .col-right {
+    right: 36px;
+    background: rgba(255,107,0,0.12);
+    border: 1px solid rgba(255,107,0,0.25);
+  }
+  .col-title {
+    font-size: 26px; font-weight: 700; margin-bottom: 4px;
+  }
+  .col-left .col-title { color: #fff; }
+  .col-right .col-title { color: #FF6B00; }
+  .col-subtitle {
+    font-size: 13px; margin-bottom: 20px;
+  }
+  .col-left .col-subtitle { color: #888; }
+  .col-right .col-subtitle { color: #ffb680; }
+  
+  .feature-list {
+    list-style: none; padding: 0;
+  }
+  .feature-list li {
+    font-size: 14px; color: #ddd; padding: 6px 0;
+    line-height: 1.5;
+  }
+  .feature-list li .icon {
+    margin-right: 8px; font-size: 16px;
+  }
+  .col-left .feature-list li.dim {
+    color: #666; font-style: italic; padding-top: 14px;
+  }
+  
+  /* VS badge */
+  .vs {
+    position: absolute;
+    top: 230px; left: 50%; transform: translateX(-50%);
+    width: 48px; height: 48px;
+    background: #050505;
+    border: 2px solid #FF6B00;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: #FF6B00;
+    z-index: 2;
+  }
+  
+  .brands {
+    font-size: 12px; color: #666; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="title-label">LLM vs OpenClaw</div>
+  
+  <div class="col-left">
+    <div class="col-title">LLM</div>
+    <div class="col-subtitle">AI의 두뇌</div>
+    <div class="brands">ChatGPT · Claude · Gemini</div>
+    <ul class="feature-list">
+      <li>질문하면 답한다</li>
+      <li>글을 쓴다</li>
+      <li>코드를 짠다</li>
+      <li class="dim">하지만... 직접 뭔가를 하진 못한다</li>
+    </ul>
+  </div>
+  
+  <div class="vs">vs</div>
+  
+  <div class="col-right">
+    <div class="col-title">OpenClaw</div>
+    <div class="col-subtitle">두뇌에 몸을 붙이다</div>
+    <ul class="feature-list">
+      <li><span class="icon">🖐</span>파일을 읽고 쓰는 손</li>
+      <li><span class="icon">👀</span>인터넷을 검색하는 눈</li>
+      <li><span class="icon">💬</span>메시지를 보내는 입</li>
+      <li><span class="icon">🧠</span>어제 대화를 기억하는 기억력</li>
+    </ul>
+  </div>
+  
+  <img class="logo" src="../../../website-v2/public/images/clawnode-logo-transparent.png" alt="ClawNode">
+</div>
+</body>
+</html>
