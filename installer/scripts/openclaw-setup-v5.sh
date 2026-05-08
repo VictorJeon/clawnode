@@ -44,7 +44,7 @@ CLAWNODE_VERSION_FILE="${CONFIG_DIR}/.clawnode-version"
 WIKI_VAULT_PATH="${CONFIG_DIR}/wiki/main"
 
 INSTALLER_V5_URL="${INSTALLER_V5_URL:-${GIST_BASE_URL}/openclaw-setup-v5.sh}"
-OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.8}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.5.7}"
 OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 GOOGLE_API_KEY_SKIPPED_BY_USER=0
@@ -273,6 +273,8 @@ resolve_openclaw_bin() {
     "${HOME}/Library/pnpm/openclaw" \
     "${HOME}/.npm-global/bin/openclaw" \
     "${HOME}/.local/bin/openclaw" \
+    "${HOME}/.bun/bin/openclaw" \
+    /opt/homebrew/bin/openclaw \
     /usr/local/bin/openclaw \
     /usr/bin/openclaw
   do
@@ -364,21 +366,90 @@ PYEOF
   IFS=$'\t' read -r provider auth_type secret_field secret <<< "${auth_tuple}"
   if [[ -z "${provider}" || -z "${secret}" ]]; then return 1; fi
 
-  case "${provider}" in
-    anthropic)
-      [[ "${auth_type}" == "token" || "${secret}" == sk-ant-oat* ]] && return 0
-      curl -fsS --max-time 8 -H "x-api-key: ${secret}" -H "anthropic-version: 2023-06-01" "https://api.anthropic.com/v1/models" -o /dev/null 2>/dev/null && return 0
-      ;;
-    openai|openai-codex)
-      curl -fsS --max-time 8 -H "Authorization: Bearer ${secret}" "https://api.openai.com/v1/models" -o /dev/null 2>/dev/null && return 0
-      ;;
-    google|gemini)
-      curl -fsS --max-time 8 "https://generativelanguage.googleapis.com/v1beta/models?key=${secret}" -o /dev/null 2>/dev/null && return 0
-      ;;
-    *) return 1 ;;
-  esac
-  warn "auth credential validation failed for ${provider} (type=${auth_type:-unknown}). re-running onboarding."
+  # Provider validation with 1 retry on transient failure (timeout 15s)
+  local attempt
+  for attempt in 1 2; do
+    case "${provider}" in
+      anthropic)
+        [[ "${auth_type}" == "token" || "${secret}" == sk-ant-oat* ]] && return 0
+        curl -fsS --max-time 15 -H "x-api-key: ${secret}" -H "anthropic-version: 2023-06-01" "https://api.anthropic.com/v1/models" -o /dev/null 2>/dev/null && return 0
+        ;;
+      openai|openai-codex)
+        curl -fsS --max-time 15 -H "Authorization: Bearer ${secret}" "https://api.openai.com/v1/models" -o /dev/null 2>/dev/null && return 0
+        ;;
+      google|gemini)
+        curl -fsS --max-time 15 "https://generativelanguage.googleapis.com/v1beta/models?key=${secret}" -o /dev/null 2>/dev/null && return 0
+        ;;
+      *) return 1 ;;
+    esac
+    [[ "${attempt}" == "1" ]] && sleep 2
+  done
+  warn "auth credential validation failed for ${provider} (type=${auth_type:-unknown}) after retry."
   return 1
+}
+
+# Provider re-auth menu — invoked when core_auth_present fails on an existing
+# install. Replaces the v5 default of forcing a full core script re-run, which
+# always presented the Anthropic onboarding screen even for OpenAI/Codex users.
+prompt_reauth_provider() {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    ok "[DRY] prompt_reauth_provider"
+    return 0
+  fi
+  echo ""
+  printf '%b\n' "${BOLD}Auth Validation Failed — Re-authenticate${NC}"
+  echo ""
+  echo "  [1] Anthropic (setup-token or API key) — full core re-run"
+  echo "  [2] OpenAI / Codex (API key) — auth-only patch"
+  echo "  [3] Skip (configure manually later)"
+  echo ""
+  local reauth_choice
+  if [[ -t 0 ]]; then
+    read -rp "  Choice [1-3]: " reauth_choice
+  else
+    read -rp "  Choice [1-3]: " reauth_choice < /dev/tty
+  fi
+  case "${reauth_choice}" in
+    1)
+      info "delegating to core script for Anthropic re-auth"
+      SUPPRESS_FINAL_REPORT=1 OPENCLAW_PARENT_LOG=1 OPENCLAW_LOG_FILE="${LOG_FILE}" OPENCLAW_VERSION="${OPENCLAW_VERSION}" bash "${CORE_SCRIPT}"
+      ;;
+    2)
+      local reauth_key
+      if [[ -t 0 ]]; then
+        read -rsp "  OpenAI API Key: " reauth_key
+      else
+        read -rsp "  OpenAI API Key: " reauth_key < /dev/tty
+      fi
+      echo ""
+      [[ -z "${reauth_key}" ]] && { warn "empty key — skipping"; return 0; }
+      local auth_dir="${CONFIG_DIR}/agents/main/agent"
+      mkdir -p "${auth_dir}"
+      AUTH_FILE="${auth_dir}/auth-profiles.json" REAUTH_KEY="${reauth_key}" python3 - <<'PYEOF'
+import json, os
+auth_file = os.environ['AUTH_FILE']
+try:
+    with open(auth_file) as f:
+        d = json.load(f)
+except Exception:
+    d = {"version": 1, "profiles": {}}
+d.setdefault("profiles", {})
+d["profiles"]["openai:default"] = {
+    "type": "apiKey",
+    "provider": "openai",
+    "apiKey": os.environ['REAUTH_KEY']
+}
+with open(auth_file, "w") as f:
+    json.dump(d, f, indent=2)
+os.chmod(auth_file, 0o600)
+print("OK: openai:default")
+PYEOF
+      ok "OpenAI key written to auth-profiles.json"
+      ;;
+    *)
+      warn "skipping auth — configure manually via 'openclaw onboard'"
+      ;;
+  esac
 }
 
 require_existing_core_for_memory_only() {
@@ -473,8 +544,11 @@ run_core_setup() {
       UPDATE_MODE=1; CORE_STEP_RESULT="skipped-existing"
       return 0
     fi
-    warn "existing core found but auth invalid — re-running core setup."
+    warn "existing core found but auth invalid — running re-auth menu."
     UPDATE_MODE=1
+    prompt_reauth_provider
+    CORE_STEP_RESULT="skipped-existing"
+    return 0
   fi
   info "running core setup"
   CORE_STEP_RESULT="ran"
@@ -500,6 +574,33 @@ install_qmd() {
     return 0
   fi
 
+  # Refresh PATH + bash hash table — npm/node may have been installed earlier
+  # in this same shell session by the core script's `brew install node`, but
+  # bash caches command lookups so a stale `command -v npm` can return false.
+  ensure_homebrew_on_path || true
+  hash -r 2>/dev/null || true
+
+  # Bootstrap: if no JS package manager is available even after PATH refresh,
+  # try Homebrew Node install
+  if ! command -v npm >/dev/null 2>&1 \
+     && ! command -v pnpm >/dev/null 2>&1 \
+     && ! command -v bun >/dev/null 2>&1; then
+    warn "no JS package manager (npm/pnpm/bun) found — attempting Homebrew Node bootstrap"
+    if command -v brew >/dev/null 2>&1; then
+      brew install node 2>/dev/null || warn "brew install node returned non-zero"
+      ensure_homebrew_on_path || true
+      hash -r 2>/dev/null || true
+    fi
+  fi
+
+  if ! command -v npm >/dev/null 2>&1 \
+     && ! command -v pnpm >/dev/null 2>&1 \
+     && ! command -v bun >/dev/null 2>&1; then
+    err "QMD requires npm, pnpm, or bun but none was found and bootstrap failed."
+    err "Install Node.js manually (e.g. 'brew install node') then re-run this script."
+    return 1
+  fi
+
   if command -v npm >/dev/null 2>&1; then
     info "installing QMD via npm"
     npm install -g @tobilu/qmd || { err "QMD npm install failed"; return 1; }
@@ -521,9 +622,6 @@ install_qmd() {
     if [[ -x "${bun_qmd}" && ! -e "/opt/homebrew/bin/qmd" ]]; then
       ln -sf "${bun_qmd}" /opt/homebrew/bin/qmd 2>/dev/null || true
     fi
-  else
-    err "neither npm, pnpm, nor bun found — cannot install QMD"
-    return 1
   fi
 
   if ! command -v qmd >/dev/null 2>&1; then
@@ -744,54 +842,31 @@ JSEOF
 }
 
 # ============================================================================
-# Hooks Token (prevents gateway crash-loop when hooks.enabled=true)
+# Bundled Hooks + Token (atomic — both land in the same write to prevent
+# the gateway from observing hooks.enabled=true without a token, which would
+# otherwise trigger crash-loop on config hot-reload)
 # ============================================================================
 
-ensure_hooks_token() {
+enable_bundled_hooks() {
+  info "bundled hooks + token check"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] ensure hooks.token"
+    ok "[DRY] enable hooks (atomic with token)"
     return 0
   fi
   [[ -f "${CONFIG_FILE}" ]] || return 0
-
-  # Check if hooks.token already exists
-  local has_token
-  has_token="$(OC_PATH="${CONFIG_FILE}" node -e '
-    const c = JSON.parse(require("fs").readFileSync(process.env.OC_PATH, "utf8"));
-    process.exit(c.hooks && c.hooks.token ? 0 : 1);
-  ' 2>/dev/null && echo yes || echo no)"
-
-  if [[ "${has_token}" == "yes" ]]; then
-    ok "hooks.token already set"
-    return 0
-  fi
 
   OC_PATH="${CONFIG_FILE}" node - <<'JSEOF'
 const fs = require("fs");
 const crypto = require("crypto");
 const path = process.env.OC_PATH;
-const c = JSON.parse(fs.readFileSync(path, "utf8"));
-c.hooks = c.hooks || {};
-c.hooks.token = crypto.randomBytes(24).toString("hex");
-fs.writeFileSync(path, JSON.stringify(c, null, 2));
-JSEOF
-  ok "hooks.token generated (prevents gateway crash-loop)"
-}
-
-enable_bundled_hooks() {
-  info "bundled hooks check"
-  if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] enable hooks"
-    return 0
-  fi
-  [[ -f "${CONFIG_FILE}" ]] || return 0
-
-  OC_PATH="${CONFIG_FILE}" node - <<'JSEOF'
-const fs = require("fs");
-const path = process.env.OC_PATH;
 const raw = fs.readFileSync(path, "utf8");
 const c = raw.trim() ? JSON.parse(raw) : {};
 c.hooks = c.hooks || {};
+// Token MUST be present before enabled flips on; set token first in object,
+// then write atomically so the gateway never observes enabled=true without a token.
+if (typeof c.hooks.token !== "string" || c.hooks.token.length < 32) {
+  c.hooks.token = crypto.randomBytes(24).toString("hex");
+}
 c.hooks.enabled = true;
 c.hooks.internal = c.hooks.internal || {};
 c.hooks.internal.enabled = true;
@@ -802,7 +877,7 @@ for (const key of ["boot-md", "command-logger", "session-memory", "pre-action-re
 }
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
 JSEOF
-  ok "bundled hooks enabled"
+  ok "bundled hooks enabled with hooks.token"
 }
 
 # ============================================================================
@@ -1138,7 +1213,6 @@ main() {
   ensure_boot_md
   patch_openclaw_config
   enable_bundled_hooks
-  ensure_hooks_token
 
   stage "Wiki"
   init_wiki_vault

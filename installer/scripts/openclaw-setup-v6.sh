@@ -52,7 +52,7 @@ ZAI_API_KEY=""
 ZAI_PROVIDER_SET=0
 
 INSTALLER_V6_URL="${INSTALLER_V6_URL:-${GIST_BASE_URL}/openclaw-setup-v6.sh}"
-OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.8}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.5.7}"
 OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 GOOGLE_API_KEY_MODE="${GOOGLE_API_KEY_MODE:-ask}"
 GOOGLE_API_KEY_SKIPPED_BY_USER=0
@@ -281,6 +281,8 @@ resolve_openclaw_bin() {
     "${HOME}/Library/pnpm/openclaw" \
     "${HOME}/.npm-global/bin/openclaw" \
     "${HOME}/.local/bin/openclaw" \
+    "${HOME}/.bun/bin/openclaw" \
+    /opt/homebrew/bin/openclaw \
     /usr/local/bin/openclaw \
     /usr/bin/openclaw
   do
@@ -513,9 +515,44 @@ install_qmd() {
     return 0
   fi
 
+  # Refresh PATH + bash hash table — npm/node may have been installed earlier
+  # in this same shell session by the core script's `brew install node`, but
+  # bash caches command lookups so a stale `command -v npm` can return false.
+  ensure_homebrew_on_path || true
+  hash -r 2>/dev/null || true
+
+  # Bootstrap: if no JS package manager is available even after PATH refresh,
+  # try Homebrew Node install
+  if ! command -v npm >/dev/null 2>&1 \
+     && ! command -v pnpm >/dev/null 2>&1 \
+     && ! command -v bun >/dev/null 2>&1; then
+    warn "no JS package manager (npm/pnpm/bun) found — attempting Homebrew Node bootstrap"
+    if command -v brew >/dev/null 2>&1; then
+      brew install node 2>/dev/null || warn "brew install node returned non-zero"
+      ensure_homebrew_on_path || true
+      hash -r 2>/dev/null || true
+    fi
+  fi
+
+  if ! command -v npm >/dev/null 2>&1 \
+     && ! command -v pnpm >/dev/null 2>&1 \
+     && ! command -v bun >/dev/null 2>&1; then
+    err "QMD requires npm, pnpm, or bun but none was found and bootstrap failed."
+    err "Install Node.js manually (e.g. 'brew install node') then re-run this script."
+    return 1
+  fi
+
   if command -v npm >/dev/null 2>&1; then
     info "installing QMD via npm"
     npm install -g @tobilu/qmd || { err "QMD npm install failed"; return 1; }
+  elif command -v pnpm >/dev/null 2>&1; then
+    info "installing QMD via pnpm"
+    pnpm install -g @tobilu/qmd || { err "QMD pnpm install failed"; return 1; }
+    local pnpm_bin
+    pnpm_bin="$(pnpm bin -g 2>/dev/null || true)"
+    if [[ -n "${pnpm_bin}" && -x "${pnpm_bin}/qmd" && ! -e "/opt/homebrew/bin/qmd" ]]; then
+      ln -sf "${pnpm_bin}/qmd" /opt/homebrew/bin/qmd 2>/dev/null || true
+    fi
   elif command -v bun >/dev/null 2>&1; then
     info "installing QMD via bun"
     bun install -g @tobilu/qmd || { err "QMD bun install failed"; return 1; }
@@ -525,9 +562,6 @@ install_qmd() {
     if [[ -x "${bun_qmd}" && ! -e "/opt/homebrew/bin/qmd" ]]; then
       ln -sf "${bun_qmd}" /opt/homebrew/bin/qmd 2>/dev/null || true
     fi
-  else
-    err "neither npm nor bun found — cannot install QMD"
-    return 1
   fi
 
   if ! command -v qmd >/dev/null 2>&1; then
@@ -748,19 +782,25 @@ JSEOF
 }
 
 enable_bundled_hooks() {
-  info "bundled hooks check"
+  info "bundled hooks + token check"
   if [[ "${DRY_RUN}" == "1" ]]; then
-    ok "[DRY] enable hooks"
+    ok "[DRY] enable hooks (atomic with token)"
     return 0
   fi
   [[ -f "${CONFIG_FILE}" ]] || return 0
 
   OC_PATH="${CONFIG_FILE}" node - <<'JSEOF'
 const fs = require("fs");
+const crypto = require("crypto");
 const path = process.env.OC_PATH;
 const raw = fs.readFileSync(path, "utf8");
 const c = raw.trim() ? JSON.parse(raw) : {};
 c.hooks = c.hooks || {};
+// Atomic: token MUST be present before enabled flips on, in the same write,
+// so the gateway never observes hooks.enabled=true without a token.
+if (typeof c.hooks.token !== "string" || c.hooks.token.length < 32) {
+  c.hooks.token = crypto.randomBytes(24).toString("hex");
+}
 c.hooks.enabled = true;
 c.hooks.internal = c.hooks.internal || {};
 c.hooks.internal.enabled = true;
@@ -771,7 +811,7 @@ for (const key of ["boot-md", "command-logger", "session-memory", "pre-action-re
 }
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
 JSEOF
-  ok "bundled hooks enabled"
+  ok "bundled hooks enabled with hooks.token"
 }
 
 # ============================================================================

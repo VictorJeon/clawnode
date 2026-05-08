@@ -20,7 +20,7 @@ SUPPRESS_FINAL_REPORT="${SUPPRESS_FINAL_REPORT:-0}"
 OPENCLAW_PARENT_LOG="${OPENCLAW_PARENT_LOG:-0}"
 OPENCLAW_LOG_FILE="${OPENCLAW_LOG_FILE:-}"
 TAILSCALE_SHARE_MODE="${TAILSCALE_SHARE_MODE:-ask}"
-OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.2}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.5.7}"
 OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 
 # curl | bash 차단 방지 (DRY_RUN에서는 스킵)
@@ -354,8 +354,12 @@ if [[ -z "${MODEL_CHOICE:-}" ]]; then
        ;;
     2) # Claude API
        AUTH_MODE="anthropic-key"
-       read -rsp "Anthropic API Key 입력: " API_KEY
+       read -rsp "Anthropic API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     3) # ChatGPT OAuth
        AUTH_MODE="openai-oauth"
@@ -363,13 +367,21 @@ if [[ -z "${MODEL_CHOICE:-}" ]]; then
        ;;
     4) # ChatGPT API
        AUTH_MODE="openai-key"
-       read -rsp "OpenAI API Key 입력: " API_KEY
+       read -rsp "OpenAI API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     5) # Gemini API
        AUTH_MODE="gemini-key"
-       read -rsp "Gemini API Key 입력: " API_KEY
+       read -rsp "Gemini API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     6) # Custom
        AUTH_MODE="custom"
@@ -478,6 +490,20 @@ info "Step 3/6: AI 모델 연결 및 Gateway 설정"
 # 이미 인증된 경우 스킵 체크 (생략 - 덮어쓰기 로직으로 간소화)
 
 case "$AUTH_MODE" in
+  "skip-no-auth")
+    # 사용자가 API Key 입력을 건너뛴 경우 — 게이트웨이만 띄우고 인증은 추후 설정
+    dry openclaw onboard --non-interactive \
+      --auth-choice skip \
+      --gateway-port 18789 --gateway-bind loopback \
+      --install-daemon --daemon-runtime node \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
+      --accept-risk
+    ONBOARD_EXIT=$?
+    if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
+      fail "openclaw onboard (skip-no-auth) 실패 (exit $ONBOARD_EXIT)"
+    fi
+    info "AI 모델 인증 없이 설치 완료. 사용 전 'openclaw onboard'로 인증을 추가하세요."
+    ;;
   "setup-token")
     # Claude CLI 설치 (setup-token 발급에 필요)
     if ! command -v claude &>/dev/null; then
@@ -507,7 +533,7 @@ case "$AUTH_MODE" in
           --auth-choice skip \
           --gateway-port 18789 --gateway-bind loopback \
           --install-daemon --daemon-runtime node \
-          --skip-channels \
+          --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
           --accept-risk
         ONBOARD_EXIT=$?
         if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -571,7 +597,7 @@ os.chmod(auth_file, 0o600)
             --anthropic-api-key "$API_KEY" \
             --gateway-port 18789 --gateway-bind loopback \
             --install-daemon --daemon-runtime node \
-            --skip-channels \
+            --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
             --accept-risk
           ONBOARD_EXIT=$?
           if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -583,7 +609,7 @@ os.chmod(auth_file, 0o600)
             --auth-choice skip \
             --gateway-port 18789 --gateway-bind loopback \
             --install-daemon --daemon-runtime node \
-            --skip-channels \
+            --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
             --accept-risk
           ONBOARD_EXIT=$?
           if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -633,7 +659,7 @@ except:
       --anthropic-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "openai-oauth")
@@ -651,7 +677,7 @@ except:
     dry openclaw onboard --auth-choice openai-codex \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "openai-key")
@@ -660,7 +686,7 @@ except:
       --openai-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "gemini-key")
@@ -669,13 +695,13 @@ except:
       --gemini-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   *)
     echo "  * 사용자 정의 설정 모드 (대화형)"
     dry openclaw onboard --flow manual \
-      --skip-channels
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm
     ;;
 esac
 
