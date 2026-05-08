@@ -142,6 +142,20 @@ for plist in "${PLISTS[@]}"; do
   fi
 done
 
+# 동적 검색 — 새 openclaw 버전이 추가하는 어떤 plist도 모두 cover
+# (ai.openclaw.gateway, ai.openclaw.dreaming, com.openclaw.*, etc.)
+info "추가 LaunchAgent 검색 중..."
+while IFS= read -r f; do
+  [[ -z "$f" || ! -f "$f" ]] && continue
+  label="$(basename "$f" .plist)"
+  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+  launchctl unload "$f" 2>/dev/null || true
+  rm -f "$f"
+  ok "  $label 제거됨"
+done < <(find "$HOME/Library/LaunchAgents" -maxdepth 1 -type f \
+  \( -name '*openclaw*.plist' -o -name 'ai.openclaw.*.plist' -o -name 'com.openclaw.*.plist' \) \
+  2>/dev/null)
+
 # ============================================================================
 # 5.1 Memory / PostgreSQL 프로세스 중지
 # ============================================================================
@@ -167,15 +181,42 @@ fi
 ok "Memory / PostgreSQL / Ollama 프로세스 정리 완료"
 
 # ============================================================================
-# 6. OpenClaw 언인스톨
+# 6. OpenClaw 언인스톨 (npm + pnpm + bun 모두)
 # ============================================================================
+info "OpenClaw 패키지 제거 중..."
 if command -v npm &>/dev/null; then
-  info "OpenClaw npm 패키지 제거 중..."
-  npm uninstall -g openclaw 2>/dev/null && ok "openclaw 제거됨" || warn "openclaw npm 패키지 없음"
-
-  # Claude CLI도 제거
-  npm uninstall -g @anthropic-ai/claude-code 2>/dev/null && ok "claude-code 제거됨" || true
+  npm uninstall -g openclaw 2>/dev/null && ok "  openclaw (npm) 제거됨" || true
+  npm uninstall -g @anthropic-ai/claude-code 2>/dev/null && ok "  claude-code 제거됨" || true
+  npm uninstall -g @tobilu/qmd 2>/dev/null && ok "  QMD (npm) 제거됨" || true
 fi
+if command -v pnpm &>/dev/null; then
+  pnpm uninstall -g openclaw 2>/dev/null && ok "  openclaw (pnpm) 제거됨" || true
+  pnpm uninstall -g @anthropic-ai/claude-code 2>/dev/null && ok "  claude-code (pnpm) 제거됨" || true
+  pnpm uninstall -g @tobilu/qmd 2>/dev/null && ok "  QMD (pnpm) 제거됨" || true
+fi
+if command -v bun &>/dev/null; then
+  bun remove -g openclaw 2>/dev/null && ok "  openclaw (bun) 제거됨" || true
+  bun remove -g @anthropic-ai/claude-code 2>/dev/null && ok "  claude-code (bun) 제거됨" || true
+  bun remove -g @tobilu/qmd 2>/dev/null && ok "  QMD (bun) 제거됨" || true
+fi
+
+# 잔존 binary/symlink 강제 제거 (uninstall이 빠뜨린 경우 대비)
+for p in \
+  "$HOME/.local/share/pnpm/openclaw" \
+  "$HOME/Library/pnpm/openclaw" \
+  "$HOME/.npm-global/bin/openclaw" \
+  "$HOME/.local/bin/openclaw" \
+  "$HOME/.bun/bin/openclaw" \
+  /opt/homebrew/bin/openclaw \
+  /usr/local/bin/openclaw \
+  /opt/homebrew/bin/qmd \
+  /usr/local/bin/qmd \
+  "$HOME/.bun/bin/qmd"
+do
+  if [[ -L "$p" || -f "$p" ]]; then
+    rm -f "$p" && ok "  잔존: $p 제거됨"
+  fi
+done
 
 # ============================================================================
 # 7. OpenClaw 설정 디렉토리 제거
@@ -191,6 +232,23 @@ rm -rf "$HOME/.config/openclaw" 2>/dev/null
 
 # Claude Code 설정도 제거
 rm -rf "$HOME/.claude" 2>/dev/null && ok "~/.claude 제거됨" || true
+
+# ============================================================================
+# 7.1 Keychain 엔트리 제거 (OpenClaw가 등록한 API key 캐시)
+# ============================================================================
+info "Keychain 엔트리 제거 중..."
+for service in \
+  openclaw-zai-api \
+  openclaw-anthropic-api \
+  openclaw-openai-api \
+  openclaw-gemini-api \
+  openclaw-google-api \
+  openclaw-gateway-token
+do
+  if security find-generic-password -s "$service" >/dev/null 2>&1; then
+    security delete-generic-password -s "$service" >/dev/null 2>&1 && ok "  $service" || true
+  fi
+done
 
 # ============================================================================
 # 8. 담당자 SSH 키 제거
