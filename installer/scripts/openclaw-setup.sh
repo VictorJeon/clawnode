@@ -463,6 +463,25 @@ if ! command -v git &>/dev/null; then
   dry brew install git || fail "Git 설치 실패"
 fi
 
+# ----------------------------------------------------------------------------
+# Homebrew zsh 디렉토리 권한 fix
+#
+# Intel Mac (/usr/local/...)에서 brew tap이 /usr/local/share/zsh 디렉토리에
+# completion 파일을 쓰려고 시도. 디렉토리 소유권이 root이거나 다른 user면
+# brew tap 실패 → openclaw skill 설치 단계에서 apple-notes/apple-reminders/
+# blogwatcher 등이 줄줄이 fail. brew 자신이 권장하는 chown/chmod를 미리 적용.
+# ----------------------------------------------------------------------------
+if [[ "$DRY_RUN" != "1" ]]; then
+  for d in /usr/local/share/zsh /usr/local/share/zsh/site-functions \
+           /opt/homebrew/share/zsh /opt/homebrew/share/zsh/site-functions; do
+    if [[ -d "$d" && ! -w "$d" ]]; then
+      info "brew zsh 디렉토리 권한 수정: $d"
+      sudo chown -R "$(whoami):admin" "$d" 2>/dev/null || true
+      sudo chmod -R u+w "$d" 2>/dev/null || true
+    fi
+  done
+fi
+
 # ============================================================================
 # Step 2: OpenClaw 설치
 # ============================================================================
@@ -1054,15 +1073,20 @@ else
   else
 
   # SSH 활성화 (원격 접속에 필수)
-  # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음
+  # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음.
+  #
+  # 주의: `set -o pipefail` 환경에서 `sudo systemsetup ... 2>&1 | grep ...`
+  # 패턴은 sudo가 비-zero로 끝나면 grep이 매치해도 pipeline 전체가 1이 되어
+  # if 분기가 잘못 빠짐. sudo 출력을 변수에 잡고 grep을 분리해서 회피.
   SSH_ON=false
   if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
     SSH_ON=true
     ok "SSH 이미 활성화됨"
   else
     info "SSH(원격 로그인) 활성화 시도 중..."
-    if sudo systemsetup -setremotelogin on 2>&1 | grep -qi "Full Disk Access"; then
-      # macOS 15+ Full Disk Access 제약
+    SSH_SETUP_OUTPUT="$(sudo systemsetup -setremotelogin on 2>&1 || true)"
+    if echo "$SSH_SETUP_OUTPUT" | grep -qi "Full Disk Access"; then
+      # macOS 15+ Full Disk Access 제약 — 사용자 수동 안내
       echo ""
       echo "  ┌──────────────────────────────────────────────────┐"
       echo "  │  SSH(원격 로그인) 수동 설정이 필요합니다          │"
@@ -1080,13 +1104,18 @@ else
       else
         warn "SSH가 아직 꺼져있습니다. 원격 접속이 제한될 수 있습니다."
       fi
-    elif sudo systemsetup -setremotelogin on 2>/dev/null; then
+    elif systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+      # sudo 명령은 다른 이유로 비-zero 종료했지만 SSH는 실제로 켜진 케이스
       SSH_ON=true
       ok "SSH 활성화 완료"
     else
-      warn "SSH 활성화 실패"
+      warn "SSH 활성화 실패 (output: ${SSH_SETUP_OUTPUT:-empty})"
       echo "  시스템 설정 → 일반 → 공유 → 원격 로그인 켜기"
       read -rp "  설정 완료 후 Enter... "
+      if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+        SSH_ON=true
+        ok "SSH 활성화 확인됨"
+      fi
     fi
   fi
 
