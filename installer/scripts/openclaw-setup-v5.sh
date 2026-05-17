@@ -786,7 +786,7 @@ c.memory.qmd = c.memory.qmd || {};
 Object.assign(c.memory.qmd, {
   includeDefaultMemory: true,
   searchMode: process.env.QMD_MODE || "search",
-  update: { interval: "5m", debounceMs: 15000, onBoot: true },
+  update: { interval: "5m", debounceMs: 15000, startup: "immediate" },
   limits: { maxResults: 6, timeoutMs: parseInt(process.env.QMD_TIMEOUT) || 8000 },
   scope: { "default": "allow" },
 });
