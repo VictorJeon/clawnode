@@ -791,13 +791,14 @@ Object.assign(c.memory.qmd, {
   scope: { "default": "allow" },
 });
 
-// Plugin allowlist
+// Plugins: rely on plugins.entries[].enabled, NOT an allowlist.
+// On openclaw 5.x a present plugins.allow strict-gates bundled provider
+// discovery (openai/anthropic/etc.) — that disables every model provider
+// and breaks `openclaw onboard` model login. Remove any allowlist so
+// providers stay discoverable; memory plugins are enabled via entries below.
 c.plugins = c.plugins || {};
-c.plugins.allow = Array.isArray(c.plugins.allow) ? c.plugins.allow : [];
-for (const name of ["memory-core", "memory-wiki"]) {
-  if (!c.plugins.allow.includes(name)) c.plugins.allow.unshift(name);
-}
-c.plugins.allow = c.plugins.allow.filter(n => n !== "memory-v3");
+if (c.plugins.allow) delete c.plugins.allow;
+if (c.plugins.bundledDiscovery) delete c.plugins.bundledDiscovery;
 
 // Active memory slot
 c.plugins.slots = c.plugins.slots || {};
