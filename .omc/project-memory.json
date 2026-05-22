@@ -1,0 +1,169 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1778986856796,
+  "projectRoot": "/Users/nova/projects/clawnode",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "PRDs": {
+      "path": "PRDs",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1778986856778,
+      "keyFiles": [
+        "v6-installer.md"
+      ]
+    },
+    "clawnode-app": {
+      "path": "clawnode-app",
+      "purpose": null,
+      "fileCount": 22,
+      "lastAccessed": 1778986856778,
+      "keyFiles": [
+        "CLAUDE.md",
+        "CODE_OF_CONDUCT.md",
+        "CODE_SIGNING.md",
+        "CONTRIBUTING.md",
+        "LICENSE"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 2,
+      "lastAccessed": 1778986856779,
+      "keyFiles": [
+        "openclaw-memory-v3-payload.tar.gz",
+        "openclaw-memory-v3-payload.tar.gz.b64"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 3,
+      "lastAccessed": 1778986856785,
+      "keyFiles": [
+        "DEVELOPMENT.md",
+        "MEMORY-V3-BASE-SCHEMA.md",
+        "MEMORY-V3-SETUP-CONTRACT.md"
+      ]
+    },
+    "installer": {
+      "path": "installer",
+      "purpose": null,
+      "fileCount": 7,
+      "lastAccessed": 1778986856786,
+      "keyFiles": [
+        "OpenClaw-Install-Mac-V2.command",
+        "OpenClaw-Install-Mac-V3.command",
+        "OpenClaw-Install-Mac.command",
+        "OpenClaw-Install-Windows-V2.bat",
+        "OpenClaw-Install-Windows-V3.bat"
+      ]
+    },
+    "specs": {
+      "path": "specs",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1778986856789,
+      "keyFiles": [
+        "20260401----Goal.md",
+        "20260404-memory-v3-installer-audit.md"
+      ]
+    },
+    "website": {
+      "path": "website",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1778986856789,
+      "keyFiles": [
+        "CLAUDE.md",
+        "fire-ant-logo.jpg",
+        "index.html"
+      ]
+    },
+    "website-v2": {
+      "path": "website-v2",
+      "purpose": null,
+      "fileCount": 13,
+      "lastAccessed": 1778986856791,
+      "keyFiles": [
+        "CLAUDE.md",
+        "claude-redesign.log",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package-lock.json"
+      ]
+    },
+    "installer/assets": {
+      "path": "installer/assets",
+      "purpose": "Static assets",
+      "fileCount": 1,
+      "lastAccessed": 1778986856792,
+      "keyFiles": [
+        "zai_openclaw_sanitize.js"
+      ]
+    },
+    "installer/scripts": {
+      "path": "installer/scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 15,
+      "lastAccessed": 1778986856795,
+      "keyFiles": [
+        "build-memory-v3-payload-bundle.sh",
+        "openclaw-cleanup.sh",
+        "openclaw-setup-hetzner.sh"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "installer/scripts/openclaw-setup-v5.sh",
+      "accessCount": 3,
+      "lastAccessed": 1778988240068,
+      "type": "file"
+    },
+    {
+      "path": "installer/scripts/openclaw-setup-v6.sh",
+      "accessCount": 3,
+      "lastAccessed": 1778988243428,
+      "type": "file"
+    },
+    {
+      "path": "installer/scripts/openclaw-setup.sh",
+      "accessCount": 1,
+      "lastAccessed": 1778987163641,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

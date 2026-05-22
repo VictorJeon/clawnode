@@ -1063,6 +1063,11 @@ c.models = c.models || {};
 c.models.providers = c.models.providers || {};
 c.models.providers.google = c.models.providers.google || {};
 c.models.providers.google.apiKey = process.env.GKEY;
+c.models.providers.google.baseUrl = "https://generativelanguage.googleapis.com/v1beta";
+c.models.providers.google.models = [
+  { name: "gemini-2.5-flash" },
+  { name: "gemini-2.5-pro" }
+];
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
 JSEOF
   ok "Google API key configured"
