@@ -731,13 +731,24 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Model prefix fix: openclaw onboard --auth-choice openai-codex creates an
-# auth profile for "openai-codex" but the config default model is set to
-# "openai/gpt-5.5".  The gateway then fails with "No API key found for
-# provider openai".  Patch agents.defaults.model.primary to use the correct
-# provider prefix that matches the auth profile.
+# Post-onboard fixes for openai-codex auth path.
+# Two known issues after openclaw onboard --auth-choice openai-codex:
+#
+#   1. Model prefix: config sets agents.defaults.model.primary to
+#      "openai/gpt-5.5" but the auth profile lives under "openai-codex".
+#      The gateway fails with "No API key found for provider openai".
+#
+#   2. Credential decryption: the OAuth token is encrypted and the
+#      decryption key should be stored in macOS Keychain.  On some
+#      machines the keychain write silently fails (e.g., headless
+#      install, SSH session without user keychain unlock).  The gateway
+#      then fails with "No API key found for provider openai-codex".
+#      This is an OpenClaw internal issue we cannot fix from the
+#      installer, but we can detect it and warn the user.
 # ---------------------------------------------------------------------------
 if [[ "$AUTH_MODE" == "openai-oauth" && -f "${HOME}/.openclaw/openclaw.json" ]]; then
+
+  # Fix 1: model prefix
   info "fixing model prefix for openai-codex provider"
   OC_PATH="${HOME}/.openclaw/openclaw.json" node - <<'JSEOF'
 const fs = require("fs");
@@ -760,6 +771,30 @@ try {
   }
 } catch (e) { /* non-fatal */ }
 JSEOF
+
+  # Fix 2: verify credential is actually usable
+  info "verifying openai-codex credential is readable"
+  CRED_CHECK="$(openclaw models status 2>&1 || true)"
+  if echo "${CRED_CHECK}" | grep -q "openai-codex.*status=usable"; then
+    ok "openai-codex credential verified (status=usable)"
+  else
+    echo ""
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    warn "openai-codex credential 검증 실패!"
+    warn ""
+    warn "원인: macOS Keychain에 암호화 키가 저장되지 않았을 수 있습니다."
+    warn "       (SSH 세션, headless 환경에서 자주 발생)"
+    warn ""
+    warn "해결: 터미널에서 직접 다음 명령어를 실행하세요:"
+    warn ""
+    warn "  openclaw onboard --auth-choice openai-codex"
+    warn ""
+    warn "브라우저가 열리면 ChatGPT 계정으로 다시 로그인하면 됩니다."
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    # Non-fatal: the user can fix this manually after install.
+    # Continue with the rest of the installer (Telegram, memory, etc.)
+  fi
 fi
 
 # ============================================================================
