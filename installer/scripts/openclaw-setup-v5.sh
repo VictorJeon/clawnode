@@ -831,9 +831,11 @@ c.plugins.entries["memory-wiki"] = {
   },
 };
 
-// Disable memory-v3 if present
+// Remove memory-v3 entry entirely — plugin doesn't exist in modern OpenClaw
+// and leaving it (even disabled) causes "plugin not found" warnings and
+// V3 HTTP endpoint health checks that always fail.
 if (c.plugins.entries["memory-v3"]) {
-  c.plugins.entries["memory-v3"].enabled = false;
+  delete c.plugins.entries["memory-v3"];
 }
 
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
