@@ -1067,8 +1067,8 @@ c.models.providers.google = c.models.providers.google || {};
 c.models.providers.google.apiKey = process.env.GKEY;
 c.models.providers.google.baseUrl = "https://generativelanguage.googleapis.com/v1beta";
 c.models.providers.google.models = [
-  { name: "gemini-2.5-flash" },
-  { name: "gemini-2.5-pro" }
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" }
 ];
 fs.writeFileSync(path, JSON.stringify(c, null, 2));
 JSEOF
