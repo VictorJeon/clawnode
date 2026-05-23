@@ -774,10 +774,10 @@ try {
   // Fix 1b: reasoning defaults for Codex models
   // - thinkingDefault: "xhigh" (maximum chain-of-thought depth)
   // - reasoningDefault: "on"   (show reasoning output)
-  // - fastModeDefault:  true   (faster response mode)
+  // Note: fastModeDefault is only valid in agents.list[] (per-agent),
+  // NOT in agents.defaults — causes config validation failure.
   c.agents.defaults.thinkingDefault = "xhigh";
   c.agents.defaults.reasoningDefault = "on";
-  c.agents.defaults.fastModeDefault = true;
 
   fs.writeFileSync(p, JSON.stringify(c, null, 2));
   console.log("OK: reasoning defaults set (thinking=xhigh, reasoning=on, fast=true)");
