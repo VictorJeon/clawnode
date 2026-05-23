@@ -748,28 +748,40 @@ fi
 # ---------------------------------------------------------------------------
 if [[ "$AUTH_MODE" == "openai-oauth" && -f "${HOME}/.openclaw/openclaw.json" ]]; then
 
-  # Fix 1: model prefix
-  info "fixing model prefix for openai-codex provider"
+  # Fix 1: model prefix + reasoning/thinking/fast defaults
+  info "fixing model prefix and reasoning defaults for openai-codex provider"
   OC_PATH="${HOME}/.openclaw/openclaw.json" node - <<'JSEOF'
 const fs = require("fs");
 const p = process.env.OC_PATH;
 try {
   const c = JSON.parse(fs.readFileSync(p, "utf8"));
-  const model = c?.agents?.defaults?.model?.primary || "";
-  // Only patch if the model uses "openai/" prefix (not already "openai-codex/")
+  c.agents = c.agents || {};
+  c.agents.defaults = c.agents.defaults || {};
+
+  // Fix 1a: model prefix — openai/ → openai-codex/
+  const model = c.agents.defaults.model?.primary || "";
   if (model.startsWith("openai/") && !model.startsWith("openai-codex/")) {
     const fixed = model.replace("openai/", "openai-codex/");
     c.agents.defaults.model.primary = fixed;
-    // Also update the models map if it has the old key
-    const models = c?.agents?.defaults?.models;
+    const models = c.agents.defaults.models;
     if (models && models[model] && !models[fixed]) {
       models[fixed] = models[model];
       delete models[model];
     }
-    fs.writeFileSync(p, JSON.stringify(c, null, 2));
     console.log("OK: model primary patched " + model + " -> " + fixed);
   }
-} catch (e) { /* non-fatal */ }
+
+  // Fix 1b: reasoning defaults for Codex models
+  // - thinkingDefault: "xhigh" (maximum chain-of-thought depth)
+  // - reasoningDefault: "on"   (show reasoning output)
+  // - fastModeDefault:  true   (faster response mode)
+  c.agents.defaults.thinkingDefault = "xhigh";
+  c.agents.defaults.reasoningDefault = "on";
+  c.agents.defaults.fastModeDefault = true;
+
+  fs.writeFileSync(p, JSON.stringify(c, null, 2));
+  console.log("OK: reasoning defaults set (thinking=xhigh, reasoning=on, fast=true)");
+} catch (e) { console.error("patch error:", e.message); }
 JSEOF
 
   # Fix 2: verify credential is actually usable
