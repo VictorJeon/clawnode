@@ -730,6 +730,38 @@ else
   fail "Onboard 과정에서 오류 발생"
 fi
 
+# ---------------------------------------------------------------------------
+# Model prefix fix: openclaw onboard --auth-choice openai-codex creates an
+# auth profile for "openai-codex" but the config default model is set to
+# "openai/gpt-5.5".  The gateway then fails with "No API key found for
+# provider openai".  Patch agents.defaults.model.primary to use the correct
+# provider prefix that matches the auth profile.
+# ---------------------------------------------------------------------------
+if [[ "$AUTH_MODE" == "openai-oauth" && -f "${HOME}/.openclaw/openclaw.json" ]]; then
+  info "fixing model prefix for openai-codex provider"
+  OC_PATH="${HOME}/.openclaw/openclaw.json" node - <<'JSEOF'
+const fs = require("fs");
+const p = process.env.OC_PATH;
+try {
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  const model = c?.agents?.defaults?.model?.primary || "";
+  // Only patch if the model uses "openai/" prefix (not already "openai-codex/")
+  if (model.startsWith("openai/") && !model.startsWith("openai-codex/")) {
+    const fixed = model.replace("openai/", "openai-codex/");
+    c.agents.defaults.model.primary = fixed;
+    // Also update the models map if it has the old key
+    const models = c?.agents?.defaults?.models;
+    if (models && models[model] && !models[fixed]) {
+      models[fixed] = models[model];
+      delete models[model];
+    }
+    fs.writeFileSync(p, JSON.stringify(c, null, 2));
+    console.log("OK: model primary patched " + model + " -> " + fixed);
+  }
+} catch (e) { /* non-fatal */ }
+JSEOF
+fi
+
 # ============================================================================
 # Step 4: Telegram 채널 설정 (수동 패치)
 # ============================================================================
