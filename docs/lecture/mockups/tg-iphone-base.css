@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  background: #1a1a2e;
+  display: flex; justify-content: center; align-items: center; min-height: 100vh;
+}
+
+/* ── iPhone Frame ── */
+.iphone {
+  width: 390px;
+  height: 620px;
+  background: #000;
+  border-radius: 50px;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 0 3px #333;
+}
+.iphone-screen {
+  width: 100%; height: 100%;
+  border-radius: 47px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+/* Dynamic Island */
+.dynamic-island {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  width: 126px; height: 36px; background: #000; border-radius: 20px; z-index: 10;
+}
+/* Status bar */
+.status-bar {
+  height: 54px; background: #17212b;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 28px 6px;
+  font-size: 12px; color: #fff; font-weight: 600;
+}
+.status-bar .time { margin-left: 4px; }
+.status-bar .icons { display: flex; gap: 4px; font-size: 11px; }
+
+/* ── Telegram UI ── */
+.tg-header {
+  background: #17212b; padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #101921;
+}
+.tg-header .back { color: #5ebbf4; font-size: 18px; }
+.tg-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff;
+}
+.tg-header-info .name { color: #fff; font-size: 14px; font-weight: 500; }
+.tg-header-info .status { color: #5ebbf4; font-size: 11px; }
+
+.tg-chat {
+  flex: 1; background: #0e1621;
+  padding: 6px 10px; display: flex; flex-direction: column; gap: 3px;
+  overflow-y: auto;
+}
+
+/* Input bar */
+.tg-input {
+  background: #17212b; padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+  border-top: 1px solid #101921;
+}
+.tg-input .field {
+  flex: 1; background: #242f3d; border: none; border-radius: 18px;
+  padding: 8px 14px; color: #8e9baa; font-size: 13px;
+}
+.tg-input .mic { color: #5ebbf4; font-size: 18px; }
+.tg-input .attach { color: #5ebbf4; font-size: 18px; }
+
+/* Home indicator */
+.home-indicator {
+  height: 34px; background: #0e1621; display: flex; align-items: center; justify-content: center;
+}
+.home-indicator .bar {
+  width: 134px; height: 5px; background: #fff; border-radius: 3px; opacity: 0.3;
+}
+
+/* ── Bubbles ── */
+.date-sep { text-align: center; padding: 4px 0; }
+.date-sep span { background: #182533; color: #7e9cb5; font-size: 11px; padding: 2px 8px; border-radius: 8px; }
+
+.bubble-row { display: flex; align-items: flex-end; gap: 5px; margin: 1px 0; }
+.bubble-row.out { justify-content: flex-end; }
+.bubble-row.in { justify-content: flex-start; }
+.bubble-row.in .av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; flex-shrink: 0; margin-bottom: 1px;
+}
+.spacer { width: 28px; flex-shrink: 0; }
+
+.bubble {
+  max-width: 290px; padding: 5px 9px; font-size: 13px; line-height: 1.5; color: #f5f5f5;
+}
+.bubble.out { background: #2b5278; border-radius: 10px 10px 4px 10px; }
+.bubble.in { background: #182533; border-radius: 10px 10px 10px 4px; }
+.bubble .sender { font-size: 11.5px; font-weight: 600; color: #8b5cf6; margin-bottom: 1px; }
+.bubble .ts {
+  font-size: 10px; color: rgba(255,255,255,0.35);
+  float: right; margin-left: 6px; margin-top: 3px; line-height: 1;
+}
+.bubble .ts .check { color: #5ebbf4; font-size: 11px; margin-left: 1px; }
+
+.file-att {
+  background: #0e1621; border-radius: 6px; padding: 6px 8px;
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  border: 1px solid #1e2d3d;
+}
+.file-att .icon {
+  width: 32px; height: 40px; background: #e74c3c; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 9px; font-weight: 700;
+}
+.file-att .fname { color: #5ebbf4; font-size: 12px; }
+.file-att .fsize { color: #7e9cb5; font-size: 10px; }
+
+b { font-weight: 600; }
+.clear { clear: both; }

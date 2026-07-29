@@ -1,4 +1,11 @@
-# E2E 테스트 계획 — openclaw-setup.sh
+# E2E 테스트 계획 — OpenClaw installer
+
+> 2026-05-27 업데이트: 현재 배포 기준은 macOS 전용 `openclaw-setup-v7.sh`입니다.
+> v7 raw gist, 원격 harness, doctor/prompt-smoke 기준은 `docs/sop/openclaw-installer-v7.md`를 우선 확인하세요.
+> 2026-05-28 보강: 프리미엄 기준에는 `memory-lancedb` 자동/강제 모드와 `skill-workshop` pending 모드 검증이 포함됩니다.
+> 2026-05-28 추가 보강: 프리미엄 기준에는 Codex harness, Codex Computer Use marketplace, full/elevated tool policy, `thinking=xhigh`, `fastMode=true`, `messages.queue=steer`, Google/Gemini image generation smoke가 포함됩니다.
+> 2026-06-11 보강: Codex harness는 host OpenClaw와 같은 버전의 `@openclaw/codex`만 허용합니다. `openclaw plugins inspect codex --runtime --json`에서 plugin version과 `openclaw --version`의 버전이 일치해야 prompt-smoke 전 gate를 통과한 것으로 봅니다.
+> 아래 내용은 v1-v5 시절의 배경/전략 노트로 남깁니다.
 
 ## 문제
 

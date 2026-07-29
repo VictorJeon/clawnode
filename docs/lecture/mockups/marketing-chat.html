@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #0e1621;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .tg {
+    width: 540px;
+    background: #0e1621;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  /* ── Header ── */
+  .tg-header {
+    background: #17212b;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #101921;
+  }
+  .tg-header .back { color: #5ebbf4; font-size: 20px; cursor: pointer; }
+  .tg-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff;
+  }
+  .tg-header-info .name { color: #fff; font-size: 14px; font-weight: 500; }
+  .tg-header-info .status { color: #5ebbf4; font-size: 12px; }
+  
+  /* ── Chat area ── */
+  .tg-chat {
+    padding: 8px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .date-sep {
+    text-align: center; padding: 6px 0;
+  }
+  .date-sep span {
+    background: #182533; color: #7e9cb5; font-size: 12px;
+    padding: 3px 10px; border-radius: 10px;
+  }
+  
+  /* ── Bubbles ── */
+  .bubble-row { display: flex; align-items: flex-end; gap: 6px; margin: 1px 0; }
+  .bubble-row.out { justify-content: flex-end; }
+  .bubble-row.in { justify-content: flex-start; }
+  
+  .bubble-row.in .av {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff; flex-shrink: 0;
+    margin-bottom: 2px;
+  }
+  
+  .bubble {
+    max-width: 380px; padding: 6px 10px; font-size: 13.5px; line-height: 1.55;
+    color: #f5f5f5; position: relative;
+  }
+  .bubble.out {
+    background: #2b5278; 
+    border-radius: 10px 10px 4px 10px;
+  }
+  .bubble.in {
+    background: #182533;
+    border-radius: 10px 10px 10px 4px;
+  }
+  .bubble .sender {
+    font-size: 12.5px; font-weight: 600; color: #8b5cf6; margin-bottom: 2px;
+  }
+  .bubble .ts {
+    font-size: 11px; color: rgba(255,255,255,0.35); float: right;
+    margin-left: 8px; margin-top: 4px; line-height: 1;
+  }
+  .bubble .ts.out-ts { color: rgba(255,255,255,0.4); }
+  .bubble .ts .check { color: #5ebbf4; font-size: 12px; margin-left: 2px; }
+  
+  /* ── File attachment ── */
+  .file-att {
+    background: #0e1621; border-radius: 8px; padding: 8px 10px;
+    display: flex; align-items: center; gap: 10px; margin-top: 5px;
+    border: 1px solid #1e2d3d;
+  }
+  .file-att .icon {
+    width: 36px; height: 44px; background: #e74c3c; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 700;
+  }
+  .file-att .fname { color: #5ebbf4; font-size: 13px; }
+  .file-att .fsize { color: #7e9cb5; font-size: 11px; }
+  
+  b, strong { font-weight: 600; }
+  .clear { clear: both; }
+</style>
+</head>
+<body>
+<div class="tg">
+  <div class="tg-header">
+    <span class="back">‹</span>
+    <div class="tg-avatar">✨</div>
+    <div class="tg-header-info">
+      <div class="name">Nova ✨</div>
+      <div class="status">online</div>
+    </div>
+  </div>
+  <div class="tg-chat">
+    <div class="date-sep"><span>April 8</span></div>
+    
+    <!-- User -->
+    <div class="bubble-row out">
+      <div class="bubble out">
+        이번주 마케팅 내용 분석해줘
+        <span class="ts out-ts">09:12 <span class="check">✓✓</span></span>
+        <div class="clear"></div>
+      </div>
+    </div>
+    
+    <!-- Bot response 1 -->
+    <div class="bubble-row in">
+      <div class="av">✨</div>
+      <div class="bubble in">
+        <div class="sender">Nova ✨</div>
+        4/1~4/8 마케팅 결과 분석하겠습니다.<br><br>
+        📊 <b>주간 마케팅 리포트</b><br><br>
+        <b>총 지출:</b> 1,920,000원<br>
+        <b>총 매출:</b> 28,450,000원 (ROAS 14.8)<br>
+        <b>주문 수:</b> 412건 (전주 대비 +23%)<br><br>
+        <b>채널별 성과:</b><br>
+        • 네이버 검색광고: 850K → 매출 15.2M (ROAS 17.9) ✅<br>
+        • 인스타 릴스 광고: 620K → 매출 8.1M (ROAS 13.1)<br>
+        • 카카오 비즈보드: 450K → 매출 5.1M (ROAS 11.4)<br><br>
+        <b>핵심 인사이트:</b><br>
+        • "여름 신상" 키워드 CPC 340→280원, 전환율 4.2%로 최고<br>
+        • 릴스 B안(착용샷)이 A안 대비 CTR 2.1배<br>
+        • 카카오 30대 여성 타겟 ROAS 18.3 → 확대 필요
+        <span class="ts">09:13</span>
+        <div class="clear"></div>
+      </div>
+    </div>
+    
+    <!-- Bot response 2 — file -->
+    <div class="bubble-row in">
+      <div style="width:32px;flex-shrink:0"></div>
+      <div class="bubble in">
+        마케팅 결과 및 향후 전략 보고서 첨부드립니다.
+        <div class="file-att">
+          <div class="icon">PDF</div>
+          <div>
+            <div class="fname">주간마케팅리포트_0401-0408.pdf</div>
+            <div class="fsize">2.4 MB</div>
+          </div>
+        </div>
+        <span class="ts">09:14</span>
+        <div class="clear"></div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+</body>
+</html>

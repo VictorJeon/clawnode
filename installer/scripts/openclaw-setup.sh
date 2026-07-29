@@ -20,7 +20,7 @@ SUPPRESS_FINAL_REPORT="${SUPPRESS_FINAL_REPORT:-0}"
 OPENCLAW_PARENT_LOG="${OPENCLAW_PARENT_LOG:-0}"
 OPENCLAW_LOG_FILE="${OPENCLAW_LOG_FILE:-}"
 TAILSCALE_SHARE_MODE="${TAILSCALE_SHARE_MODE:-ask}"
-OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.4.2}"
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-2026.5.12}"
 OPENCLAW_PKG="openclaw@${OPENCLAW_VERSION}"
 
 # curl | bash 차단 방지 (DRY_RUN에서는 스킵)
@@ -354,8 +354,12 @@ if [[ -z "${MODEL_CHOICE:-}" ]]; then
        ;;
     2) # Claude API
        AUTH_MODE="anthropic-key"
-       read -rsp "Anthropic API Key 입력: " API_KEY
+       read -rsp "Anthropic API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     3) # ChatGPT OAuth
        AUTH_MODE="openai-oauth"
@@ -363,13 +367,21 @@ if [[ -z "${MODEL_CHOICE:-}" ]]; then
        ;;
     4) # ChatGPT API
        AUTH_MODE="openai-key"
-       read -rsp "OpenAI API Key 입력: " API_KEY
+       read -rsp "OpenAI API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     5) # Gemini API
        AUTH_MODE="gemini-key"
-       read -rsp "Gemini API Key 입력: " API_KEY
+       read -rsp "Gemini API Key 입력 (없으면 Enter — 설치 후 'openclaw onboard'로 직접 연결): " API_KEY
        echo ""
+       if [[ -z "$API_KEY" ]]; then
+         warn "API Key 미입력 — 인증 없이 게이트웨이만 설치합니다."
+         AUTH_MODE="skip-no-auth"
+       fi
        ;;
     6) # Custom
        AUTH_MODE="custom"
@@ -451,6 +463,25 @@ if ! command -v git &>/dev/null; then
   dry brew install git || fail "Git 설치 실패"
 fi
 
+# ----------------------------------------------------------------------------
+# Homebrew zsh 디렉토리 권한 fix
+#
+# Intel Mac (/usr/local/...)에서 brew tap이 /usr/local/share/zsh 디렉토리에
+# completion 파일을 쓰려고 시도. 디렉토리 소유권이 root이거나 다른 user면
+# brew tap 실패 → openclaw skill 설치 단계에서 apple-notes/apple-reminders/
+# blogwatcher 등이 줄줄이 fail. brew 자신이 권장하는 chown/chmod를 미리 적용.
+# ----------------------------------------------------------------------------
+if [[ "$DRY_RUN" != "1" ]]; then
+  for d in /usr/local/share/zsh /usr/local/share/zsh/site-functions \
+           /opt/homebrew/share/zsh /opt/homebrew/share/zsh/site-functions; do
+    if [[ -d "$d" && ! -w "$d" ]]; then
+      info "brew zsh 디렉토리 권한 수정: $d"
+      sudo chown -R "$(whoami):admin" "$d" 2>/dev/null || true
+      sudo chmod -R u+w "$d" 2>/dev/null || true
+    fi
+  done
+fi
+
 # ============================================================================
 # Step 2: OpenClaw 설치
 # ============================================================================
@@ -478,6 +509,20 @@ info "Step 3/6: AI 모델 연결 및 Gateway 설정"
 # 이미 인증된 경우 스킵 체크 (생략 - 덮어쓰기 로직으로 간소화)
 
 case "$AUTH_MODE" in
+  "skip-no-auth")
+    # 사용자가 API Key 입력을 건너뛴 경우 — 게이트웨이만 띄우고 인증은 추후 설정
+    dry openclaw onboard --non-interactive \
+      --auth-choice skip \
+      --gateway-port 18789 --gateway-bind loopback \
+      --install-daemon --daemon-runtime node \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
+      --accept-risk
+    ONBOARD_EXIT=$?
+    if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
+      fail "openclaw onboard (skip-no-auth) 실패 (exit $ONBOARD_EXIT)"
+    fi
+    info "AI 모델 인증 없이 설치 완료. 사용 전 'openclaw onboard'로 인증을 추가하세요."
+    ;;
   "setup-token")
     # Claude CLI 설치 (setup-token 발급에 필요)
     if ! command -v claude &>/dev/null; then
@@ -507,7 +552,7 @@ case "$AUTH_MODE" in
           --auth-choice skip \
           --gateway-port 18789 --gateway-bind loopback \
           --install-daemon --daemon-runtime node \
-          --skip-channels \
+          --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
           --accept-risk
         ONBOARD_EXIT=$?
         if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -571,7 +616,7 @@ os.chmod(auth_file, 0o600)
             --anthropic-api-key "$API_KEY" \
             --gateway-port 18789 --gateway-bind loopback \
             --install-daemon --daemon-runtime node \
-            --skip-channels \
+            --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
             --accept-risk
           ONBOARD_EXIT=$?
           if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -583,7 +628,7 @@ os.chmod(auth_file, 0o600)
             --auth-choice skip \
             --gateway-port 18789 --gateway-bind loopback \
             --install-daemon --daemon-runtime node \
-            --skip-channels \
+            --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
             --accept-risk
           ONBOARD_EXIT=$?
           if [[ "$DRY_RUN" != "1" && $ONBOARD_EXIT -ne 0 ]]; then
@@ -633,7 +678,7 @@ except:
       --anthropic-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "openai-oauth")
@@ -651,7 +696,7 @@ except:
     dry openclaw onboard --auth-choice openai-codex \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "openai-key")
@@ -660,7 +705,7 @@ except:
       --openai-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   "gemini-key")
@@ -669,13 +714,13 @@ except:
       --gemini-api-key "$API_KEY" \
       --gateway-port 18789 --gateway-bind loopback \
       --install-daemon --daemon-runtime node \
-      --skip-channels \
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm \
       --accept-risk
     ;;
   *)
     echo "  * 사용자 정의 설정 모드 (대화형)"
     dry openclaw onboard --flow manual \
-      --skip-channels
+      --skip-channels --skip-ui --skip-health --skip-bootstrap --node-manager npm
     ;;
 esac
 
@@ -683,6 +728,85 @@ if [[ $? -eq 0 ]]; then
   ok "OpenClaw Onboard 완료"
 else
   fail "Onboard 과정에서 오류 발생"
+fi
+
+# ---------------------------------------------------------------------------
+# Post-onboard fixes for openai-codex auth path.
+# Two known issues after openclaw onboard --auth-choice openai-codex:
+#
+#   1. Model prefix: config sets agents.defaults.model.primary to
+#      "openai/gpt-5.5" but the auth profile lives under "openai-codex".
+#      The gateway fails with "No API key found for provider openai".
+#
+#   2. Credential decryption: the OAuth token is encrypted and the
+#      decryption key should be stored in macOS Keychain.  On some
+#      machines the keychain write silently fails (e.g., headless
+#      install, SSH session without user keychain unlock).  The gateway
+#      then fails with "No API key found for provider openai-codex".
+#      This is an OpenClaw internal issue we cannot fix from the
+#      installer, but we can detect it and warn the user.
+# ---------------------------------------------------------------------------
+if [[ "$AUTH_MODE" == "openai-oauth" && -f "${HOME}/.openclaw/openclaw.json" ]]; then
+
+  # Fix 1: model prefix + reasoning/thinking/fast defaults
+  info "fixing model prefix and reasoning defaults for openai-codex provider"
+  OC_PATH="${HOME}/.openclaw/openclaw.json" node - <<'JSEOF'
+const fs = require("fs");
+const p = process.env.OC_PATH;
+try {
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  c.agents = c.agents || {};
+  c.agents.defaults = c.agents.defaults || {};
+
+  // Fix 1a: model prefix — openai/ → openai-codex/
+  const model = c.agents.defaults.model?.primary || "";
+  if (model.startsWith("openai/") && !model.startsWith("openai-codex/")) {
+    const fixed = model.replace("openai/", "openai-codex/");
+    c.agents.defaults.model.primary = fixed;
+    const models = c.agents.defaults.models;
+    if (models && models[model] && !models[fixed]) {
+      models[fixed] = models[model];
+      delete models[model];
+    }
+    console.log("OK: model primary patched " + model + " -> " + fixed);
+  }
+
+  // Fix 1b: reasoning defaults for Codex models
+  // - thinkingDefault: "xhigh" (maximum chain-of-thought depth)
+  // - reasoningDefault: "on"   (show reasoning output)
+  // Note: fastModeDefault is only valid in agents.list[] (per-agent),
+  // NOT in agents.defaults — causes config validation failure.
+  c.agents.defaults.thinkingDefault = "xhigh";
+  c.agents.defaults.reasoningDefault = "on";
+
+  fs.writeFileSync(p, JSON.stringify(c, null, 2));
+  console.log("OK: reasoning defaults set (thinking=xhigh, reasoning=on, fast=true)");
+} catch (e) { console.error("patch error:", e.message); }
+JSEOF
+
+  # Fix 2: verify credential is actually usable
+  info "verifying openai-codex credential is readable"
+  CRED_CHECK="$(openclaw models status 2>&1 || true)"
+  if echo "${CRED_CHECK}" | grep -q "openai-codex.*status=usable"; then
+    ok "openai-codex credential verified (status=usable)"
+  else
+    echo ""
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    warn "openai-codex credential 검증 실패!"
+    warn ""
+    warn "원인: macOS Keychain에 암호화 키가 저장되지 않았을 수 있습니다."
+    warn "       (SSH 세션, headless 환경에서 자주 발생)"
+    warn ""
+    warn "해결: 터미널에서 직접 다음 명령어를 실행하세요:"
+    warn ""
+    warn "  openclaw onboard --auth-choice openai-codex"
+    warn ""
+    warn "브라우저가 열리면 ChatGPT 계정으로 다시 로그인하면 됩니다."
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    # Non-fatal: the user can fix this manually after install.
+    # Continue with the rest of the installer (Telegram, memory, etc.)
+  fi
 fi
 
 # ============================================================================
@@ -865,16 +989,15 @@ _이 파일은 내가 어떻게 동작하는지를 정의한다._
 작업 요청을 받으면, 실행 전에 관련 기억을 먼저 검색한다.
 이미 조사한 걸 다시 조사하고, 이미 결정한 걸 다시 묻는 건 가장 짜증나는 실패다.
 
-### Memory V3 검색 규칙
-- 우선순위: `PROJECT-STATE.md` 읽기 → Memory V3 API 검색 → 작업 시작
-- 기본 검색 엔드포인트: `http://127.0.0.1:18790/v1/memory/search`
+### 기억 검색 규칙 (QMD)
+- 우선순위: `PROJECT-STATE.md` 읽기 → QMD 검색(`openclaw memory search` 또는 메모리 도구) → 작업 시작
 - 최소 2회 검색:
   1. `<entity> 현재 상태`
   2. `<entity> 최근 변경`
-- 둘 다 실패할 때만 \"기억 없음\"으로 판단한다.
+- 둘 다 실패할 때만 "기억 없음"으로 판단한다.
 - 메모리 인프라/장애/동기화 이슈는 `memory/infra.md`에 기록한다.
 
-### Memory V3 기록 규칙
+### 기억 기록 규칙
 - 장기적으로 다시 필요할 결정, 선호, 운영 규칙은 `MEMORY.md`에 적는다.
 - 당일 작업 흐름, 실패, 임시 판단은 `memory/YYYY-MM-DD.md`에 적는다.
 - 새 프로젝트 상태 요약이 생기면 `PROJECT-STATE.md`를 먼저 갱신한다.
@@ -1028,15 +1151,20 @@ else
   else
 
   # SSH 활성화 (원격 접속에 필수)
-  # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음
+  # macOS 15+에서는 systemsetup에 Full Disk Access가 필요해서 실패할 수 있음.
+  #
+  # 주의: `set -o pipefail` 환경에서 `sudo systemsetup ... 2>&1 | grep ...`
+  # 패턴은 sudo가 비-zero로 끝나면 grep이 매치해도 pipeline 전체가 1이 되어
+  # if 분기가 잘못 빠짐. sudo 출력을 변수에 잡고 grep을 분리해서 회피.
   SSH_ON=false
   if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
     SSH_ON=true
     ok "SSH 이미 활성화됨"
   else
     info "SSH(원격 로그인) 활성화 시도 중..."
-    if sudo systemsetup -setremotelogin on 2>&1 | grep -qi "Full Disk Access"; then
-      # macOS 15+ Full Disk Access 제약
+    SSH_SETUP_OUTPUT="$(sudo systemsetup -setremotelogin on 2>&1 || true)"
+    if echo "$SSH_SETUP_OUTPUT" | grep -qi "Full Disk Access"; then
+      # macOS 15+ Full Disk Access 제약 — 사용자 수동 안내
       echo ""
       echo "  ┌──────────────────────────────────────────────────┐"
       echo "  │  SSH(원격 로그인) 수동 설정이 필요합니다          │"
@@ -1054,13 +1182,18 @@ else
       else
         warn "SSH가 아직 꺼져있습니다. 원격 접속이 제한될 수 있습니다."
       fi
-    elif sudo systemsetup -setremotelogin on 2>/dev/null; then
+    elif systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+      # sudo 명령은 다른 이유로 비-zero 종료했지만 SSH는 실제로 켜진 케이스
       SSH_ON=true
       ok "SSH 활성화 완료"
     else
-      warn "SSH 활성화 실패"
+      warn "SSH 활성화 실패 (output: ${SSH_SETUP_OUTPUT:-empty})"
       echo "  시스템 설정 → 일반 → 공유 → 원격 로그인 켜기"
       read -rp "  설정 완료 후 Enter... "
+      if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+        SSH_ON=true
+        ok "SSH 활성화 확인됨"
+      fi
     fi
   fi
 

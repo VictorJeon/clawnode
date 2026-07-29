@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"ssh gloria@100.89.157.109 'export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH\\necho \\\"=== gateway ===\\\"; curl -fsS --max-time 5 http://127.0.0.1:18789/health 2>&1; echo\\necho \\\"=== version...",
+  "error": "Exit code 1\n=== gateway ===\n{\"ok\":true,\"status\":\"live\"}\n=== version ===\nOpenClaw 2026.5.12 (f066dd2)\n=== model auth (핵심) ===\nDefault       : openai-codex/gpt-5.5\nConfigured models (1): openai-codex/gpt-5.5\nProviders w/ OAuth/tokens (1): openai-codex (1)\n- openai-codex effective=profiles:~/.openclaw/agents/main/agent/auth-profiles.json | profiles=1 (oauth=1, token=0, api_key=0) | openai-codex:gloriakim@signite.co=OAuth (gloriakim@signite.co)\nOAuth/token status\n=== plugins.allow 재생성됐나 ===\nConfig p...",
+  "timestamp": "2026-05-17T03:32:44.774Z",
+  "retry_count": 1
+}
